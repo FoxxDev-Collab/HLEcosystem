@@ -1,0 +1,123 @@
+@model HLE.FamilyHealth.Models.ViewModels.AppointmentEditDto
+@{
+    ViewData["Title"] = "Edit Appointment";
+}
+
+<div class="container-fluid py-4">
+    <div class="mb-4">
+        <h2 class="mb-1">Edit Appointment</h2>
+        <p class="text-muted mb-0">Update appointment details</p>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-body">
+                    <form asp-action="Edit" method="post">
+                        <input type="hidden" asp-for="Id" />
+                        <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label asp-for="FamilyMemberId" class="form-label"></label>
+                                <select asp-for="FamilyMemberId" class="form-select" asp-items="ViewBag.FamilyMembers">
+                                    <option value="">Select family member...</option>
+                                </select>
+                                <span asp-validation-for="FamilyMemberId" class="text-danger"></span>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label asp-for="ProviderId" class="form-label"></label>
+                                <select asp-for="ProviderId" class="form-select" asp-items="ViewBag.Providers">
+                                </select>
+                                <span asp-validation-for="ProviderId" class="text-danger"></span>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-8">
+                                <label asp-for="AppointmentDateTime" class="form-label"></label>
+                                <input asp-for="AppointmentDateTime" type="datetime-local" class="form-control" />
+                                <span asp-validation-for="AppointmentDateTime" class="text-danger"></span>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label asp-for="DurationMinutes" class="form-label"></label>
+                                <input asp-for="DurationMinutes" type="number" class="form-control" />
+                                <span asp-validation-for="DurationMinutes" class="text-danger"></span>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label asp-for="AppointmentType" class="form-label"></label>
+                                <select asp-for="AppointmentType" class="form-select">
+                                    <option value="">Select type...</option>
+                                    <option value="Annual Checkup">Annual Checkup</option>
+                                    <option value="Follow-up">Follow-up</option>
+                                    <option value="Specialist">Specialist</option>
+                                    <option value="Procedure">Procedure</option>
+                                    <option value="Lab Work">Lab Work</option>
+                                    <option value="Vaccination">Vaccination</option>
+                                    <option value="Dental">Dental</option>
+                                    <option value="Vision">Vision</option>
+                                    <option value="Mental Health">Mental Health</option>
+                                    <option value="Urgent Care">Urgent Care</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                                <span asp-validation-for="AppointmentType" class="text-danger"></span>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label asp-for="Status" class="form-label"></label>
+                                <select asp-for="Status" class="form-select">
+                                    <option value="Scheduled">Scheduled</option>
+                                    <option value="Confirmed">Confirmed</option>
+                                    <option value="Completed">Completed</option>
+                                    <option value="Cancelled">Cancelled</option>
+                                    <option value="No-Show">No-Show</option>
+                                    <option value="Rescheduled">Rescheduled</option>
+                                </select>
+                                <span asp-validation-for="Status" class="text-danger"></span>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Location" class="form-label"></label>
+                            <input asp-for="Location" class="form-control" placeholder="e.g., Main Office, Telehealth, Hospital" />
+                            <span asp-validation-for="Location" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="ReasonForVisit" class="form-label"></label>
+                            <textarea asp-for="ReasonForVisit" class="form-control" rows="3"></textarea>
+                            <span asp-validation-for="ReasonForVisit" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="PreAppointmentNotes" class="form-label"></label>
+                            <textarea asp-for="PreAppointmentNotes" class="form-control" rows="3"></textarea>
+                            <span asp-validation-for="PreAppointmentNotes" class="text-danger"></span>
+                        </div>
+
+                        <div class="form-check mb-3">
+                            <input asp-for="ReminderSent" class="form-check-input" type="checkbox" />
+                            <label asp-for="ReminderSent" class="form-check-label"></label>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle"></i> Save Changes
+                            </button>
+                            <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-outline-secondary">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

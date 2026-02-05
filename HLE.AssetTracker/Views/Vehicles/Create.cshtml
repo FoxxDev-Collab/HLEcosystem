@@ -1,0 +1,126 @@
+@model HLE.AssetTracker.Models.ViewModels.VehicleCreateViewModel
+@{
+    ViewData["Title"] = "Add Vehicle";
+}
+
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a asp-action="Index">Vehicles</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Add Vehicle</li>
+                </ol>
+            </nav>
+            <h1>Add Vehicle</h1>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-body">
+                    <form id="vehicleCreateForm" asp-action="Create" method="post">
+                        <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+                        <h5 class="mb-3">Basic Information</h5>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label asp-for="Make" class="form-label">Make *</label>
+                                <input asp-for="Make" class="form-control" placeholder="e.g., Toyota" />
+                                <span asp-validation-for="Make" class="text-danger"></span>
+                            </div>
+                            <div class="col-md-6">
+                                <label asp-for="Model" class="form-label">Model *</label>
+                                <input asp-for="Model" class="form-control" placeholder="e.g., Camry" />
+                                <span asp-validation-for="Model" class="text-danger"></span>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label asp-for="Year" class="form-label">Year</label>
+                                <input asp-for="Year" type="number" class="form-control" placeholder="e.g., 2020" />
+                                <span asp-validation-for="Year" class="text-danger"></span>
+                            </div>
+                            <div class="col-md-4">
+                                <label asp-for="Color" class="form-label">Color</label>
+                                <input asp-for="Color" class="form-control" placeholder="e.g., Silver" />
+                                <span asp-validation-for="Color" class="text-danger"></span>
+                            </div>
+                            <div class="col-md-4">
+                                <label asp-for="VehicleType" class="form-label">Type</label>
+                                <select asp-for="VehicleType" class="form-select">
+                                    <option value="">Select type...</option>
+                                    <option value="Car">Car</option>
+                                    <option value="Truck">Truck</option>
+                                    <option value="SUV">SUV</option>
+                                    <option value="Van">Van</option>
+                                    <option value="Motorcycle">Motorcycle</option>
+                                    <option value="RV">RV</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                                <span asp-validation-for="VehicleType" class="text-danger"></span>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label asp-for="VIN" class="form-label">VIN</label>
+                                <input asp-for="VIN" class="form-control" placeholder="17-character VIN" maxlength="17" />
+                                <span asp-validation-for="VIN" class="text-danger"></span>
+                            </div>
+                            <div class="col-md-6">
+                                <label asp-for="LicensePlate" class="form-label">License Plate</label>
+                                <input asp-for="LicensePlate" class="form-control" placeholder="e.g., ABC-1234" />
+                                <span asp-validation-for="LicensePlate" class="text-danger"></span>
+                            </div>
+                        </div>
+
+                        <hr class="my-4">
+
+                        <h5 class="mb-3">Odometer</h5>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label asp-for="CurrentOdometer" class="form-label">Current Odometer *</label>
+                                <input asp-for="CurrentOdometer" type="number" class="form-control" placeholder="e.g., 50000" />
+                                <span asp-validation-for="CurrentOdometer" class="text-danger"></span>
+                            </div>
+                            <div class="col-md-6">
+                                <label asp-for="OdometerUnit" class="form-label">Unit *</label>
+                                <select asp-for="OdometerUnit" class="form-select">
+                                    <option value="Miles">Miles</option>
+                                    <option value="Kilometers">Kilometers</option>
+                                </select>
+                                <span asp-validation-for="OdometerUnit" class="text-danger"></span>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Notes" class="form-label">Notes</label>
+                            <textarea asp-for="Notes" class="form-control" rows="3" placeholder="Additional notes about this vehicle..."></textarea>
+                            <span asp-validation-for="Notes" class="text-danger"></span>
+                        </div>
+
+                        <div class="d-flex gap-2 mt-4">
+                            <button type="submit" class="btn btn-primary">
+                                <i data-lucide="save" style="width: 16px; height: 16px;"></i>
+                                Save Vehicle
+                            </button>
+                            <a asp-action="Index" class="btn btn-secondary">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            lucide.createIcons();
+        });
+    </script>
+}

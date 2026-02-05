@@ -1,0 +1,403 @@
+/* ============================================
+   Mobile-Optimized Styles
+   ============================================ */
+
+/* Mobile breakpoint */
+@media (max-width: 768px) {
+    /* Hide desktop table view on mobile */
+    .table-responsive {
+        display: none !important;
+    }
+
+    /* Show mobile card view */
+    .mobile-file-list {
+        display: block !important;
+    }
+
+    /* Group header stats - make them responsive */
+    .group-header-card .row {
+        margin-bottom: 0.5rem;
+    }
+
+    .group-header-card .col-md-3,
+    .group-header-card .col-6 {
+        margin-bottom: 1rem;
+    }
+
+    .group-header-card h2 {
+        font-size: 1.5rem;
+    }
+
+    /* Members modal - optimize table for mobile */
+    #membersModal .modal-lg {
+        max-width: 100%;
+        margin: 0.5rem;
+    }
+
+    #membersModal .table-responsive {
+        display: block !important;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    #membersModal .table {
+        font-size: 0.85rem;
+    }
+
+    #membersModal .table th,
+    #membersModal .table td {
+        padding: 0.5rem;
+        white-space: nowrap;
+    }
+
+    /* Stack permission badges vertically on mobile */
+    #membersModal .table td .d-flex {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+    }
+
+    #membersModal .badge {
+        margin-bottom: 0.25rem;
+    }
+
+    /* Touch-friendly action buttons */
+    .mobile-file-card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        padding: 1rem;
+        margin-bottom: 0.75rem;
+        transition: all 0.2s ease;
+    }
+
+    .mobile-file-card:active {
+        transform: scale(0.98);
+        background: var(--accent);
+    }
+
+    .mobile-file-icon {
+        font-size: 2.5rem;
+        min-width: 50px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .mobile-file-info {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .mobile-file-name {
+        font-weight: 600;
+        font-size: 1rem;
+        margin-bottom: 0.25rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        color: var(--foreground);
+    }
+
+    .mobile-file-meta {
+        font-size: 0.8rem;
+        color: var(--muted-foreground);
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+
+    .mobile-file-actions {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 0.75rem;
+        padding-top: 0.75rem;
+        border-top: 1px solid var(--border);
+    }
+
+    .mobile-file-actions .btn {
+        flex: 1;
+        min-height: 44px; /* iOS touch target minimum */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.25rem;
+        font-size: 0.85rem;
+        padding: 0.5rem;
+    }
+
+    /* Optimize top action buttons for mobile */
+    .mobile-action-bar {
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        background: var(--background);
+        padding: 0.75rem 0;
+        margin-bottom: 1rem;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .mobile-action-bar .btn {
+        width: 100%;
+        min-height: 48px;
+        margin-bottom: 0.5rem;
+        font-size: 1rem;
+    }
+
+    .mobile-action-bar .btn-group {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+    }
+
+    /* Breadcrumb optimization for mobile */
+    .breadcrumb {
+        font-size: 0.85rem;
+        padding: 0.5rem;
+        overflow-x: auto;
+        white-space: nowrap;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .breadcrumb-item {
+        display: inline-block;
+    }
+
+    /* Upload drop zone mobile */
+    .upload-drop-zone {
+        padding: 2rem 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .upload-drop-zone h5 {
+        font-size: 1rem;
+    }
+
+    .upload-drop-zone p {
+        font-size: 0.85rem;
+    }
+
+    /* Empty state mobile */
+    .card-body.text-center.py-5 {
+        padding: 2rem 1rem !important;
+    }
+
+    /* Modal optimization for mobile */
+    .modal-dialog {
+        margin: 0.5rem;
+    }
+
+    .modal-content {
+        border-radius: var(--radius-lg);
+    }
+
+    .modal-body {
+        padding: 1rem;
+    }
+
+    .modal-footer {
+        padding: 1rem;
+        gap: 0.5rem;
+    }
+
+    .modal-footer .btn {
+        flex: 1;
+        min-height: 44px;
+    }
+
+    /* Form inputs - bigger touch targets */
+    .form-control,
+    .form-select {
+        min-height: 44px;
+        font-size: 16px; /* Prevents zoom on iOS */
+    }
+
+    .form-label {
+        font-size: 0.9rem;
+        font-weight: 600;
+    }
+
+    /* Container padding for mobile */
+    .container-fluid {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+
+    /* Page title mobile */
+    .container-fluid h2 {
+        font-size: 1.5rem;
+    }
+
+    /* Stats card mobile (Home page) */
+    .stat-card {
+        margin-bottom: 1rem;
+    }
+
+    .stat-icon {
+        width: 48px;
+        height: 48px;
+    }
+
+    /* Alert spacing mobile */
+    .alert {
+        font-size: 0.9rem;
+        padding: 0.75rem;
+    }
+
+    /* Badge sizing */
+    .badge {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+    }
+
+    /* File type badge in mobile cards */
+    .mobile-file-type-badge {
+        display: inline-block;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+        font-size: 0.7rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+
+    /* Loading/Spinner optimization */
+    .spinner-border {
+        width: 2rem;
+        height: 2rem;
+    }
+
+    /* Navbar mobile optimization */
+    .navbar {
+        padding: 0.5rem 1rem;
+    }
+
+    .navbar-brand {
+        font-size: 1.1rem;
+    }
+
+    .nav-link {
+        padding: 0.75rem 1rem;
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+    }
+
+    /* Collapse menu spacing */
+    .navbar-collapse {
+        margin-top: 0.5rem;
+    }
+
+    /* User avatar in navbar */
+    .navbar .dropdown-menu {
+        position: absolute !important;
+        right: 0;
+        left: auto;
+    }
+}
+
+/* Desktop - hide mobile-only elements */
+@media (min-width: 769px) {
+    .mobile-file-list {
+        display: none !important;
+    }
+
+    .mobile-action-bar {
+        display: none !important;
+    }
+}
+
+/* Extra small devices optimization */
+@media (max-width: 576px) {
+    .mobile-file-icon {
+        font-size: 2rem;
+        min-width: 40px;
+    }
+
+    .mobile-file-name {
+        font-size: 0.95rem;
+    }
+
+    .mobile-file-meta {
+        font-size: 0.75rem;
+    }
+
+    .mobile-file-actions .btn {
+        font-size: 0.75rem;
+        padding: 0.4rem;
+    }
+
+    .modal-dialog {
+        margin: 0.25rem;
+    }
+
+    /* Simplify action buttons on very small screens */
+    .mobile-file-actions {
+        flex-wrap: wrap;
+    }
+
+    .mobile-file-actions .btn {
+        flex: 0 0 calc(50% - 0.25rem);
+    }
+
+    .mobile-file-actions .btn-danger {
+        flex: 0 0 100%;
+        margin-top: 0.25rem;
+    }
+}
+
+/* Landscape mode optimization */
+@media (max-width: 768px) and (orientation: landscape) {
+    .upload-drop-zone {
+        padding: 1.5rem 1rem;
+    }
+
+    .mobile-file-card {
+        padding: 0.75rem;
+    }
+
+    .modal-dialog {
+        max-width: 90%;
+    }
+}
+
+/* Touch target improvements - all devices */
+button,
+.btn,
+a.btn,
+input[type="submit"],
+input[type="button"] {
+    min-height: 36px;
+    min-width: 36px;
+}
+
+/* Better tap highlighting */
+* {
+    -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
+}
+
+/* Smooth scrolling for mobile */
+html {
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Prevent text size adjustment on orientation change */
+html {
+    -webkit-text-size-adjust: 100%;
+    -moz-text-size-adjust: 100%;
+    -ms-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+}
+
+/* Safe area insets for notched devices (iPhone X+) */
+@supports (padding: max(0px)) {
+    .container-fluid,
+    .modal-content,
+    .navbar {
+        padding-left: max(1rem, env(safe-area-inset-left));
+        padding-right: max(1rem, env(safe-area-inset-right));
+    }
+
+    .mobile-action-bar {
+        padding-left: max(0.75rem, env(safe-area-inset-left));
+        padding-right: max(0.75rem, env(safe-area-inset-right));
+    }
+}

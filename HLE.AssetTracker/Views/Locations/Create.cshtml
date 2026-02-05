@@ -1,0 +1,82 @@
+@model CreateLocationViewModel
+@{
+    ViewData["Title"] = "Create Location";
+}
+
+<div class="container py-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-action="Index">Locations</a></li>
+            <li class="breadcrumb-item active">Create</li>
+        </ol>
+    </nav>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">Create Location</h4>
+                    @if (!string.IsNullOrWhiteSpace(Model.ParentName))
+                    {
+                        <small class="text-muted">Parent: @Model.ParentName</small>
+                    }
+                </div>
+                <div class="card-body">
+                    <form asp-action="Create" method="post">
+                        @Html.AntiForgeryToken()
+
+                        <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+                        <div class="mb-3">
+                            <label asp-for="Name" class="form-label">Location Name</label>
+                            <input asp-for="Name" class="form-control" placeholder="e.g., Kitchen, Garage, Living Room" autofocus />
+                            <span asp-validation-for="Name" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Description" class="form-label">Description (Optional)</label>
+                            <textarea asp-for="Description" class="form-control" rows="2" placeholder="Additional details about this location"></textarea>
+                            <span asp-validation-for="Description" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-4">
+                            <label asp-for="ParentId" class="form-label">Parent Location (Optional)</label>
+                            <select asp-for="ParentId" class="form-select">
+                                @foreach (var parent in Model.AvailableParents)
+                                {
+                                    <option value="@(parent.Id == 0 ? "" : parent.Id.ToString())"
+                                            selected="@(Model.ParentId.HasValue && Model.ParentId.Value == parent.Id)">
+                                        @parent.Name
+                                    </option>
+                                }
+                            </select>
+                            <small class="text-muted d-block mt-1">Leave as "(No Parent)" to create a top-level location</small>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">Create Location</button>
+                            <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">About Locations</h6>
+                </div>
+                <div class="card-body">
+                    <p class="small mb-2">Locations help you organize where your assets are stored.</p>
+                    <ul class="small mb-0">
+                        <li>Create hierarchical structures (e.g., Home > Kitchen > Pantry)</li>
+                        <li>Top-level locations have no parent</li>
+                        <li>Sub-locations inherit from parent locations</li>
+                        <li>Assign assets to specific locations for easy tracking</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

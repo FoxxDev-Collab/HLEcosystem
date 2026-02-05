@@ -1,0 +1,160 @@
+@using HLE.FamilyFinance.Services.Interfaces
+@using HLE.FamilyFinance.Models.Enums
+@model List<CategoryRuleDto>
+@{
+    ViewData["Title"] = "Category Rules";
+}
+
+<div class="py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="bi-gear me-2"></i>Category Rules</h2>
+            <p class="text-muted mb-0">Automatically categorize imported transactions based on description patterns.</p>
+        </div>
+        <div>
+            <a asp-action="Index" class="btn btn-outline-secondary"><i class="bi-upload me-1"></i>Import</a>
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createRuleModal">
+                <i class="bi-plus-lg me-1"></i>Add Rule
+            </button>
+        </div>
+    </div>
+
+    @if (Model.Count == 0)
+    {
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <i class="bi-funnel fs-1 text-muted"></i>
+                <p class="text-muted mt-2 mb-3">No category rules yet. Create rules to automatically categorize imported transactions.</p>
+                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createRuleModal">
+                    <i class="bi-plus-lg me-1"></i>Create First Rule
+                </button>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="card">
+            <div class="card-header">
+                <div class="row align-items-center">
+                    <div class="col">
+                        <h5 class="mb-0">Rules (@Model.Count)</h5>
+                    </div>
+                    <div class="col-auto">
+                        <small class="text-muted">Rules are applied in priority order (lower number = higher priority)</small>
+                    </div>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 60px;">Priority</th>
+                            <th>Pattern</th>
+                            <th>Match Type</th>
+                            <th>Category</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var rule in Model.OrderBy(r => r.Priority))
+                        {
+                            <tr>
+                                <td>
+                                    <span class="badge bg-secondary">@rule.Priority</span>
+                                </td>
+                                <td>
+                                    <code>@rule.Pattern</code>
+                                </td>
+                                <td>
+                                    @switch (rule.MatchType)
+                                    {
+                                        case CategoryRuleMatchType.Contains:
+                                            <span class="badge bg-info">Contains</span>
+                                            break;
+                                        case CategoryRuleMatchType.StartsWith:
+                                            <span class="badge bg-primary">Starts With</span>
+                                            break;
+                                        case CategoryRuleMatchType.Exact:
+                                            <span class="badge bg-success">Exact Match</span>
+                                            break;
+                                        case CategoryRuleMatchType.Regex:
+                                            <span class="badge bg-warning text-dark">Regex</span>
+                                            break;
+                                    }
+                                </td>
+                                <td>@rule.CategoryName</td>
+                                <td>
+                                    <form asp-action="DeleteRule" method="post" class="d-inline">
+                                        <input type="hidden" name="id" value="@rule.Id" />
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete this rule?')">
+                                            <i class="bi-trash"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+
+    <div class="card mt-4 hint-card">
+        <div class="card-body">
+            <h6><i class="bi-lightbulb me-2"></i>Tips for Creating Rules</h6>
+            <ul class="small text-muted mb-0">
+                <li><strong>Contains</strong> - Pattern can appear anywhere in the description (e.g., "AMAZON" matches "AMAZON.COM" and "AMAZON PRIME")</li>
+                <li><strong>Starts With</strong> - Description must start with the pattern (e.g., "WALMART" matches "WALMART SUPERCENTER")</li>
+                <li><strong>Exact Match</strong> - Description must match exactly (case-insensitive)</li>
+                <li><strong>Regex</strong> - Use regular expressions for complex patterns (e.g., "^WAL.?MART" for variations)</li>
+                <li>Rules with lower priority numbers are applied first</li>
+                <li>Common patterns: Store names, payment processors, subscription services</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- Create Rule Modal -->
+<div class="modal fade" id="createRuleModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form asp-action="CreateRule" method="post">
+                <div class="modal-header">
+                    <h5 class="modal-title">Create Category Rule</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Pattern</label>
+                        <input name="pattern" class="form-control" required placeholder="e.g., AMAZON" />
+                        <small class="text-muted">The text to match in transaction descriptions</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Match Type</label>
+                        <select name="matchType" class="form-select" required>
+                            <option value="@CategoryRuleMatchType.Contains">Contains</option>
+                            <option value="@CategoryRuleMatchType.StartsWith">Starts With</option>
+                            <option value="@CategoryRuleMatchType.Exact">Exact Match</option>
+                            <option value="@CategoryRuleMatchType.Regex">Regex</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Category</label>
+                        <select name="categoryId" asp-items="@(ViewData["Categories"] as SelectList)" class="form-select" required>
+                            <option value="">Select category...</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Priority</label>
+                        <input name="priority" class="form-control" type="number" value="100" min="1" required />
+                        <small class="text-muted">Lower numbers are applied first</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Create Rule</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

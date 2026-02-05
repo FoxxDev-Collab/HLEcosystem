@@ -1,0 +1,89 @@
+@model HLE.FamilyHealth.Models.ViewModels.EmergencyContactIndexViewModel
+@{
+    ViewData["Title"] = "Emergency Contacts";
+}
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">Emergency Contacts</h2>
+            <p class="text-muted mb-0">Manage emergency contacts for family members</p>
+        </div>
+        @{
+            ViewData["Text"] = "Add Emergency Contact";
+            ViewData["Variant"] = "primary";
+            ViewData["Href"] = Url.Action("Create");
+            ViewData["Icon"] = "bi bi-plus";
+        }
+        <partial name="_Button" />
+    </div>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        ViewData["AlertType"] = "success";
+        ViewData["AlertMessage"] = TempData["SuccessMessage"]?.ToString();
+        ViewData["AlertDismissible"] = true;
+        <partial name="_Alert" />
+    }
+
+    <div class="card">
+        <div class="card-body">
+            @if (!Model.EmergencyContacts.Any())
+            {
+                <div class="text-center py-5">
+                    <i class="bi bi-person-lines-fill text-muted" style="font-size: 3rem;"></i>
+                    <p class="text-muted mb-3 mt-3">No emergency contacts found. Add contacts for quick access in case of emergencies.</p>
+                    <a href="@Url.Action("Create")" class="btn btn-primary">
+                        <i class="bi bi-plus"></i> Add Emergency Contact
+                    </a>
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive table-mobile-cards-wrapper">
+                    <table class="table-themed table-hover table-mobile-cards">
+                        <thead>
+                            <tr>
+                                <th>Family Member</th>
+                                <th>Contact Name</th>
+                                <th>Relationship</th>
+                                <th>Phone Number</th>
+                                <th>Priority</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var contact in Model.EmergencyContacts.OrderBy(c => c.FamilyMemberId).ThenBy(c => c.Priority))
+                            {
+                                <tr>
+                                    <td data-label="For" data-primary="true">
+                                        <strong>@contact.FamilyMemberName</strong>
+                                    </td>
+                                    <td data-label="Contact">@contact.Name</td>
+                                    <td data-label="Relationship">@contact.Relationship</td>
+                                    <td data-label="Phone">
+                                        <i class="bi bi-telephone"></i> @contact.PhoneNumber
+                                    </td>
+                                    <td data-label="Priority">
+                                        @{
+                                            ViewData["BadgeText"] = $"Priority {contact.Priority}";
+                                            ViewData["BadgeVariant"] = contact.Priority == 1 ? "danger" : contact.Priority == 2 ? "warning" : "secondary";
+                                            ViewData["BadgePill"] = "True";
+                                        }
+                                        <partial name="_Badge" />
+                                    </td>
+                                    <td class="text-end">
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="@Url.Action("Details", new { id = contact.Id })" class="btn btn-outline-primary btn-sm">View</a>
+                                            <a href="@Url.Action("Edit", new { id = contact.Id })" class="btn btn-outline-secondary btn-sm">Edit</a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+</div>

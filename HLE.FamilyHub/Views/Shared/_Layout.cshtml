@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Family Hub</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/theme.css" />
+    <link rel="stylesheet" href="~/css/site.css" />
+    <link rel="stylesheet" href="~/css/components.css" />
+    <link rel="stylesheet" href="~/HLE.FamilyHub.styles.css" asp-append-version="true" />
+    <script src="~/js/theme-toggle.js"></script>
+</head>
+<body>
+    <header>
+        <nav class="navbar navbar-expand-sm navbar-dark bg-dark border-bottom box-shadow mb-3">
+            <div class="container-fluid">
+                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">
+                    <i class="bi bi-house-heart"></i> Family Hub
+                </a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
+                        aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
+                    @if (User.Identity?.IsAuthenticated == true)
+                    {
+                        <ul class="navbar-nav flex-grow-1">
+                            <li class="nav-item">
+                                <a class="nav-link" asp-area="" asp-controller="Home" asp-action="Dashboard">
+                                    <i class="bi bi-speedometer2"></i> Dashboard
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" asp-area="" asp-controller="FamilyMembers" asp-action="Index">
+                                    <i class="bi bi-people"></i> Family
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" asp-area="" asp-controller="ImportantDates" asp-action="Index">
+                                    <i class="bi bi-calendar-heart"></i> Dates
+                                </a>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="bi bi-gift"></i> Gifts
+                                </a>
+                                <ul class="dropdown-menu">
+                                    <li>
+                                        <a class="dropdown-item" asp-area="" asp-controller="GiftIdeas" asp-action="Index">
+                                            <i class="bi bi-lightbulb"></i> Gift Ideas
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" asp-area="" asp-controller="Gifts" asp-action="Index">
+                                            <i class="bi bi-gift"></i> Gift History
+                                        </a>
+                                    </li>
+                                </ul>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" asp-area="" asp-controller="FamilyMembers" asp-action="AddressBook">
+                                    <i class="bi bi-envelope"></i> Address Book
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" asp-area="" asp-controller="ImportantDates" asp-action="Calendar">
+                                    <i class="bi bi-calendar3"></i> Calendar
+                                </a>
+                            </li>
+                        </ul>
+                        <ul class="navbar-nav">
+                            <li class="nav-item">
+                                @{
+                                    ViewData["UserName"] = User.Identity?.Name ?? "User";
+                                }
+                                <partial name="_UserAvatar" />
+                            </li>
+                        </ul>
+                    }
+                    else
+                    {
+                        <ul class="navbar-nav ms-auto">
+                            <li class="nav-item">
+                                <a class="nav-link" asp-area="" asp-controller="Account" asp-action="Login">
+                                    <i class="bi bi-box-arrow-in-right"></i> Login
+                                </a>
+                            </li>
+                        </ul>
+                    }
+                </div>
+            </div>
+        </nav>
+    </header>
+    <div class="container-fluid">
+        <main role="main" class="pb-3">
+            @if (TempData["Success"] != null)
+            {
+                ViewData["Message"] = TempData["Success"];
+                ViewData["Variant"] = "success";
+                ViewData["Dismissible"] = "True";
+                <partial name="_Alert" />
+            }
+            @if (TempData["Error"] != null)
+            {
+                ViewData["Message"] = TempData["Error"];
+                ViewData["Variant"] = "danger";
+                ViewData["Dismissible"] = "True";
+                <partial name="_Alert" />
+            }
+            @RenderBody()
+        </main>
+    </div>
+
+    <footer class="border-top footer text-muted">
+        <div class="container-fluid">
+            &copy; 2026 - Family Hub - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
+        </div>
+    </footer>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

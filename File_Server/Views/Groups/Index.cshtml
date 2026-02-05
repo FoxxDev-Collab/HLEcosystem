@@ -1,0 +1,336 @@
+@using HLE.FileServer.Models
+@using HLE.FileServer.Helpers
+@{
+    ViewData["Title"] = "Groups";
+    var ownedGroups = ViewBag.OwnedGroups as List<Group> ?? new List<Group>();
+    var memberGroups = ViewBag.MemberGroups as List<Group> ?? new List<Group>();
+}
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Groups</h2>
+        @{
+            ViewData["Text"] = "Create New Group";
+            ViewData["Href"] = Url.Action("Create");
+            ViewData["Variant"] = "primary";
+            ViewData["Icon"] = "bi bi-plus-circle";
+        }
+        <partial name="_Button" />
+    </div>
+
+    @if (TempData["Success"] != null)
+    {
+        ViewData["Message"] = TempData["Success"]!.ToString();
+        ViewData["Variant"] = "success";
+        ViewData["Dismissible"] = "True";
+        <partial name="_Alert" />
+    }
+
+    @if (TempData["Error"] != null)
+    {
+        ViewData["Message"] = TempData["Error"]!.ToString();
+        ViewData["Variant"] = "danger";
+        ViewData["Dismissible"] = "True";
+        <partial name="_Alert" />
+    }
+
+    <!-- Owned Groups Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h4 class="mb-3">
+                @Html.Raw(Icons.Get("user", 20, "me-2"))
+                My Groups (@ownedGroups.Count)
+            </h4>
+
+            @if (ownedGroups.Any())
+            {
+                <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+                    @foreach (var group in ownedGroups)
+                    {
+                        <div class="col">
+                            <div class="card h-100 group-card">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-start mb-3">
+                                        <h5 class="card-title mb-0">
+                                            @Html.Raw(Icons.Get("grid", 20, "me-2"))
+                                            @group.Name
+                                        </h5>
+                                        @{
+                                            ViewData["Text"] = "Owner";
+                                            ViewData["Variant"] = "primary";
+                                            ViewData["Pill"] = true;
+                                        }
+                                        <partial name="_Badge" />
+                                    </div>
+
+                                    @if (!string.IsNullOrEmpty(group.Description))
+                                    {
+                                        <p class="card-text text-muted-foreground mb-3">@group.Description</p>
+                                    }
+
+                                    <div class="group-stats mb-3">
+                                        <div class="d-flex justify-content-between mb-2">
+                                            <small class="text-muted-foreground">
+                                                @Html.Raw(Icons.Get("user", 14, "me-1"))
+                                                @group.Members.Count members
+                                            </small>
+                                            <small class="text-muted-foreground">
+                                                @Html.Raw(Icons.Get("activity", 14, "me-1"))
+                                                @FormatFileSize(group.StorageUsedBytes)
+                                            </small>
+                                        </div>
+
+                                        @if (group.StorageQuotaBytes > 0)
+                                        {
+                                            var percentUsed = (double)group.StorageUsedBytes / group.StorageQuotaBytes * 100;
+                                            <div class="mb-2">
+                                                @{
+                                                    ViewData["Value"] = (int)percentUsed;
+                                                    ViewData["Height"] = "6px";
+                                                    ViewData["Variant"] = percentUsed > 90 ? "danger" : percentUsed > 70 ? "warning" : "primary";
+                                                }
+                                                <partial name="_ProgressBar" />
+                                            </div>
+                                            <small class="text-muted-foreground">
+                                                @FormatFileSize(group.StorageUsedBytes) / @FormatFileSize(group.StorageQuotaBytes)
+                                            </small>
+                                        }
+                                        else
+                                        {
+                                            <small class="text-muted-foreground">Unlimited storage</small>
+                                        }
+                                    </div>
+
+                                    <div class="d-flex gap-2">
+                                        @{
+                                            ViewData["Text"] = "Open";
+                                            ViewData["Href"] = Url.Action("Details", new { id = group.Id });
+                                            ViewData["Variant"] = "primary";
+                                            ViewData["Size"] = "sm";
+                                            ViewData["CssClass"] = "flex-grow-1";
+                                        }
+                                        <partial name="_Button" />
+                                    </div>
+                                </div>
+                                <div class="card-footer">
+                                    <small class="text-muted-foreground">
+                                        Created @group.CreatedDate.ToLocalTime().ToString("MMM dd, yyyy")
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="card">
+                    <div class="card-body text-center py-5">
+                        @Html.Raw(Icons.Get("grid", 64, "text-muted mb-3"))
+                        <h5>No Groups Yet</h5>
+                        <p class="text-muted-foreground mb-3">Create your first group to start collaborating!</p>
+                        @{
+                            ViewData["Text"] = "Create New Group";
+                            ViewData["Href"] = Url.Action("Create");
+                            ViewData["Variant"] = "primary";
+                        }
+                        <partial name="_Button" />
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Member Groups Section -->
+    <div class="row">
+        <div class="col-12">
+            <h4 class="mb-3">
+                @Html.Raw(Icons.Get("share", 20, "me-2"))
+                Groups I'm In (@memberGroups.Count)
+            </h4>
+
+            @if (memberGroups.Any())
+            {
+                <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+                    @foreach (var group in memberGroups)
+                    {
+                        var member = group.Members.FirstOrDefault(m => m.UserId == User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value);
+                        <div class="col">
+                            <div class="card h-100 group-card">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-start mb-3">
+                                        <h5 class="card-title mb-0">
+                                            @Html.Raw(Icons.Get("grid", 20, "me-2"))
+                                            @group.Name
+                                        </h5>
+                                        @{
+                                            var roleText = member?.Role.ToString() ?? "Member";
+                                            var roleVariant = member?.Role == GroupRole.Admin ? "warning" : "secondary";
+                                            ViewData["Text"] = roleText;
+                                            ViewData["Variant"] = roleVariant;
+                                            ViewData["Pill"] = true;
+                                        }
+                                        <partial name="_Badge" />
+                                    </div>
+
+                                    @if (!string.IsNullOrEmpty(group.Description))
+                                    {
+                                        <p class="card-text text-muted-foreground mb-3">@group.Description</p>
+                                    }
+
+                                    <div class="group-stats mb-3">
+                                        <div class="d-flex justify-content-between mb-2">
+                                            <small class="text-muted-foreground">
+                                                @Html.Raw(Icons.Get("user", 14, "me-1"))
+                                                @group.Members.Count members
+                                            </small>
+                                            <small class="text-muted-foreground">
+                                                Owner: @(group.Owner?.Email ?? "Unknown")
+                                            </small>
+                                        </div>
+
+                                        @if (member != null)
+                                        {
+                                            <div class="permissions-list mt-2">
+                                                <small class="text-muted-foreground d-block mb-1">Permissions:</small>
+                                                <div class="d-flex flex-wrap gap-1">
+                                                    @if (member.CanUpload)
+                                                    {
+                                                        ViewData["Text"] = "Upload";
+                                                        ViewData["Variant"] = "success";
+                                                        ViewData["Size"] = "sm";
+                                                        <partial name="_Badge" />
+                                                    }
+                                                    @if (member.CanDownload)
+                                                    {
+                                                        ViewData["Text"] = "Download";
+                                                        ViewData["Variant"] = "info";
+                                                        ViewData["Size"] = "sm";
+                                                        <partial name="_Badge" />
+                                                    }
+                                                    @if (member.CanDelete)
+                                                    {
+                                                        ViewData["Text"] = "Delete";
+                                                        ViewData["Variant"] = "danger";
+                                                        ViewData["Size"] = "sm";
+                                                        <partial name="_Badge" />
+                                                    }
+                                                    @if (member.CanManageMembers)
+                                                    {
+                                                        ViewData["Text"] = "Manage";
+                                                        ViewData["Variant"] = "warning";
+                                                        ViewData["Size"] = "sm";
+                                                        <partial name="_Badge" />
+                                                    }
+                                                </div>
+                                            </div>
+                                        }
+                                    </div>
+
+                                    <div class="d-flex gap-2">
+                                        @{
+                                            ViewData["Text"] = "Open";
+                                            ViewData["Href"] = Url.Action("Details", new { id = group.Id });
+                                            ViewData["Variant"] = "primary";
+                                            ViewData["Size"] = "sm";
+                                            ViewData["CssClass"] = "flex-grow-1";
+                                        }
+                                        <partial name="_Button" />
+                                    </div>
+                                </div>
+                                <div class="card-footer">
+                                    <small class="text-muted-foreground">
+                                        Joined @(member?.JoinedDate.ToLocalTime().ToString("MMM dd, yyyy") ?? "Unknown")
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="card">
+                    <div class="card-body text-center py-5">
+                        @Html.Raw(Icons.Get("share", 64, "text-muted mb-3"))
+                        <h5>Not a Member of Any Groups</h5>
+                        <p class="text-muted-foreground">You'll see groups here when someone adds you as a member.</p>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@functions {
+    string FormatFileSize(long bytes)
+    {
+        string[] sizes = { "B", "KB", "MB", "GB", "TB" };
+        double len = bytes;
+        int order = 0;
+        while (len >= 1024 && order < sizes.Length - 1)
+        {
+            order++;
+            len = len / 1024;
+        }
+        return $"{len:0.##} {sizes[order]}";
+    }
+}
+
+<style>
+    .group-card {
+        background: var(--card);
+        border-color: var(--border);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .group-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-lg);
+    }
+
+    .card {
+        background: var(--card);
+        border-color: var(--border);
+        color: var(--foreground);
+    }
+
+    .card-header,
+    .card-footer {
+        background: var(--muted);
+        border-color: var(--border);
+        color: var(--foreground);
+    }
+
+    .card-body {
+        background: var(--card);
+    }
+
+    .card-title {
+        color: var(--foreground);
+    }
+
+    .card-text {
+        color: var(--muted-foreground);
+    }
+
+    .text-muted-foreground {
+        color: var(--muted-foreground) !important;
+    }
+
+    .text-muted {
+        color: var(--muted-foreground) !important;
+    }
+
+    .group-stats {
+        padding: 0.75rem;
+        background: var(--muted);
+        border-radius: var(--radius);
+    }
+
+    .permissions-list {
+        padding: 0.5rem;
+        background: var(--accent);
+        border-radius: var(--radius-sm);
+    }
+</style>

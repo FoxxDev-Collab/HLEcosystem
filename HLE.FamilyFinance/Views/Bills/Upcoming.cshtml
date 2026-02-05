@@ -1,0 +1,122 @@
+@using HLE.FamilyFinance.Services.Interfaces
+@using HLE.FamilyFinance.Helpers
+@using HLE.FamilyFinance.Models.Enums
+@model List<UpcomingBillDto>
+@{
+    ViewData["Title"] = "Upcoming Bills";
+    var days = (int)(ViewData["Days"] ?? 30);
+    var groupedBills = Model.GroupBy(b => b.DueDate).OrderBy(g => g.Key).ToList();
+}
+
+<div class="py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi-clock me-2"></i>Upcoming Bills</h2>
+        <div>
+            <div class="btn-group me-2">
+                <a asp-action="Upcoming" asp-route-days="7" class="btn btn-outline-secondary @(days == 7 ? "active" : "")">7 days</a>
+                <a asp-action="Upcoming" asp-route-days="14" class="btn btn-outline-secondary @(days == 14 ? "active" : "")">14 days</a>
+                <a asp-action="Upcoming" asp-route-days="30" class="btn btn-outline-secondary @(days == 30 ? "active" : "")">30 days</a>
+            </div>
+            <a asp-action="Index" class="btn btn-outline-secondary"><i class="bi-list me-1"></i>All Bills</a>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card bg-warning text-dark">
+                <div class="card-body">
+                    <h6 class="text-dark-50">Total Due</h6>
+                    <h3 class="mb-0">$@Model.Sum(b => b.ExpectedAmount).ToString("N2")</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-danger text-white">
+                <div class="card-body">
+                    <h6 class="text-white-50">Due in 3 days</h6>
+                    <h3 class="mb-0">$@Model.Where(b => b.DaysUntilDue <= 3).Sum(b => b.ExpectedAmount).ToString("N2")</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <h6 class="text-white-50">Auto-Pay</h6>
+                    <h3 class="mb-0">@Model.Count(b => b.AutoPay) bills</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (Model.Count == 0)
+    {
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <i class="bi-calendar-check fs-1 text-success"></i>
+                <p class="text-muted mt-2">No bills due in the next @days days!</p>
+                <a asp-action="Index" class="btn btn-outline-primary">View All Bills</a>
+            </div>
+        </div>
+    }
+    else
+    {
+        @foreach (var group in groupedBills)
+        {
+            var daysUntil = (group.Key.ToDateTime(TimeOnly.MinValue) - DateTime.Today).Days;
+            var dateLabel = daysUntil switch
+            {
+                0 => "Today",
+                1 => "Tomorrow",
+                _ => group.Key.ToString("dddd, MMM d")
+            };
+            var headerClass = daysUntil <= 0 ? "bg-danger text-white" : daysUntil <= 3 ? "bg-warning" : "bg-light";
+
+            <div class="card mb-3">
+                <div class="card-header @headerClass d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">@dateLabel</h5>
+                    <span>$@group.Sum(b => b.ExpectedAmount).ToString("N2")</span>
+                </div>
+                <div class="list-group list-group-flush">
+                    @foreach (var bill in group)
+                    {
+                        var icon = bill.Icon ?? IconHelper.GetBillIcon(bill.Category);
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center">
+                                @if (icon.StartsWith("bi-"))
+                                {
+                                    <i class="@icon fs-4 me-3 text-muted"></i>
+                                }
+                                <div>
+                                    <h6 class="mb-0">@bill.Name</h6>
+                                    <small class="text-muted">
+                                        @bill.Category
+                                        @if (bill.AutoPay)
+                                        {
+                                            <span class="badge bg-info ms-1"><i class="bi-arrow-repeat"></i> Auto-pay</span>
+                                        }
+                                    </small>
+                                </div>
+                            </div>
+                            <div class="text-end">
+                                <h5 class="mb-0">$@bill.ExpectedAmount.ToString("N2")</h5>
+                                @if (bill.PaymentId.HasValue && bill.Status != BillPaymentStatus.Paid)
+                                {
+                                    <form asp-action="MarkPaid" method="post" class="d-inline">
+                                        <input type="hidden" name="paymentId" value="@bill.PaymentId" />
+                                        <button type="submit" class="btn btn-sm btn-success mt-1">
+                                            <i class="bi-check me-1"></i>Mark Paid
+                                        </button>
+                                    </form>
+                                }
+                                else if (bill.Status == BillPaymentStatus.Paid)
+                                {
+                                    <span class="badge bg-success"><i class="bi-check-circle me-1"></i>Paid</span>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    }
+</div>

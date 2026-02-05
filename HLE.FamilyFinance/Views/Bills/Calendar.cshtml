@@ -1,0 +1,158 @@
+@using HLE.FamilyFinance.Services.Interfaces
+@using HLE.FamilyFinance.Helpers
+@using HLE.FamilyFinance.Models.Enums
+@model List<BillCalendarEntryDto>
+@{
+    ViewData["Title"] = "Bill Calendar";
+    var year = (int)(ViewData["Year"] ?? DateTime.Today.Year);
+    var month = (int)(ViewData["Month"] ?? DateTime.Today.Month);
+    var currentDate = new DateTime(year, month, 1);
+    var daysInMonth = DateTime.DaysInMonth(year, month);
+    var startDayOfWeek = (int)currentDate.DayOfWeek;
+    var prevMonth = currentDate.AddMonths(-1);
+    var nextMonth = currentDate.AddMonths(1);
+
+    // Create a lookup for bills by day
+    var billsByDay = Model.ToDictionary(e => e.Date.Day, e => e);
+
+    // Calculate totals from all entries
+    var totalBillCount = Model.Sum(e => e.Bills.Count);
+    var totalDue = Model.Sum(e => e.TotalDue);
+    var paidCount = Model.Sum(e => e.Bills.Count(b => b.Status == BillPaymentStatus.Paid));
+    var pendingCount = Model.Sum(e => e.Bills.Count(b => b.Status == BillPaymentStatus.Pending));
+}
+
+<div class="py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="@IconHelper.Nav.Bills me-2"></i>Bill Calendar</h2>
+        <div>
+            <a asp-action="Index" class="btn btn-outline-secondary"><i class="bi-list me-1"></i>List View</a>
+            <a asp-action="Create" class="btn btn-primary"><i class="bi-plus-lg me-1"></i>Add Bill</a>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <a asp-action="Calendar" asp-route-year="@prevMonth.Year" asp-route-month="@prevMonth.Month" class="btn btn-sm btn-outline-secondary">
+                <i class="bi-chevron-left"></i>
+            </a>
+            <h4 class="mb-0">@currentDate.ToString("MMMM yyyy")</h4>
+            <a asp-action="Calendar" asp-route-year="@nextMonth.Year" asp-route-month="@nextMonth.Month" class="btn btn-sm btn-outline-secondary">
+                <i class="bi-chevron-right"></i>
+            </a>
+        </div>
+        <div class="card-body p-0">
+            <table class="table table-bordered mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="text-center" style="width: 14.28%;">Sun</th>
+                        <th class="text-center" style="width: 14.28%;">Mon</th>
+                        <th class="text-center" style="width: 14.28%;">Tue</th>
+                        <th class="text-center" style="width: 14.28%;">Wed</th>
+                        <th class="text-center" style="width: 14.28%;">Thu</th>
+                        <th class="text-center" style="width: 14.28%;">Fri</th>
+                        <th class="text-center" style="width: 14.28%;">Sat</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @{
+                        var dayCounter = 1;
+                        var totalCells = startDayOfWeek + daysInMonth;
+                        var rows = (int)Math.Ceiling(totalCells / 7.0);
+                    }
+                    @for (var row = 0; row < rows; row++)
+                    {
+                        <tr style="height: 100px;">
+                            @for (var col = 0; col < 7; col++)
+                            {
+                                var cellIndex = row * 7 + col;
+                                if (cellIndex < startDayOfWeek || dayCounter > daysInMonth)
+                                {
+                                    <td class="bg-light"></td>
+                                }
+                                else
+                                {
+                                    var day = dayCounter;
+                                    var hasEntry = billsByDay.TryGetValue(day, out var entry);
+                                    var billsForDay = hasEntry ? entry!.Bills : new List<UpcomingBillDto>();
+                                    var isToday = year == DateTime.Today.Year && month == DateTime.Today.Month && day == DateTime.Today.Day;
+                                    <td class="@(isToday ? "bg-primary bg-opacity-10" : "") align-top p-2">
+                                        <div class="d-flex justify-content-between">
+                                            <span class="@(isToday ? "badge bg-primary" : "text-muted small")">@day</span>
+                                            @if (billsForDay.Any())
+                                            {
+                                                var dayTotal = billsForDay.Sum(b => b.ExpectedAmount);
+                                                <small class="text-muted">$@dayTotal.ToString("N0")</small>
+                                            }
+                                        </div>
+                                        @foreach (var bill in billsForDay.Take(3))
+                                        {
+                                            var statusClass = bill.Status switch
+                                            {
+                                                BillPaymentStatus.Paid => "bg-success",
+                                                BillPaymentStatus.Overdue => "bg-danger",
+                                                BillPaymentStatus.Scheduled => "bg-info",
+                                                _ => "bg-warning"
+                                            };
+                                            <div class="small @statusClass text-white rounded px-1 mb-1 text-truncate" style="font-size: 0.7rem;" title="@bill.Name - $@bill.ExpectedAmount.ToString("N2")">
+                                                @bill.Name
+                                            </div>
+                                        }
+                                        @if (billsForDay.Count > 3)
+                                        {
+                                            <small class="text-muted">+@(billsForDay.Count - 3) more</small>
+                                        }
+                                    </td>
+                                    dayCounter++;
+                                }
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Legend</h5>
+                </div>
+                <div class="card-body">
+                    <span class="badge bg-warning me-2">Pending</span>
+                    <span class="badge bg-info me-2">Scheduled</span>
+                    <span class="badge bg-success me-2">Paid</span>
+                    <span class="badge bg-danger">Overdue</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Monthly Summary</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col">
+                            <h4>@totalBillCount</h4>
+                            <small class="text-muted">Bills</small>
+                        </div>
+                        <div class="col">
+                            <h4>$@totalDue.ToString("N2")</h4>
+                            <small class="text-muted">Total Due</small>
+                        </div>
+                        <div class="col">
+                            <h4 class="text-success">@paidCount</h4>
+                            <small class="text-muted">Paid</small>
+                        </div>
+                        <div class="col">
+                            <h4 class="text-warning">@pendingCount</h4>
+                            <small class="text-muted">Pending</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

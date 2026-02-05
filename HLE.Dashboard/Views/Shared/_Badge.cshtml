@@ -1,0 +1,17 @@
+@*
+    Badge Component
+    Usage:
+    <partial name="_Badge" model='new { Text = "New", Variant = "primary", Pill = "True" }' />
+    Variants: primary, secondary, success, danger, warning, info, light, dark
+*@
+@{
+    var text = ViewData["Text"]?.ToString() ?? "";
+    var variant = ViewData["Variant"]?.ToString() ?? "primary";
+    var pill = ViewData["Pill"]?.ToString() == "True";
+    var cssClass = ViewData["CssClass"]?.ToString() ?? "";
+    
+    var badgeClass = $"badge bg-{variant} {cssClass}";
+    if (pill) badgeClass += " rounded-pill";
+}
+
+<span class="@badgeClass">@text</span>

@@ -1,0 +1,152 @@
+@model HLE.FamilyFinance.Models.ViewModels.RecurringTransactionEditViewModel
+@{
+    ViewData["Title"] = "Edit Recurring Transaction";
+}
+
+<div class="py-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-action="Index">Recurring Transactions</a></li>
+            <li class="breadcrumb-item active">Edit</li>
+        </ol>
+    </nav>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">Edit Recurring Transaction</h4>
+                </div>
+                <div class="card-body">
+                    <form asp-action="Edit" method="post">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" asp-for="Id" />
+                        <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="mb-3">
+                                    <label asp-for="Name" class="form-label">Name / Description</label>
+                                    <input asp-for="Name" class="form-control" />
+                                    <span asp-validation-for="Name" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label class="form-label">Status</label>
+                                    <div class="form-check form-switch">
+                                        <input asp-for="IsActive" class="form-check-input" type="checkbox" />
+                                        <label asp-for="IsActive" class="form-check-label">Active</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="Amount" class="form-label"></label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">$</span>
+                                        <input asp-for="Amount" class="form-control money-input" type="text" />
+                                    </div>
+                                    <span asp-validation-for="Amount" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="Payee" class="form-label"></label>
+                                    <input asp-for="Payee" class="form-control" />
+                                    <span asp-validation-for="Payee" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="AccountId" class="form-label">Account</label>
+                                    <select asp-for="AccountId" asp-items="@(ViewData["Accounts"] as SelectList)" class="form-select">
+                                        <option value="">Select Account...</option>
+                                    </select>
+                                    <span asp-validation-for="AccountId" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="CategoryId" class="form-label">Category</label>
+                                    <select asp-for="CategoryId" asp-items="@(ViewData["Categories"] as SelectList)" class="form-select">
+                                        <option value="">Uncategorized</option>
+                                    </select>
+                                    <span asp-validation-for="CategoryId" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr />
+                        <h5>Schedule</h5>
+
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label asp-for="Frequency" class="form-label"></label>
+                                    <select asp-for="Frequency" asp-items="@(ViewData["Frequencies"] as SelectList)" class="form-select"></select>
+                                    <span asp-validation-for="Frequency" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label asp-for="FrequencyInterval" class="form-label">Every (intervals)</label>
+                                    <input asp-for="FrequencyInterval" class="form-control" type="number" min="1" max="12" />
+                                    <span asp-validation-for="FrequencyInterval" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label asp-for="DayOfPeriod" class="form-label">Day of Period</label>
+                                    <input asp-for="DayOfPeriod" class="form-control" type="number" min="1" max="31" />
+                                    <span asp-validation-for="DayOfPeriod" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="EndDate" class="form-label">End Date (Optional)</label>
+                            <input asp-for="EndDate" class="form-control" type="date" />
+                            <span asp-validation-for="EndDate" class="text-danger"></span>
+                            <div class="form-text">Leave empty for no end date</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input asp-for="AutoCreate" class="form-check-input" type="checkbox" />
+                                <label asp-for="AutoCreate" class="form-check-label">
+                                    Auto-create transactions when due
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Description" class="form-label">Notes (Optional)</label>
+                            <textarea asp-for="Description" class="form-control" rows="2"></textarea>
+                            <span asp-validation-for="Description" class="text-danger"></span>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">Save Changes</button>
+                            <a asp-action="Index" class="btn btn-secondary">Cancel</a>
+                        </div>
+                    </form>
+                    <hr />
+                    <form asp-action="Delete" asp-route-id="@Model.Id" method="post" onsubmit="return confirm('Are you sure you want to permanently delete this recurring transaction? This cannot be undone.');">
+                        <button type="submit" class="btn btn-outline-danger"><i class="bi-trash me-1"></i>Delete Recurring Transaction</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

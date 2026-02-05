@@ -1,0 +1,127 @@
+@model EditScheduleViewModel
+@{
+    ViewData["Title"] = "Edit Maintenance Schedule";
+}
+
+<div class="container py-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-controller="Assets" asp-action="Index">Assets</a></li>
+            <li class="breadcrumb-item"><a asp-controller="Assets" asp-action="Details" asp-route-id="@Model.AssetId">@Model.AssetName</a></li>
+            <li class="breadcrumb-item"><a asp-action="ByAsset" asp-route-id="@Model.AssetId">Maintenance</a></li>
+            <li class="breadcrumb-item active">Edit Schedule</li>
+        </ol>
+    </nav>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">Edit Maintenance Schedule</h4>
+                    <small class="text-muted">Asset: @Model.AssetName</small>
+                </div>
+                <div class="card-body">
+                    <form asp-action="EditSchedule" method="post">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" asp-for="Id" />
+                        <input type="hidden" asp-for="AssetId" />
+
+                        <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+                        <div class="mb-3">
+                            <label asp-for="Name" class="form-label">Schedule Name</label>
+                            <input asp-for="Name" class="form-control" />
+                            <span asp-validation-for="Name" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Description" class="form-label">Description</label>
+                            <textarea asp-for="Description" class="form-control" rows="3"></textarea>
+                            <span asp-validation-for="Description" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input asp-for="IsActive" class="form-check-input" />
+                                <label asp-for="IsActive" class="form-check-label">
+                                    Active
+                                </label>
+                            </div>
+                            <small class="text-muted">Inactive schedules won't appear in reminders</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input asp-for="IsRecurring" class="form-check-input" id="isRecurringCheck" />
+                                <label class="form-check-label" for="isRecurringCheck">
+                                    Recurring maintenance
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="mb-3" id="intervalContainer">
+                            <label asp-for="IntervalDays" class="form-label">Repeat Every (Days)</label>
+                            <input asp-for="IntervalDays" class="form-control" type="number" min="1" max="3650" />
+                            <span asp-validation-for="IntervalDays" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="NextDueDate" class="form-label">Next Due Date</label>
+                            <input asp-for="NextDueDate" class="form-control" type="date" />
+                            <span asp-validation-for="NextDueDate" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-4">
+                            <label asp-for="NotifyDaysBefore" class="form-label">Notify Days Before Due</label>
+                            <input asp-for="NotifyDaysBefore" class="form-control" type="number" min="0" max="365" />
+                            <span asp-validation-for="NotifyDaysBefore" class="text-danger"></span>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">Save Changes</button>
+                            <a asp-action="ByAsset" asp-route-id="@Model.AssetId" class="btn btn-outline-secondary">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">Schedule Info</h6>
+                </div>
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item">
+                        <small class="text-muted">Schedule ID</small>
+                        <div>#@Model.Id</div>
+                    </li>
+                    <li class="list-group-item">
+                        <small class="text-muted">Type</small>
+                        <div>@(Model.IsRecurring ? "Recurring" : "One-time")</div>
+                    </li>
+                    <li class="list-group-item">
+                        <small class="text-muted">Status</small>
+                        <div>
+                            <span class="badge @(Model.IsActive ? "bg-success" : "bg-secondary")">
+                                @(Model.IsActive ? "Active" : "Inactive")
+                            </span>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function updateIntervalVisibility() {
+            const isRecurring = document.getElementById('isRecurringCheck').checked;
+            document.getElementById('intervalContainer').style.display = isRecurring ? 'block' : 'none';
+        }
+
+        document.getElementById('isRecurringCheck').addEventListener('change', updateIntervalVisibility);
+        updateIntervalVisibility();
+    </script>
+}

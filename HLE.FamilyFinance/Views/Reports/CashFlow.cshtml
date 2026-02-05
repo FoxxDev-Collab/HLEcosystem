@@ -1,0 +1,129 @@
+@using HLE.FamilyFinance.Services.Interfaces
+@model List<CashFlowDto>
+@{
+    ViewData["Title"] = "Cash Flow Report";
+    var totalIncome = Model.Sum(m => m.Income);
+    var totalExpenses = Model.Sum(m => m.Expenses);
+    var totalNet = totalIncome - totalExpenses;
+    var avgMonthlyIncome = Model.Any() ? totalIncome / Model.Count : 0;
+    var avgMonthlyExpenses = Model.Any() ? totalExpenses / Model.Count : 0;
+}
+
+<div class="py-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-action="Index">Reports</a></li>
+            <li class="breadcrumb-item active">Cash Flow</li>
+        </ol>
+    </nav>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Cash Flow Report</h2>
+        <div class="btn-group">
+            <a asp-action="CashFlow" asp-route-months="6" class="btn btn-outline-secondary">6 Months</a>
+            <a asp-action="CashFlow" asp-route-months="12" class="btn btn-outline-secondary">12 Months</a>
+            <a asp-action="CashFlow" asp-route-months="24" class="btn btn-outline-secondary">24 Months</a>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <h6 class="text-white-50">Total Income</h6>
+                    <h3 class="mb-0">$@totalIncome.ToString("N2")</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-danger text-white">
+                <div class="card-body">
+                    <h6 class="text-white-50">Total Expenses</h6>
+                    <h3 class="mb-0">$@totalExpenses.ToString("N2")</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card @(totalNet >= 0 ? "bg-primary" : "bg-warning") text-white">
+                <div class="card-body">
+                    <h6 class="text-white-50">Net Cash Flow</h6>
+                    <h3 class="mb-0">$@totalNet.ToString("N2")</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <h6 class="text-white-50">Avg Monthly Savings</h6>
+                    <h3 class="mb-0">$@((avgMonthlyIncome - avgMonthlyExpenses).ToString("N2"))</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (!Model.Any())
+    {
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <p class="text-muted mb-3">No cash flow data available yet. Start adding transactions to see your cash flow.</p>
+                <a asp-controller="Transactions" asp-action="Create" class="btn btn-primary">Add Transaction</a>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Monthly Breakdown</h5>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Month</th>
+                            <th class="text-end">Income</th>
+                            <th class="text-end">Expenses</th>
+                            <th class="text-end">Net</th>
+                            <th style="width: 25%">Cash Flow</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var month in Model)
+                        {
+                            var maxAmount = Model.Max(m => Math.Max(m.Income, m.Expenses));
+                            var incomeWidth = maxAmount > 0 ? (month.Income / maxAmount) * 100 : 0;
+                            var expenseWidth = maxAmount > 0 ? (month.Expenses / maxAmount) * 100 : 0;
+                            <tr>
+                                <td><strong>@month.MonthName @month.Year</strong></td>
+                                <td class="text-end text-success">+$@month.Income.ToString("N2")</td>
+                                <td class="text-end text-danger">-$@month.Expenses.ToString("N2")</td>
+                                <td class="text-end @(month.NetCashFlow >= 0 ? "text-success fw-bold" : "text-danger fw-bold")">
+                                    @(month.NetCashFlow >= 0 ? "+" : "")$@month.NetCashFlow.ToString("N2")
+                                </td>
+                                <td>
+                                    <div class="d-flex flex-column gap-1">
+                                        <div class="progress" style="height: 10px;">
+                                            <div class="progress-bar bg-success" style="width: @incomeWidth%"></div>
+                                        </div>
+                                        <div class="progress" style="height: 10px;">
+                                            <div class="progress-bar bg-danger" style="width: @expenseWidth%"></div>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot class="table-light fw-bold">
+                        <tr>
+                            <td>TOTAL</td>
+                            <td class="text-end text-success">$@totalIncome.ToString("N2")</td>
+                            <td class="text-end text-danger">$@totalExpenses.ToString("N2")</td>
+                            <td class="text-end @(totalNet >= 0 ? "text-success" : "text-danger")">$@totalNet.ToString("N2")</td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    }
+</div>

@@ -1,0 +1,140 @@
+@using HLE.FamilyFinance.Services.Interfaces
+@using HLE.FamilyFinance.Models.Enums
+@model DebtDetailDto
+@{
+    ViewData["Title"] = $"Edit {Model.Name}";
+}
+
+<div class="py-4">
+    <h2><i class="bi-pencil me-2"></i>Edit Debt</h2>
+    <p class="text-muted">Update details for @Model.Name</p>
+
+    <form asp-action="Edit" method="post">
+        <input type="hidden" name="id" value="@Model.Id" />
+        <div class="row">
+            <div class="col-lg-8">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Debt Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Name</label>
+                                <input name="Name" class="form-control" required value="@Model.Name" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Type</label>
+                                <select name="Type" asp-items="@(ViewData["DebtTypes"] as SelectList)" class="form-select"></select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Lender</label>
+                                <input name="Lender" class="form-control" value="@Model.Lender" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Account Number (last 4)</label>
+                                <input name="AccountNumberLast4" class="form-control" maxlength="4" value="@Model.AccountNumberLast4" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Loan Details</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Original Principal</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input name="OriginalPrincipal" class="form-control money-input" type="text" required value="@Model.OriginalPrincipal" />
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Current Balance</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input name="CurrentBalance" class="form-control money-input" type="text" required value="@Model.CurrentBalance" />
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Interest Rate (APR %)</label>
+                                <div class="input-group">
+                                    <input name="InterestRate" class="form-control" type="number" step="0.001" required value="@Model.InterestRate" />
+                                    <span class="input-group-text">%</span>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Term (Months)</label>
+                                <input name="TermMonths" class="form-control" type="number" value="@Model.TermMonths" />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Origination Date</label>
+                                <input name="OriginationDate" class="form-control" type="date" value="@Model.OriginationDate?.ToString("yyyy-MM-dd")" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Payment Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Minimum Payment</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input name="MinimumPayment" class="form-control money-input" type="text" required value="@Model.MinimumPayment" />
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Payment Day of Month</label>
+                                <input name="PaymentDayOfMonth" class="form-control" type="number" min="1" max="31" value="@Model.PaymentDayOfMonth" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Link to Account</label>
+                                <select name="LinkedAccountId" asp-items="@(ViewData["Accounts"] as SelectList)" class="form-select">
+                                    <option value="">None</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">Notes</label>
+                            <textarea name="Notes" class="form-control" rows="3">@Model.Notes</textarea>
+                        </div>
+                        <div class="form-check">
+                            <input name="IncludeInNetWorth" class="form-check-input" type="checkbox" @(Model.IncludeInNetWorth ? "checked" : "") />
+                            <label class="form-check-label">Include in net worth calculation</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary"><i class="bi-check-lg me-1"></i>Save Changes</button>
+                    <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-outline-secondary">Cancel</a>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+<script>
+    // Set initial type value
+    document.querySelector('select[name="Type"]').value = '@Model.Type';
+    // Set initial linked account value
+    @if (Model.LinkedAccountId.HasValue)
+    {
+        <text>document.querySelector('select[name="LinkedAccountId"]').value = '@Model.LinkedAccountId';</text>
+    }
+</script>
+}

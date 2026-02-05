@@ -1,0 +1,95 @@
+@model HLE.FamilyHealth.Models.ViewModels.WorkoutImportViewModel
+@{
+    ViewData["Title"] = "Import Workouts";
+}
+
+<div class="container-fluid py-4">
+    <div class="mb-4">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-1">
+                <li class="breadcrumb-item"><a href="@Url.Action("Index")">Workouts</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Import</li>
+            </ol>
+        </nav>
+        <h2 class="mb-1">Import Workouts</h2>
+        <p class="text-muted mb-0">Import workout data from a CSV file</p>
+    </div>
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+        ViewData["AlertType"] = "danger";
+        ViewData["AlertMessage"] = TempData["ErrorMessage"]?.ToString();
+        ViewData["AlertDismissible"] = true;
+        <partial name="_Alert" />
+    }
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-body">
+                    <form asp-action="Import" method="post" enctype="multipart/form-data">
+                        @Html.AntiForgeryToken()
+
+                        <div class="mb-3">
+                            <label asp-for="FamilyMemberId" class="form-label"></label>
+                            <select asp-for="FamilyMemberId" asp-items="Model.FamilyMembers" class="form-select">
+                                <option value="">Select Family Member</option>
+                            </select>
+                            <span asp-validation-for="FamilyMemberId" class="text-danger"></span>
+                            <div class="form-text">Select which family member these workouts belong to</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="CsvFile" class="form-label"></label>
+                            <input asp-for="CsvFile" type="file" class="form-control" accept=".csv" />
+                            <span asp-validation-for="CsvFile" class="text-danger"></span>
+                            <div class="form-text">Upload a CSV file exported from your fitness app</div>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-upload"></i> Upload and Preview
+                            </button>
+                            <a href="@Url.Action("Index")" class="btn btn-outline-secondary">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">CSV Format</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted small">Your CSV file should include these columns:</p>
+                    <ul class="small">
+                        <li><strong>title</strong> - Workout name</li>
+                        <li><strong>start_time</strong> - Start time</li>
+                        <li><strong>end_time</strong> - End time (optional)</li>
+                        <li><strong>description</strong> - Notes (optional)</li>
+                        <li><strong>exercise_title</strong> - Exercise name</li>
+                        <li><strong>superset_id</strong> - Superset group (optional)</li>
+                        <li><strong>exercise_notes</strong> - Exercise notes (optional)</li>
+                        <li><strong>set_index</strong> - Set number</li>
+                        <li><strong>set_type</strong> - normal, warmup, failure, dropset</li>
+                        <li><strong>weight_lbs</strong> - Weight in pounds (optional)</li>
+                        <li><strong>reps</strong> - Repetitions (optional)</li>
+                        <li><strong>distance_miles</strong> - Distance (optional)</li>
+                        <li><strong>duration_seconds</strong> - Duration (optional)</li>
+                        <li><strong>rpe</strong> - Rate of perceived exertion (optional)</li>
+                    </ul>
+                    <p class="text-muted small mb-0">
+                        Date format: <code>d MMM yyyy, HH:mm</code><br>
+                        Example: <code>19 Jan 2026, 08:30</code>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

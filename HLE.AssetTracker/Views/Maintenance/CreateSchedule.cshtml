@@ -1,0 +1,113 @@
+@model CreateScheduleViewModel
+@{
+    ViewData["Title"] = "Create Maintenance Schedule";
+}
+
+<div class="container py-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-controller="Assets" asp-action="Index">Assets</a></li>
+            <li class="breadcrumb-item"><a asp-controller="Assets" asp-action="Details" asp-route-id="@Model.AssetId">@Model.AssetName</a></li>
+            <li class="breadcrumb-item"><a asp-action="ByAsset" asp-route-id="@Model.AssetId">Maintenance</a></li>
+            <li class="breadcrumb-item active">Create Schedule</li>
+        </ol>
+    </nav>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">Create Maintenance Schedule</h4>
+                    <small class="text-muted">Asset: @Model.AssetName</small>
+                </div>
+                <div class="card-body">
+                    <form asp-action="CreateSchedule" method="post">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" asp-for="AssetId" />
+
+                        <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+                        <div class="mb-3">
+                            <label asp-for="Name" class="form-label">Schedule Name</label>
+                            <input asp-for="Name" class="form-control" placeholder="e.g., Oil Change, Filter Replacement" />
+                            <span asp-validation-for="Name" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Description" class="form-label">Description</label>
+                            <textarea asp-for="Description" class="form-control" rows="3" placeholder="Optional details about this maintenance task"></textarea>
+                            <span asp-validation-for="Description" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input asp-for="IsRecurring" class="form-check-input" id="isRecurringCheck" />
+                                <label class="form-check-label" for="isRecurringCheck">
+                                    Recurring maintenance
+                                </label>
+                            </div>
+                            <small class="text-muted">One-time tasks will be marked inactive after completion</small>
+                        </div>
+
+                        <div class="mb-3" id="intervalContainer" style="display: none;">
+                            <label asp-for="IntervalDays" class="form-label">Repeat Every (Days)</label>
+                            <input asp-for="IntervalDays" class="form-control" type="number" min="1" max="3650" />
+                            <span asp-validation-for="IntervalDays" class="text-danger"></span>
+                            <small class="text-muted d-block mt-1">Common intervals: 30 days (monthly), 90 days (quarterly), 180 days (semi-annual), 365 days (annual)</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="NextDueDate" class="form-label">Next Due Date</label>
+                            <input asp-for="NextDueDate" class="form-control" type="date" />
+                            <span asp-validation-for="NextDueDate" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-4">
+                            <label asp-for="NotifyDaysBefore" class="form-label">Notify Days Before Due</label>
+                            <input asp-for="NotifyDaysBefore" class="form-control" type="number" min="0" max="365" />
+                            <span asp-validation-for="NotifyDaysBefore" class="text-danger"></span>
+                            <small class="text-muted d-block mt-1">Show reminder this many days before the due date</small>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">Create Schedule</button>
+                            <a asp-action="ByAsset" asp-route-id="@Model.AssetId" class="btn btn-outline-secondary">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">Tips</h6>
+                </div>
+                <div class="card-body">
+                    <ul class="small mb-0">
+                        <li>Use clear, descriptive names for easy identification</li>
+                        <li>Recurring tasks automatically advance after completion</li>
+                        <li>One-time tasks become inactive after completion</li>
+                        <li>Set notification reminders to stay ahead of maintenance</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.getElementById('isRecurringCheck').addEventListener('change', function() {
+            document.getElementById('intervalContainer').style.display = this.checked ? 'block' : 'none';
+            if (this.checked) {
+                document.getElementById('IntervalDays').value = document.getElementById('IntervalDays').value || 30;
+            }
+        });
+
+        // Initialize on page load
+        if (document.getElementById('isRecurringCheck').checked) {
+            document.getElementById('intervalContainer').style.display = 'block';
+        }
+    </script>
+}

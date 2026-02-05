@@ -1,0 +1,33 @@
+@*
+    Alert Component
+    Usage:
+    <partial name="_Alert" model='new { Message = "Success!", Variant = "success", Dismissible = "True" }' />
+    Variants: primary, secondary, success, danger, warning, info, light, dark
+*@
+@{
+    var message = ViewData["Message"]?.ToString() ?? "";
+    var variant = ViewData["Variant"]?.ToString() ?? "info";
+    var dismissible = ViewData["Dismissible"]?.ToString() == "True";
+    var icon = ViewData["Icon"]?.ToString() ?? "";
+    var title = ViewData["Title"]?.ToString() ?? "";
+    var cssClass = ViewData["CssClass"]?.ToString() ?? "";
+    
+    var alertClass = $"alert alert-{variant} {cssClass}";
+    if (dismissible) alertClass += " alert-dismissible fade show";
+}
+
+<div class="@alertClass" role="alert">
+    @if (!string.IsNullOrEmpty(icon))
+    {
+        <i class="@icon me-2"></i>
+    }
+    @if (!string.IsNullOrEmpty(title))
+    {
+        <h4 class="alert-heading">@title</h4>
+    }
+    @Html.Raw(message)
+    @if (dismissible)
+    {
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    }
+</div>

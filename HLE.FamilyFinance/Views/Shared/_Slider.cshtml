@@ -1,0 +1,108 @@
+@*
+    Slider Component
+    Usage:
+    <partial name="_Slider" model='new { Id = "slider1", Value = 50, Min = 0, Max = 100, Step = 1, Variant = "primary" }' />
+    Variants: primary (default), success, warning, danger
+    Marks: Pass array of mark values via ViewData["Marks"]
+*@
+@{
+    var id = ViewData["Id"]?.ToString() ?? $"slider-{Guid.NewGuid().ToString("N").Substring(0, 8)}";
+    var value = int.Parse(ViewData["Value"]?.ToString() ?? "50");
+    var min = int.Parse(ViewData["Min"]?.ToString() ?? "0");
+    var max = int.Parse(ViewData["Max"]?.ToString() ?? "100");
+    var step = int.Parse(ViewData["Step"]?.ToString() ?? "1");
+    var variant = ViewData["Variant"]?.ToString() ?? "primary";
+    var disabled = ViewData["Disabled"]?.ToString()?.ToLower() == "true";
+    var showMarks = ViewData["ShowMarks"]?.ToString()?.ToLower() == "true";
+    var marks = ViewData["Marks"] as List<int> ?? new List<int>();
+
+    var percentage = ((double)(value - min) / (max - min)) * 100;
+    var sliderClass = $"slider slider-{variant}";
+    if (disabled) sliderClass += " disabled";
+}
+
+<div class="@sliderClass" data-slider-id="@id" @(disabled ? "disabled" : "")>
+    <div class="slider-track">
+        <div class="slider-range" id="@id-range" style="width: @percentage%"></div>
+        <div class="slider-thumb" id="@id-thumb" style="left: @percentage%" tabindex="@(disabled ? "-1" : "0")" role="slider"
+             aria-valuemin="@min" aria-valuemax="@max" aria-valuenow="@value" aria-label="Slider"></div>
+    </div>
+    <input type="hidden" id="@id" name="@id" value="@value" data-min="@min" data-max="@max" data-step="@step" />
+</div>
+
+@if (showMarks && marks.Any())
+{
+    <div class="slider-marks">
+        @foreach (var mark in marks)
+        {
+            <span class="slider-mark">@mark</span>
+        }
+    </div>
+}
+
+@section Scripts {
+    <script>
+        (function() {
+            const slider = document.querySelector('[data-slider-id="@id"]');
+            if (!slider || slider.classList.contains('disabled')) return;
+
+            const track = slider.querySelector('.slider-track');
+            const range = slider.querySelector('#@id-range');
+            const thumb = slider.querySelector('#@id-thumb');
+            const input = document.querySelector('#@id');
+
+            const min = parseInt(input.dataset.min);
+            const max = parseInt(input.dataset.max);
+            const step = parseInt(input.dataset.step);
+
+            function updateSlider(clientX) {
+                const rect = track.getBoundingClientRect();
+                let percentage = ((clientX - rect.left) / rect.width) * 100;
+                percentage = Math.max(0, Math.min(100, percentage));
+
+                let value = min + (percentage / 100) * (max - min);
+                value = Math.round(value / step) * step;
+                value = Math.max(min, Math.min(max, value));
+
+                percentage = ((value - min) / (max - min)) * 100;
+
+                range.style.width = percentage + '%';
+                thumb.style.left = percentage + '%';
+                thumb.setAttribute('aria-valuenow', value);
+                input.value = value;
+            }
+
+            let isDragging = false;
+
+            thumb.addEventListener('mousedown', () => isDragging = true);
+            track.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                updateSlider(e.clientX);
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (isDragging) updateSlider(e.clientX);
+            });
+
+            document.addEventListener('mouseup', () => isDragging = false);
+
+            // Keyboard support
+            thumb.addEventListener('keydown', (e) => {
+                let value = parseInt(input.value);
+                if (e.key === 'ArrowRight' || e.key === 'ArrowUp') {
+                    value = Math.min(max, value + step);
+                } else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') {
+                    value = Math.max(min, value - step);
+                } else {
+                    return;
+                }
+                e.preventDefault();
+                const percentage = ((value - min) / (max - min)) * 100;
+                range.style.width = percentage + '%';
+                thumb.style.left = percentage + '%';
+                thumb.setAttribute('aria-valuenow', value);
+                input.value = value;
+            });
+        })();
+    </script>
+}

@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  fileserver:
+    image: file-server-mvc:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: file-server-mvc
+    ports:
+      - "5000:8080"
+      - "5001:8081"
+    volumes:
+      # Persist SQLite database
+      - ./file_server.db:/app/file_server.db
+      # User uploads storage
+      - ./data/uploads:/data/uploads
+      # Group files storage
+      - ./data/group_files:/data/group_files
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:8080
+      - ConnectionStrings__DefaultConnection=DataSource=/app/file_server.db
+      # Configurable storage paths
+      - Storage__UserFilesPath=/data/uploads
+      - Storage__GroupFilesPath=/data/group_files
+    restart: unless-stopped
+    networks:
+      - fileserver-network
+
+networks:
+  fileserver-network:
+    driver: bridge

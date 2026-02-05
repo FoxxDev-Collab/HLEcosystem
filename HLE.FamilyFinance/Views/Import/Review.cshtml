@@ -1,0 +1,205 @@
+@using HLE.FamilyFinance.Services.Interfaces
+@using HLE.FamilyFinance.Models.Enums
+@model ImportReviewDto
+@{
+    ViewData["Title"] = "Review Import";
+    var categories = ViewData["Categories"] as SelectList;
+}
+
+<div class="py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="bi-file-earmark-check me-2"></i>Review Import</h2>
+            <p class="text-muted mb-0">
+                @Model.FileName • @Model.AccountName
+            </p>
+        </div>
+        <div>
+            <form asp-action="Cancel" method="post" class="d-inline">
+                <input type="hidden" name="id" value="@Model.BatchId" />
+                <button type="submit" class="btn btn-outline-danger" onclick="return confirm('Cancel this import? All pending transactions will be discarded.')">
+                    <i class="bi-x-lg me-1"></i>Cancel Import
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body text-center">
+                    <h3 class="mb-0">@Model.TotalCount</h3>
+                    <small>Total Rows</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-dark">
+                <div class="card-body text-center">
+                    <h3 class="mb-0">@Model.Transactions.Count(t => t.MatchStatus == ImportMatchStatus.Pending)</h3>
+                    <small>Pending Review</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-secondary text-white">
+                <div class="card-body text-center">
+                    <h3 class="mb-0">@Model.Transactions.Count(t => t.MatchStatus == ImportMatchStatus.Duplicate)</h3>
+                    <small>Duplicates</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body text-center">
+                    <h3 class="mb-0">@Model.Transactions.Count(t => t.MatchStatus == ImportMatchStatus.AutoMatched)</h3>
+                    <small>Auto-Matched</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <form asp-action="Confirm" method="post">
+        <input type="hidden" name="batchId" value="@Model.BatchId" />
+
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Transactions to Review</h5>
+                <div>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="selectAll">Select All New</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="deselectAll">Deselect All</button>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="table-themed table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th style="width: 40px;">
+                                <input type="checkbox" class="form-check-input" id="masterCheckbox" />
+                            </th>
+                            <th>Date</th>
+                            <th>Description</th>
+                            <th class="text-end">Amount</th>
+                            <th>Category</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (var i = 0; i < Model.Transactions.Count; i++)
+                        {
+                            var txn = Model.Transactions[i];
+                            var rowClass = txn.MatchStatus switch
+                            {
+                                ImportMatchStatus.Duplicate => "row-muted",
+                                ImportMatchStatus.AutoMatched => "row-success",
+                                ImportMatchStatus.Skipped => "row-muted",
+                                _ => ""
+                            };
+                            var isChecked = txn.MatchStatus == ImportMatchStatus.Pending || txn.MatchStatus == ImportMatchStatus.AutoMatched;
+                            <tr class="@rowClass">
+                                <td>
+                                    <input type="checkbox"
+                                           class="form-check-input txn-checkbox"
+                                           name="selectedTransactionIds"
+                                           value="@txn.Id"
+                                           @(isChecked ? "checked" : "")
+                                           @(txn.MatchStatus == ImportMatchStatus.Duplicate ? "disabled" : "") />
+                                </td>
+                                <td>@txn.Date.ToString("MMM d, yyyy")</td>
+                                <td>
+                                    @txn.Description
+                                    @if (!string.IsNullOrEmpty(txn.ReferenceNumber))
+                                    {
+                                        <br /><small class="text-muted">Ref: @txn.ReferenceNumber</small>
+                                    }
+                                </td>
+                                <td class="text-end @(txn.Amount >= 0 ? "text-success" : "text-danger")">
+                                    @(txn.Amount >= 0 ? "+" : "")$@Math.Abs(txn.Amount).ToString("N2")
+                                </td>
+                                <td>
+                                    @if (txn.MatchStatus != ImportMatchStatus.Duplicate)
+                                    {
+                                        <select name="categoryIds[@i]" class="form-select form-select-sm" style="min-width: 150px;">
+                                            <option value="">Uncategorized</option>
+                                            @if (categories != null)
+                                            {
+                                                @foreach (var cat in categories)
+                                                {
+                                                    <option value="@cat.Value" selected="@(cat.Value == txn.SuggestedCategoryId?.ToString())">@cat.Text</option>
+                                                }
+                                            }
+                                        </select>
+                                        <input type="hidden" name="transactionIds[@i]" value="@txn.Id" />
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">-</span>
+                                    }
+                                </td>
+                                <td>
+                                    @switch (txn.MatchStatus)
+                                    {
+                                        case ImportMatchStatus.Pending:
+                                            <span class="badge bg-warning text-dark">New</span>
+                                            break;
+                                        case ImportMatchStatus.AutoMatched:
+                                            <span class="badge bg-success">Auto-categorized</span>
+                                            break;
+                                        case ImportMatchStatus.Duplicate:
+                                            <span class="badge bg-secondary">Duplicate</span>
+                                            break;
+                                        case ImportMatchStatus.Skipped:
+                                            <span class="badge bg-secondary">Skipped</span>
+                                            break;
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <div class="card-footer">
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="text-muted">
+                        <span id="selectedCount">0</span> transactions selected for import
+                    </span>
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi-check-lg me-1"></i>Import Selected Transactions
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+<script>
+    const checkboxes = document.querySelectorAll('.txn-checkbox:not([disabled])');
+    const masterCheckbox = document.getElementById('masterCheckbox');
+    const selectedCount = document.getElementById('selectedCount');
+
+    function updateCount() {
+        const checked = document.querySelectorAll('.txn-checkbox:checked').length;
+        selectedCount.textContent = checked;
+    }
+
+    masterCheckbox.addEventListener('change', function() {
+        checkboxes.forEach(cb => cb.checked = this.checked);
+        updateCount();
+    });
+
+    checkboxes.forEach(cb => cb.addEventListener('change', updateCount));
+
+    document.getElementById('selectAll').addEventListener('click', function() {
+        checkboxes.forEach(cb => cb.checked = true);
+        updateCount();
+    });
+
+    document.getElementById('deselectAll').addEventListener('click', function() {
+        checkboxes.forEach(cb => cb.checked = false);
+        updateCount();
+    });
+
+    updateCount();
+</script>
+}

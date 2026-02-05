@@ -1,0 +1,109 @@
+@model HLE.FamilyHub.Models.ViewModels.ImportantDateCreateViewModel
+@{
+    ViewData["Title"] = "Add Important Date";
+}
+
+@{
+    ViewData["BreadcrumbItems"] = new List<(string Text, string? Url, bool IsActive)>
+    {
+        ("Home", Url.Action("Index", "Home"), false),
+        ("Important Dates", Url.Action("Index"), false),
+        ("Add", null, true)
+    };
+}
+<partial name="_Breadcrumb" />
+
+<h2>
+    <i class="bi bi-calendar-plus"></i> Add Important Date
+</h2>
+
+<div class="row">
+    <div class="col-lg-6">
+        <form asp-action="Create" method="post">
+            @Html.AntiForgeryToken()
+
+            <div class="card mb-3">
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label asp-for="Label" class="form-label"></label>
+                        <input asp-for="Label" class="form-control" />
+                        <span asp-validation-for="Label" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Date" class="form-label"></label>
+                        <input asp-for="Date" type="date" class="form-control" />
+                        <span asp-validation-for="Date" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Type" class="form-label"></label>
+                        <select asp-for="Type" class="form-select">
+                            <option value="">Select type...</option>
+                            <option value="Birthday">Birthday</option>
+                            <option value="Anniversary">Anniversary</option>
+                            <option value="Holiday">Holiday</option>
+                            <option value="Other">Other</option>
+                        </select>
+                        <span asp-validation-for="Type" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="RecurrenceType" class="form-label"></label>
+                        <select asp-for="RecurrenceType" class="form-select">
+                            <option value="Yearly">Yearly</option>
+                            <option value="Monthly">Monthly</option>
+                            <option value="Once">Once</option>
+                        </select>
+                        <span asp-validation-for="RecurrenceType" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="ReminderDaysBefore" class="form-label"></label>
+                        <input asp-for="ReminderDaysBefore" type="number" min="0" class="form-control" value="14" />
+                        <span asp-validation-for="ReminderDaysBefore" class="text-danger"></span>
+                        <div class="form-text">How many days before to show a reminder</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="FamilyMemberId" class="form-label"></label>
+                        <select asp-for="FamilyMemberId" class="form-select">
+                            <option value="">None (General Date)</option>
+                            @if (ViewBag.FamilyMembers != null)
+                            {
+                                foreach (var member in ViewBag.FamilyMembers as List<HLE.FamilyHub.Services.Interfaces.FamilyMemberSummaryDto>)
+                                {
+                                    <option value="@member.Id">@member.FirstName @member.LastName</option>
+                                }
+                            }
+                        </select>
+                        <span asp-validation-for="FamilyMemberId" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Notes" class="form-label"></label>
+                        <textarea asp-for="Notes" class="form-control" rows="3"></textarea>
+                        <span asp-validation-for="Notes" class="text-danger"></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex gap-2 mb-4">
+                @{
+                    ViewData["Text"] = "Cancel";
+                    ViewData["Variant"] = "secondary";
+                    ViewData["Href"] = Url.Action("Index");
+                }
+                <partial name="_Button" />
+
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-check-circle"></i> Create
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

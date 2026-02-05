@@ -1,0 +1,74 @@
+@*
+    Dropdown Component
+    Usage:
+    @{
+        ViewData["ButtonText"] = "Dropdown";
+        ViewData["Items"] = new List<dynamic> {
+            new { Text = "Action", Url = "#", Divider = false },
+            new { Text = "Another action", Url = "#", Divider = false },
+            new { Divider = true },
+            new { Text = "Something else", Url = "#", Divider = false }
+        };
+    }
+    <partial name="_Dropdown" />
+*@
+@{
+    var buttonText = ViewData["ButtonText"]?.ToString() ?? "Dropdown";
+    var variant = ViewData["Variant"]?.ToString() ?? "primary";
+    var size = ViewData["Size"]?.ToString() ?? "md";
+    var split = ViewData["Split"]?.ToString() == "True";
+    var direction = ViewData["Direction"]?.ToString() ?? "down"; // down, up, start, end
+    var items = ViewData["Items"] as IEnumerable<dynamic> ?? new List<dynamic>();
+    var id = ViewData["Id"]?.ToString() ?? "dropdown-" + Guid.NewGuid().ToString("N").Substring(0, 8);
+    
+    var sizeClass = size switch
+    {
+        "sm" => "btn-sm",
+        "lg" => "btn-lg",
+        _ => ""
+    };
+    
+    var directionClass = direction switch
+    {
+        "up" => "dropup",
+        "start" => "dropstart",
+        "end" => "dropend",
+        _ => "dropdown"
+    };
+}
+
+<div class="btn-group @directionClass">
+    @if (split)
+    {
+        <button type="button" class="btn btn-@variant @sizeClass">@buttonText</button>
+        <button type="button" class="btn btn-@variant @sizeClass dropdown-toggle dropdown-toggle-split" 
+                data-bs-toggle="dropdown" aria-expanded="false">
+            <span class="visually-hidden">Toggle Dropdown</span>
+        </button>
+    }
+    else
+    {
+        <button type="button" class="btn btn-@variant @sizeClass dropdown-toggle" 
+                data-bs-toggle="dropdown" aria-expanded="false" id="@id">
+            @buttonText
+        </button>
+    }
+    <ul class="dropdown-menu" aria-labelledby="@id">
+        @foreach (var item in items)
+        {
+            var isDivider = item.GetType().GetProperty("Divider")?.GetValue(item)?.ToString() == "True";
+            if (isDivider)
+            {
+                <li><hr class="dropdown-divider"></li>
+            }
+            else
+            {
+                var text = item.GetType().GetProperty("Text")?.GetValue(item)?.ToString() ?? "";
+                var url = item.GetType().GetProperty("Url")?.GetValue(item)?.ToString() ?? "#";
+                var disabled = item.GetType().GetProperty("Disabled")?.GetValue(item)?.ToString() == "True";
+                
+                <li><a class="dropdown-item @(disabled ? "disabled" : "")" href="@url">@text</a></li>
+            }
+        }
+    </ul>
+</div>

@@ -1,0 +1,95 @@
+@using HLE.FamilyFinance.Services.Interfaces
+@using HLE.FamilyFinance.Helpers
+@model List<TaxYearSummaryDto>
+@{
+    ViewData["Title"] = "Tax Center";
+}
+
+<div class="py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="@IconHelper.Nav.TaxCenter me-2"></i>Tax Center</h2>
+        <a asp-action="Create" class="btn btn-primary"><i class="bi-plus-lg me-1"></i>Add Tax Year</a>
+    </div>
+
+    @if (Model.Count == 0)
+    {
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <i class="bi-calculator fs-1 text-muted"></i>
+                <p class="text-muted mb-3 mt-2">No tax years tracked yet. Add a tax year to track documents and filing status.</p>
+                <a asp-action="Create" class="btn btn-primary">Add Tax Year</a>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="row g-3">
+            @foreach (var taxYear in Model)
+            {
+                var federalBadge = taxYear.IsFederalFiled ? "bg-success" : "bg-warning text-dark";
+                var stateBadge = taxYear.IsStateFiled ? "bg-success" : "bg-warning text-dark";
+                <div class="col-md-6 col-lg-4">
+                    <div class="card h-100">
+                        <div class="card-header">
+                            <h4 class="mb-0">@taxYear.Year Tax Year</h4>
+                        </div>
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between mb-3">
+                                <div>
+                                    <h6 class="text-muted mb-1">Federal</h6>
+                                    <span class="badge @federalBadge">@(taxYear.IsFederalFiled ? "Filed" : "Not Filed")</span>
+                                </div>
+                                <div class="text-end">
+                                    <h6 class="text-muted mb-1">State</h6>
+                                    <span class="badge @stateBadge">@(taxYear.IsStateFiled ? "Filed" : "Not Filed")</span>
+                                </div>
+                            </div>
+
+                            @if (taxYear.FederalRefund.HasValue || taxYear.StateRefund.HasValue)
+                            {
+                                <div class="row text-center mb-3">
+                                    @if (taxYear.FederalRefund.HasValue)
+                                    {
+                                        <div class="col">
+                                            <small class="text-muted">Federal</small>
+                                            <div class="@(taxYear.FederalRefund >= 0 ? "text-success" : "text-danger")">
+                                                @(taxYear.FederalRefund >= 0 ? "Refund" : "Owed")
+                                                <br /><strong>$@Math.Abs(taxYear.FederalRefund.Value).ToString("N2")</strong>
+                                            </div>
+                                        </div>
+                                    }
+                                    @if (taxYear.StateRefund.HasValue)
+                                    {
+                                        <div class="col">
+                                            <small class="text-muted">State</small>
+                                            <div class="@(taxYear.StateRefund >= 0 ? "text-success" : "text-danger")">
+                                                @(taxYear.StateRefund >= 0 ? "Refund" : "Owed")
+                                                <br /><strong>$@Math.Abs(taxYear.StateRefund.Value).ToString("N2")</strong>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            }
+
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="text-muted">
+                                    <i class="bi-file-earmark me-1"></i>
+                                    @taxYear.ReceivedDocumentCount / @taxYear.DocumentCount documents
+                                </span>
+                                @if (taxYear.DocumentCount > 0)
+                                {
+                                    <div class="progress flex-grow-1 mx-2" style="height: 6px;">
+                                        <div class="progress-bar bg-success" style="width: @((taxYear.ReceivedDocumentCount * 100.0 / taxYear.DocumentCount))%"></div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                        <div class="card-footer bg-transparent">
+                            <a asp-action="Details" asp-route-id="@taxYear.Id" class="btn btn-sm btn-outline-primary">View Details</a>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>

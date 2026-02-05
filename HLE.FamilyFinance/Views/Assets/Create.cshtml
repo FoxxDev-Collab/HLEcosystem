@@ -1,0 +1,166 @@
+@using HLE.FamilyFinance.Services.Interfaces
+@using HLE.FamilyFinance.Models.Enums
+@model AssetCreateDto?
+@{
+    ViewData["Title"] = "Add Asset";
+}
+
+<div class="py-4">
+    <h2><i class="bi-plus-circle me-2"></i>Add Asset</h2>
+    <p class="text-muted">Track a new asset like real estate, vehicle, or other valuable property.</p>
+
+    <form asp-action="Create" method="post">
+        <div class="row">
+            <div class="col-lg-8">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Basic Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Name</label>
+                                <input asp-for="Name" class="form-control" required placeholder="e.g., Family Home" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Type</label>
+                                <select asp-for="Type" asp-items="@(ViewData["AssetTypes"] as SelectList)" class="form-select" id="assetType"></select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Purchase Price</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input asp-for="PurchasePrice" class="form-control money-input" type="text" required />
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Purchase Date</label>
+                                <input asp-for="PurchaseDate" class="form-control" type="date" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Current Value</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input asp-for="CurrentValue" class="form-control money-input" type="text" required />
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Link to Debt</label>
+                                <select asp-for="LinkedDebtId" asp-items="@(ViewData["Debts"] as SelectList)" class="form-select">
+                                    <option value="">None</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Real Estate Fields -->
+                <div class="card mb-4" id="realEstateFields" style="display: none;">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="bi-house me-2"></i>Property Details</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label class="form-label">Address</label>
+                                <input asp-for="Address" class="form-control" placeholder="123 Main St" />
+                            </div>
+                            <div class="col-md-5">
+                                <label class="form-label">City</label>
+                                <input asp-for="City" class="form-control" />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">State</label>
+                                <input asp-for="State" class="form-control" />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">ZIP Code</label>
+                                <input asp-for="ZipCode" class="form-control" />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Square Footage</label>
+                                <input asp-for="SquareFootage" class="form-control" type="number" />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Year Built</label>
+                                <input asp-for="YearBuilt" class="form-control" type="number" />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Annual Property Tax</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input asp-for="PropertyTaxAnnual" class="form-control money-input" type="text" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Vehicle Fields -->
+                <div class="card mb-4" id="vehicleFields" style="display: none;">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="bi-car-front me-2"></i>Vehicle Details</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label">Year</label>
+                                <input asp-for="VehicleYear" class="form-control" type="number" />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Make</label>
+                                <input asp-for="Make" class="form-control" placeholder="e.g., Toyota" />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Model</label>
+                                <input asp-for="VehicleModel" class="form-control" placeholder="e.g., Camry" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">VIN</label>
+                                <input asp-for="VIN" class="form-control" maxlength="17" />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Mileage</label>
+                                <input asp-for="Mileage" class="form-control" type="number" />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">License Plate</label>
+                                <input asp-for="LicensePlate" class="form-control" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">Notes</label>
+                            <textarea asp-for="Notes" class="form-control" rows="3"></textarea>
+                        </div>
+                        <div class="form-check">
+                            <input asp-for="IncludeInNetWorth" class="form-check-input" type="checkbox" checked />
+                            <label class="form-check-label">Include in net worth calculation</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary"><i class="bi-check-lg me-1"></i>Create Asset</button>
+                    <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+<script>
+    document.getElementById('assetType').addEventListener('change', function() {
+        const type = this.value;
+        document.getElementById('realEstateFields').style.display = type === 'RealEstate' ? 'block' : 'none';
+        document.getElementById('vehicleFields').style.display = type === 'Vehicle' ? 'block' : 'none';
+    });
+    // Trigger on load
+    document.getElementById('assetType').dispatchEvent(new Event('change'));
+</script>
+}

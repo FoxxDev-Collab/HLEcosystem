@@ -1,0 +1,168 @@
+@using HLE.FamilyFinance.Services.Interfaces
+@using HLE.FamilyFinance.Models.Enums
+@model AssetCreateDto
+@{
+    ViewData["Title"] = $"Edit {Model.Name}";
+    var assetId = ViewData["AssetId"];
+}
+
+<div class="py-4">
+    <h2><i class="bi-pencil me-2"></i>Edit Asset</h2>
+    <p class="text-muted">Update details for @Model.Name</p>
+
+    <form asp-action="Edit" asp-route-id="@assetId" method="post">
+        <div class="row">
+            <div class="col-lg-8">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Basic Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Name</label>
+                                <input name="Name" class="form-control" required value="@Model.Name" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Type</label>
+                                <select name="Type" asp-items="@(ViewData["AssetTypes"] as SelectList)" class="form-select" id="assetType"></select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Purchase Price</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input name="PurchasePrice" class="form-control money-input" type="text" required value="@Model.PurchasePrice" />
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Purchase Date</label>
+                                <input name="PurchaseDate" class="form-control" type="date" value="@Model.PurchaseDate?.ToString("yyyy-MM-dd")" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Current Value</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input name="CurrentValue" class="form-control money-input" type="text" required value="@Model.CurrentValue" />
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Link to Debt</label>
+                                <select name="LinkedDebtId" asp-items="@(ViewData["Debts"] as SelectList)" class="form-select">
+                                    <option value="">None</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Real Estate Fields -->
+                <div class="card mb-4" id="realEstateFields" style="display: none;">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="bi-house me-2"></i>Property Details</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label class="form-label">Address</label>
+                                <input name="Address" class="form-control" value="@Model.Address" />
+                            </div>
+                            <div class="col-md-5">
+                                <label class="form-label">City</label>
+                                <input name="City" class="form-control" value="@Model.City" />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">State</label>
+                                <input name="State" class="form-control" value="@Model.State" />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">ZIP Code</label>
+                                <input name="ZipCode" class="form-control" value="@Model.ZipCode" />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Square Footage</label>
+                                <input name="SquareFootage" class="form-control" type="number" value="@Model.SquareFootage" />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Year Built</label>
+                                <input name="YearBuilt" class="form-control" type="number" value="@Model.YearBuilt" />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Annual Property Tax</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input name="PropertyTaxAnnual" class="form-control money-input" type="text" value="@Model.PropertyTaxAnnual" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Vehicle Fields -->
+                <div class="card mb-4" id="vehicleFields" style="display: none;">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="bi-car-front me-2"></i>Vehicle Details</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label">Year</label>
+                                <input name="VehicleYear" class="form-control" type="number" value="@Model.VehicleYear" />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Make</label>
+                                <input name="Make" class="form-control" value="@Model.Make" />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Model</label>
+                                <input name="VehicleModel" class="form-control" value="@Model.VehicleModel" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">VIN</label>
+                                <input name="VIN" class="form-control" maxlength="17" value="@Model.VIN" />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Mileage</label>
+                                <input name="Mileage" class="form-control" type="number" value="@Model.Mileage" />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">License Plate</label>
+                                <input name="LicensePlate" class="form-control" value="@Model.LicensePlate" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">Notes</label>
+                            <textarea name="Notes" class="form-control" rows="3">@Model.Notes</textarea>
+                        </div>
+                        <div class="form-check">
+                            <input name="IncludeInNetWorth" class="form-check-input" type="checkbox" @(Model.IncludeInNetWorth ? "checked" : "") />
+                            <label class="form-check-label">Include in net worth calculation</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary"><i class="bi-check-lg me-1"></i>Save Changes</button>
+                    <a asp-action="Details" asp-route-id="@assetId" class="btn btn-outline-secondary">Cancel</a>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+<script>
+    document.getElementById('assetType').addEventListener('change', function() {
+        const type = this.value;
+        document.getElementById('realEstateFields').style.display = type === 'RealEstate' ? 'block' : 'none';
+        document.getElementById('vehicleFields').style.display = type === 'Vehicle' ? 'block' : 'none';
+    });
+    // Set initial value and trigger
+    document.getElementById('assetType').value = '@Model.Type';
+    document.getElementById('assetType').dispatchEvent(new Event('change'));
+</script>
+}

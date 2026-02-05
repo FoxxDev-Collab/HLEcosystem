@@ -1,0 +1,48 @@
+@using HLE.FileServer.Helpers
+@*
+    Chip Component
+    Usage:
+    <partial name="_Chip" model='new { Text = "Chip Label", Variant = "primary", Size = "md", Closeable = "True", AvatarSrc = "/path/to/avatar.jpg" }' />
+    Variants: default, primary, success, warning, danger, outline
+    Sizes: sm, md (default), lg
+*@
+@{
+    var text = ViewData["Text"]?.ToString() ?? "";
+    var variant = ViewData["Variant"]?.ToString() ?? "";
+    var size = ViewData["Size"]?.ToString() ?? "md";
+    var closeable = ViewData["Closeable"]?.ToString()?.ToLower() == "true";
+    var avatarSrc = ViewData["AvatarSrc"]?.ToString() ?? "";
+    var avatarAlt = ViewData["AvatarAlt"]?.ToString() ?? text;
+    var cssClass = ViewData["CssClass"]?.ToString() ?? "";
+    var onClick = ViewData["OnClick"]?.ToString() ?? "";
+
+    var chipClass = "chip";
+    if (!string.IsNullOrEmpty(variant))
+    {
+        chipClass += $" chip-{variant}";
+    }
+    if (size != "md")
+    {
+        chipClass += $" chip-{size}";
+    }
+    if (!string.IsNullOrEmpty(cssClass))
+    {
+        chipClass += $" {cssClass}";
+    }
+}
+
+<span class="@chipClass" @(string.IsNullOrEmpty(onClick) ? "" : $"onclick=\"{onClick}\"")>
+    @if (!string.IsNullOrEmpty(avatarSrc))
+    {
+        <span class="chip-avatar">
+            <img src="@avatarSrc" alt="@avatarAlt" />
+        </span>
+    }
+    @text
+    @if (closeable)
+    {
+        <button type="button" class="chip-close" aria-label="Remove">
+            @Html.Raw(Icons.Get("x", 16))
+        </button>
+    }
+</span>

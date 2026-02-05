@@ -1,0 +1,202 @@
+@using HLE.FamilyFinance.Services.Interfaces
+@using HLE.FamilyFinance.Helpers
+@model AssetDetailDto
+@{
+    ViewData["Title"] = Model.Name;
+    var valueHistory = ViewData["ValueHistory"] as List<AssetValueHistoryDto> ?? new List<AssetValueHistoryDto>();
+    var icon = Model.Icon ?? IconHelper.GetAssetIcon(Model.Type);
+}
+
+<div class="py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            @if (icon.StartsWith("bi-"))
+            {
+                <i class="@icon fs-2 me-2" style="@(Model.Color != null ? $"color: {Model.Color}" : "")"></i>
+            }
+            else
+            {
+                <span class="fs-2 me-2">@icon</span>
+            }
+            <h2 class="d-inline">@Model.Name</h2>
+            <span class="badge bg-secondary ms-2">@Model.Type</span>
+        </div>
+        <div class="d-flex gap-2">
+            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-primary"><i class="bi-pencil me-1"></i>Edit</a>
+            <form asp-action="Archive" asp-route-id="@Model.Id" method="post" class="d-inline">
+                <button type="submit" class="btn btn-outline-warning"><i class="bi-archive me-1"></i>Archive</button>
+            </form>
+            <form asp-action="Delete" asp-route-id="@Model.Id" method="post" class="d-inline" onsubmit="return confirm('Are you sure you want to permanently delete this asset? This cannot be undone.');">
+                <button type="submit" class="btn btn-outline-danger"><i class="bi-trash me-1"></i>Delete</button>
+            </form>
+            <a asp-action="Index" class="btn btn-outline-secondary">Back to List</a>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Value Summary</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 text-center">
+                            <h6 class="text-muted">Current Value</h6>
+                            <h3 class="text-success">$@Model.CurrentValue.ToString("N2")</h3>
+                            <small class="text-muted">As of @Model.ValueAsOfDate.ToString("MMM d, yyyy")</small>
+                        </div>
+                        <div class="col-md-4 text-center">
+                            <h6 class="text-muted">Purchase Price</h6>
+                            <h3>$@Model.PurchasePrice.ToString("N2")</h3>
+                            @if (Model.PurchaseDate.HasValue)
+                            {
+                                <small class="text-muted">@Model.PurchaseDate.Value.ToString("MMM d, yyyy")</small>
+                            }
+                        </div>
+                        <div class="col-md-4 text-center">
+                            <h6 class="text-muted">Appreciation</h6>
+                            <h3 class="@(Model.AppreciationPercent >= 0 ? "text-success" : "text-danger")">
+                                @(Model.AppreciationPercent >= 0 ? "+" : "")@Model.AppreciationPercent.ToString("N1")%
+                            </h3>
+                            <small class="text-muted">$@((Model.CurrentValue - Model.PurchasePrice).ToString("N2"))</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            @if (Model.Type == HLE.FamilyFinance.Models.Enums.AssetType.RealEstate && Model.Address != null)
+            {
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="bi-house me-2"></i>Property Details</h5>
+                    </div>
+                    <div class="card-body">
+                        <dl class="row mb-0">
+                            <dt class="col-sm-3">Address</dt>
+                            <dd class="col-sm-9">@Model.Address, @Model.City, @Model.State @Model.ZipCode</dd>
+
+                            @if (Model.SquareFootage.HasValue)
+                            {
+                                <dt class="col-sm-3">Square Footage</dt>
+                                <dd class="col-sm-9">@Model.SquareFootage.Value.ToString("N0") sq ft</dd>
+                            }
+
+                            @if (Model.YearBuilt.HasValue)
+                            {
+                                <dt class="col-sm-3">Year Built</dt>
+                                <dd class="col-sm-9">@Model.YearBuilt</dd>
+                            }
+
+                            @if (Model.PropertyTaxAnnual.HasValue)
+                            {
+                                <dt class="col-sm-3">Annual Property Tax</dt>
+                                <dd class="col-sm-9">$@Model.PropertyTaxAnnual.Value.ToString("N2")</dd>
+                            }
+                        </dl>
+                    </div>
+                </div>
+            }
+
+            @if (Model.Type == HLE.FamilyFinance.Models.Enums.AssetType.Vehicle && Model.Make != null)
+            {
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="bi-car-front me-2"></i>Vehicle Details</h5>
+                    </div>
+                    <div class="card-body">
+                        <dl class="row mb-0">
+                            <dt class="col-sm-3">Vehicle</dt>
+                            <dd class="col-sm-9">@Model.VehicleYear @Model.Make @Model.VehicleModel</dd>
+
+                            @if (Model.VIN != null)
+                            {
+                                <dt class="col-sm-3">VIN</dt>
+                                <dd class="col-sm-9"><code>@Model.VIN</code></dd>
+                            }
+
+                            @if (Model.Mileage.HasValue)
+                            {
+                                <dt class="col-sm-3">Mileage</dt>
+                                <dd class="col-sm-9">@Model.Mileage.Value.ToString("N0") miles</dd>
+                            }
+
+                            @if (Model.LicensePlate != null)
+                            {
+                                <dt class="col-sm-3">License Plate</dt>
+                                <dd class="col-sm-9">@Model.LicensePlate</dd>
+                            }
+                        </dl>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Update Value</h5>
+                </div>
+                <div class="card-body">
+                    <form asp-action="UpdateValue" method="post">
+                        <input type="hidden" name="id" value="@Model.Id" />
+                        <div class="mb-3">
+                            <label class="form-label">New Value</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="text" name="newValue" class="form-control money-input" value="@Model.CurrentValue" required />
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Source</label>
+                            <input type="text" name="source" class="form-control" placeholder="e.g., Zillow, KBB" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Notes</label>
+                            <textarea name="notes" class="form-control" rows="2"></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Update Value</button>
+                    </form>
+                </div>
+            </div>
+
+            @if (Model.LinkedDebtId.HasValue)
+            {
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="bi-link me-2"></i>Linked Debt</h5>
+                    </div>
+                    <div class="card-body">
+                        <a asp-controller="Debts" asp-action="Details" asp-route-id="@Model.LinkedDebtId" class="text-decoration-none">
+                            <i class="bi-file-text me-1"></i>@Model.LinkedDebtName
+                        </a>
+                    </div>
+                </div>
+            }
+
+            @if (valueHistory.Count > 0)
+            {
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Value History</h5>
+                    </div>
+                    <ul class="list-group list-group-flush">
+                        @foreach (var entry in valueHistory.Take(10))
+                        {
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <div>
+                                    <small class="text-muted">@entry.Date.ToString("MMM d, yyyy")</small>
+                                    @if (entry.Source != null)
+                                    {
+                                        <br /><small class="text-muted">@entry.Source</small>
+                                    }
+                                </div>
+                                <strong>$@entry.Value.ToString("N2")</strong>
+                            </li>
+                        }
+                    </ul>
+                </div>
+            }
+        </div>
+    </div>
+</div>

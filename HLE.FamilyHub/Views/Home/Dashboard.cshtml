@@ -1,0 +1,248 @@
+@model HLE.FamilyHub.Models.ViewModels.DashboardViewModel
+@{
+    ViewData["Title"] = "Dashboard";
+}
+
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2 class="mb-0">Welcome, @User.Identity?.Name</h2>
+            <p class="text-muted">Here's what's happening with your family</p>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-6 col-lg-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-subtitle mb-2 text-white-50">Total Family</h6>
+                            <h2 class="card-title mb-0">@Model.Stats.TotalFamilyMembers</h2>
+                        </div>
+                        <div>
+                            <i class="bi bi-people display-4 opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-3">
+            <div class="card bg-warning text-dark">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-subtitle mb-2 text-dark-50">Upcoming Events</h6>
+                            <h2 class="card-title mb-0">@Model.Stats.UpcomingDatesCount</h2>
+                        </div>
+                        <div>
+                            <i class="bi bi-calendar-event display-4 opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-subtitle mb-2 text-white-50">Gift Ideas</h6>
+                            <h2 class="card-title mb-0">@Model.Stats.ActiveGiftIdeas</h2>
+                        </div>
+                        <div>
+                            <i class="bi bi-lightbulb display-4 opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-subtitle mb-2 text-white-50">Gift Spending</h6>
+                            <h2 class="card-title mb-0">@Model.Stats.TotalGiftSpentThisYear.ToString("C")</h2>
+                        </div>
+                        <div>
+                            <i class="bi bi-gift display-4 opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-3">
+        <div class="col-12">
+            <div class="btn-group" role="group" aria-label="Days filter">
+                <a href="@Url.Action("Dashboard", new { days = 30 })"
+                   class="btn @(Model.DaysAhead == 30 ? "btn-primary" : "btn-outline-primary")">
+                    30 Days
+                </a>
+                <a href="@Url.Action("Dashboard", new { days = 60 })"
+                   class="btn @(Model.DaysAhead == 60 ? "btn-primary" : "btn-outline-primary")">
+                    60 Days
+                </a>
+                <a href="@Url.Action("Dashboard", new { days = 90 })"
+                   class="btn @(Model.DaysAhead == 90 ? "btn-primary" : "btn-outline-primary")">
+                    90 Days
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="bi bi-calendar-heart"></i> Upcoming Events
+                    </h5>
+                    <a href="@Url.Action("Index", "ImportantDates")" class="btn btn-sm btn-outline-primary">
+                        View All
+                    </a>
+                </div>
+                <div class="card-body p-0">
+                    @if (Model.UpcomingEvents.Any())
+                    {
+                        <div class="list-group list-group-flush">
+                            @foreach (var date in Model.UpcomingEvents)
+                            {
+                                <div class="list-group-item">
+                                    <div class="d-flex w-100 justify-content-between align-items-center">
+                                        <div>
+                                            <h6 class="mb-1">@date.Label</h6>
+                                            <p class="mb-0 text-muted small">
+                                                @if (!string.IsNullOrEmpty(date.FamilyMemberName))
+                                                {
+                                                    <span>@date.FamilyMemberName</span>
+                                                }
+                                            </p>
+                                        </div>
+                                        <div>
+                                            @{
+                                                var daysUntil = date.DaysUntil;
+                                                var badgeClass = daysUntil < 7 ? "bg-danger" : (daysUntil < 14 ? "bg-warning text-dark" : "bg-success");
+                                            }
+                                            <span class="badge @badgeClass">
+                                                @if (daysUntil == 0)
+                                                {
+                                                    <text>Today</text>
+                                                }
+                                                else if (daysUntil == 1)
+                                                {
+                                                    <text>Tomorrow</text>
+                                                }
+                                                else
+                                                {
+                                                    <text>in @daysUntil days</text>
+                                                }
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="p-3 text-center text-muted">
+                            <i class="bi bi-calendar-x display-6 d-block mb-2"></i>
+                            <p class="mb-0">No upcoming events in the next @Model.DaysAhead days</p>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-gift"></i> Recent Gift Activity
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    @if (Model.RecentGiftActivity.Any())
+                    {
+                        <div class="list-group list-group-flush">
+                            @foreach (var activity in Model.RecentGiftActivity)
+                            {
+                                <div class="list-group-item">
+                                    <div class="d-flex w-100 justify-content-between align-items-start">
+                                        <div>
+                                            <h6 class="mb-1">@activity.Description</h6>
+                                            <p class="mb-1 text-muted small">
+                                                For: @activity.FamilyMemberName
+                                            </p>
+                                            @if (activity.GiftDate.HasValue)
+                                            {
+                                                <p class="mb-0 text-muted small">
+                                                    @activity.GiftDate.Value.ToString("MMM d, yyyy")
+                                                </p>
+                                            }
+                                        </div>
+                                        <div>
+                                            @{
+                                                ViewData["Text"] = activity.Status;
+                                                ViewData["Variant"] = activity.EntityType == "Gift" ? "primary" : "info";
+                                            }
+                                            <partial name="_Badge" />
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="p-3 text-center text-muted">
+                            <i class="bi bi-gift display-6 d-block mb-2"></i>
+                            <p class="mb-0">No recent gift activity</p>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title mb-3">Quick Actions</h5>
+                    <div class="d-flex gap-2 flex-wrap">
+                        @{
+                            ViewData["Text"] = "Add Family Member";
+                            ViewData["Variant"] = "primary";
+                            ViewData["Icon"] = "bi-person-plus";
+                            ViewData["Href"] = Url.Action("Create", "FamilyMembers");
+                        }
+                        <partial name="_Button" />
+
+                        @{
+                            ViewData["Text"] = "Add Gift Idea";
+                            ViewData["Variant"] = "success";
+                            ViewData["Icon"] = "bi-lightbulb";
+                            ViewData["Href"] = Url.Action("Create", "GiftIdeas");
+                        }
+                        <partial name="_Button" />
+
+                        @{
+                            ViewData["Text"] = "Add Important Date";
+                            ViewData["Variant"] = "warning";
+                            ViewData["Icon"] = "bi-calendar-plus";
+                            ViewData["Href"] = Url.Action("Create", "ImportantDates");
+                        }
+                        <partial name="_Button" />
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

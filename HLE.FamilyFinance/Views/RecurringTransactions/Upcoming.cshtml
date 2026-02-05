@@ -1,0 +1,134 @@
+@using HLE.FamilyFinance.Services.Interfaces
+@model List<UpcomingTransactionDto>
+@{
+    ViewData["Title"] = "Upcoming Transactions";
+    var days = (int)(ViewData["Days"] ?? 30);
+}
+
+<div class="py-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-action="Index">Recurring Transactions</a></li>
+            <li class="breadcrumb-item active">Upcoming</li>
+        </ol>
+    </nav>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Upcoming Transactions</h2>
+        <div class="btn-group">
+            <a asp-action="Upcoming" asp-route-days="7" class="btn @(days == 7 ? "btn-primary" : "btn-outline-secondary")">7 Days</a>
+            <a asp-action="Upcoming" asp-route-days="14" class="btn @(days == 14 ? "btn-primary" : "btn-outline-secondary")">14 Days</a>
+            <a asp-action="Upcoming" asp-route-days="30" class="btn @(days == 30 ? "btn-primary" : "btn-outline-secondary")">30 Days</a>
+            <a asp-action="Upcoming" asp-route-days="60" class="btn @(days == 60 ? "btn-primary" : "btn-outline-secondary")">60 Days</a>
+        </div>
+    </div>
+
+    @if (!Model.Any())
+    {
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <p class="text-muted mb-3">No upcoming transactions in the next @days days.</p>
+                <a asp-action="Index" class="btn btn-outline-secondary">Back to Recurring</a>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="row g-3 mb-4">
+            <div class="col-md-4">
+                <div class="card bg-success text-white">
+                    <div class="card-body">
+                        <h6 class="text-white-50">Expected Income</h6>
+                        <h3 class="mb-0">$@Model.Where(m => m.Type == HLE.FamilyFinance.Models.Enums.TransactionType.Income).Sum(m => m.Amount).ToString("N2")</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card bg-danger text-white">
+                    <div class="card-body">
+                        <h6 class="text-white-50">Expected Expenses</h6>
+                        <h3 class="mb-0">$@Model.Where(m => m.Type == HLE.FamilyFinance.Models.Enums.TransactionType.Expense).Sum(m => m.Amount).ToString("N2")</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                @{
+                    var netUpcoming = Model.Where(m => m.Type == HLE.FamilyFinance.Models.Enums.TransactionType.Income).Sum(m => m.Amount) -
+                                     Model.Where(m => m.Type == HLE.FamilyFinance.Models.Enums.TransactionType.Expense).Sum(m => m.Amount);
+                }
+                <div class="card @(netUpcoming >= 0 ? "bg-primary" : "bg-warning") text-white">
+                    <div class="card-body">
+                        <h6 class="text-white-50">Net Cash Flow</h6>
+                        <h3 class="mb-0">$@netUpcoming.ToString("N2")</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Next @days Days</h5>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Date</th>
+                            <th>Description</th>
+                            <th>Category</th>
+                            <th>Account</th>
+                            <th class="text-end">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @{
+                            var currentDate = DateOnly.MinValue;
+                        }
+                        @foreach (var item in Model.OrderBy(m => m.Date))
+                        {
+                            var isNewDate = item.Date != currentDate;
+                            currentDate = item.Date;
+                            var typeClass = item.Type == HLE.FamilyFinance.Models.Enums.TransactionType.Income ? "text-success" : "text-danger";
+                            var urgencyClass = item.DaysUntil <= 0 ? "table-danger" :
+                                              item.DaysUntil <= 3 ? "table-warning" : "";
+                            <tr class="@urgencyClass">
+                                <td>
+                                    @if (isNewDate)
+                                    {
+                                        <strong>@item.Date.ToString("MMM d")</strong>
+                                        <br />
+                                        <small class="text-muted">
+                                            @if (item.DaysUntil == 0)
+                                            {
+                                                @:Today
+                                            }
+                                            else if (item.DaysUntil == 1)
+                                            {
+                                                @:Tomorrow
+                                            }
+                                            else
+                                            {
+                                                @:In @item.DaysUntil days
+                                            }
+                                        </small>
+                                    }
+                                </td>
+                                <td>
+                                    <span class="badge @(item.Type == HLE.FamilyFinance.Models.Enums.TransactionType.Income ? "bg-success" : "bg-danger") me-2">
+                                        @item.Type
+                                    </span>
+                                    <strong>@item.Name</strong>
+                                </td>
+                                <td>@(item.CategoryName ?? "—")</td>
+                                <td>@item.AccountName</td>
+                                <td class="text-end @typeClass fw-bold">
+                                    @(item.Type == HLE.FamilyFinance.Models.Enums.TransactionType.Income ? "+" : "-")$@item.Amount.ToString("N2")
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+</div>

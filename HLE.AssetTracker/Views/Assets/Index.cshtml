@@ -1,0 +1,229 @@
+@using HLE.AssetTracker.Services.Interfaces
+@model PagedResult<AssetListItemDto>
+@{
+    ViewData["Title"] = "Assets";
+    var categories = ViewData["Categories"] as SelectList;
+    var locations = ViewData["Locations"] as SelectList;
+    var search = ViewData["Search"] as string;
+    var sortBy = ViewData["SortBy"] as string ?? "name";
+    var sortDesc = ViewData["SortDesc"] as bool? ?? false;
+}
+
+@{
+    ViewData["BreadcrumbItems"] = new List<(string Text, string? Url, bool IsActive)>
+    {
+        ("Home", Url.Action("Index", "Home"), false),
+        ("Assets", null, true)
+    };
+}
+<partial name="_Breadcrumb" />
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Assets</h2>
+        @{
+            ViewData["Text"] = "+ Add Asset";
+            ViewData["Variant"] = "primary";
+            ViewData["Href"] = Url.Action("Create");
+        }
+        <partial name="_Button" />
+    </div>
+
+    <!-- Filters -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-4">
+                    <input type="text" class="form-control" name="search" value="@search" placeholder="Search assets..." />
+                </div>
+                <div class="col-md-3">
+                    <select name="categoryId" class="form-select" asp-items="@categories">
+                        <option value="">All Categories</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select name="locationId" class="form-select" asp-items="@locations">
+                        <option value="">All Locations</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-secondary w-100">Filter</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    @if (TempData["Success"] != null)
+    {
+        ViewData["Message"] = TempData["Success"];
+        ViewData["Variant"] = "success";
+        ViewData["Dismissible"] = "True";
+        <partial name="_Alert" />
+    }
+
+    @if (TempData["Error"] != null)
+    {
+        ViewData["Message"] = TempData["Error"];
+        ViewData["Variant"] = "danger";
+        ViewData["Dismissible"] = "True";
+        <partial name="_Alert" />
+    }
+
+    @if (Model.Items.Count == 0)
+    {
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <h5 class="text-muted mb-3">No assets found</h5>
+                <p class="text-muted">Get started by adding your first asset.</p>
+                @{
+                    ViewData["Text"] = "Add Asset";
+                    ViewData["Variant"] = "primary";
+                    ViewData["Href"] = Url.Action("Create");
+                }
+                <partial name="_Button" />
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="card">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>
+                                <a asp-action="Index" asp-route-search="@search" asp-route-sortBy="name" asp-route-sortDesc="@(sortBy == "name" && !sortDesc)" class="text-decoration-none">
+                                    Name @(sortBy == "name" ? (sortDesc ? "↓" : "↑") : "")
+                                </a>
+                            </th>
+                            <th>Category</th>
+                            <th>Location</th>
+                            <th class="text-center">Qty</th>
+                            <th class="text-end">
+                                <a asp-action="Index" asp-route-search="@search" asp-route-sortBy="price" asp-route-sortDesc="@(sortBy == "price" && !sortDesc)" class="text-decoration-none">
+                                    Value @(sortBy == "price" ? (sortDesc ? "↓" : "↑") : "")
+                                </a>
+                            </th>
+                            <th>Warranty</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var asset in Model.Items)
+                        {
+                            <tr class="@(asset.IsArchived ? "table-secondary" : "")">
+                                <td>
+                                    <a asp-action="Details" asp-route-id="@asset.Id" class="text-decoration-none fw-medium">
+                                        @asset.Name
+                                    </a>
+                                    @if (asset.IsArchived)
+                                    {
+                                        ViewData["Text"] = "Archived";
+                                        ViewData["Variant"] = "secondary";
+                                        ViewData["CssClass"] = "ms-1";
+                                        <partial name="_Badge" />
+                                    }
+                                </td>
+                                <td class="text-muted">@(asset.CategoryName ?? "-")</td>
+                                <td class="text-muted">@(asset.LocationName ?? "-")</td>
+                                <td class="text-center">@asset.Quantity</td>
+                                <td class="text-end">
+                                    @if (asset.PurchasePrice.HasValue)
+                                    {
+                                        @:$@asset.PurchasePrice.Value.ToString("N2")
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">-</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (asset.WarrantyExpiration.HasValue)
+                                    {
+                                        var daysLeft = (asset.WarrantyExpiration.Value.ToDateTime(TimeOnly.MinValue) - DateTime.UtcNow).Days;
+                                        if (daysLeft < 0)
+                                        {
+                                            ViewData["Text"] = "Expired";
+                                            ViewData["Variant"] = "secondary";
+                                            <partial name="_Chip" />
+                                        }
+                                        else if (daysLeft <= 30)
+                                        {
+                                            ViewData["Text"] = $"{daysLeft} days";
+                                            ViewData["Variant"] = "warning";
+                                            <partial name="_Chip" />
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">@asset.WarrantyExpiration.Value.ToString("MMM yyyy")</span>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">-</span>
+                                    }
+                                </td>
+                                <td class="text-end">
+                                    <div class="d-flex gap-1 justify-content-end">
+                                        <a asp-action="Edit" asp-route-id="@asset.Id" class="btn btn-sm btn-outline-primary">
+                                            <i data-lucide="edit" style="width: 14px; height: 14px;"></i>
+                                        </a>
+                                        @if (asset.IsArchived)
+                                        {
+                                            <form asp-action="Restore" asp-route-id="@asset.Id" method="post" class="d-inline">
+                                                @Html.AntiForgeryToken()
+                                                <button type="submit" class="btn btn-sm btn-outline-success" title="Restore">
+                                                    <i data-lucide="archive-restore" style="width: 14px; height: 14px;"></i>
+                                                </button>
+                                            </form>
+                                        }
+                                        else
+                                        {
+                                            <form asp-action="Archive" asp-route-id="@asset.Id" method="post" class="d-inline">
+                                                @Html.AntiForgeryToken()
+                                                <button type="submit" class="btn btn-sm btn-outline-warning" title="Archive" onclick="return confirm('Archive @asset.Name?')">
+                                                    <i data-lucide="archive" style="width: 14px; height: 14px;"></i>
+                                                </button>
+                                            </form>
+                                        }
+                                        <form asp-action="Delete" asp-route-id="@asset.Id" method="post" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete Permanently" onclick="return confirm('⚠️ PERMANENTLY DELETE @asset.Name? This cannot be undone!')">
+                                                <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Pagination -->
+        @if (Model.TotalPages > 1)
+        {
+            <nav class="mt-4">
+                <ul class="pagination justify-content-center">
+                    <li class="page-item @(Model.Page <= 1 ? "disabled" : "")">
+                        <a class="page-link" asp-action="Index" asp-route-search="@search" asp-route-sortBy="@sortBy" asp-route-sortDesc="@sortDesc" asp-route-page="@(Model.Page - 1)">Previous</a>
+                    </li>
+                    @for (int i = 1; i <= Model.TotalPages; i++)
+                    {
+                        <li class="page-item @(i == Model.Page ? "active" : "")">
+                            <a class="page-link" asp-action="Index" asp-route-search="@search" asp-route-sortBy="@sortBy" asp-route-sortDesc="@sortDesc" asp-route-page="@i">@i</a>
+                        </li>
+                    }
+                    <li class="page-item @(Model.Page >= Model.TotalPages ? "disabled" : "")">
+                        <a class="page-link" asp-action="Index" asp-route-search="@search" asp-route-sortBy="@sortBy" asp-route-sortDesc="@sortDesc" asp-route-page="@(Model.Page + 1)">Next</a>
+                    </li>
+                </ul>
+            </nav>
+        }
+
+        <div class="text-center text-muted mt-2">
+            Showing @Model.Items.Count of @Model.TotalCount assets
+        </div>
+    }
+</div>

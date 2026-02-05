@@ -1,0 +1,222 @@
+@model HLE.FamilyHealth.Models.ViewModels.AppointmentCalendarViewModel
+@{
+    ViewData["Title"] = "Appointment Calendar";
+}
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">Appointment Calendar</h2>
+            <p class="text-muted mb-0">View and manage appointments by month</p>
+        </div>
+        @{
+            ViewData["Text"] = "New Appointment";
+            ViewData["Variant"] = "primary";
+            ViewData["Href"] = Url.Action("Create");
+            ViewData["Icon"] = "plus";
+        }
+        <partial name="_Button" />
+    </div>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        ViewData["AlertType"] = "success";
+        ViewData["AlertMessage"] = TempData["SuccessMessage"]?.ToString();
+        ViewData["AlertDismissible"] = true;
+        <partial name="_Alert" />
+    }
+
+    <!-- Month Navigation -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center">
+                <a href="@Url.Action("Calendar", new { year = Model.Month == 1 ? Model.Year - 1 : Model.Year, month = Model.Month == 1 ? 12 : Model.Month - 1 })"
+                   class="btn btn-outline-secondary">
+                    <i class="bi bi-chevron-left"></i> Previous
+                </a>
+                <h4 class="mb-0">
+                    @(new DateTime(Model.Year, Model.Month, 1).ToString("MMMM yyyy"))
+                </h4>
+                <a href="@Url.Action("Calendar", new { year = Model.Month == 12 ? Model.Year + 1 : Model.Year, month = Model.Month == 12 ? 1 : Model.Month + 1 })"
+                   class="btn btn-outline-secondary">
+                    Next <i class="bi bi-chevron-right"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Calendar Grid -->
+    <div class="card">
+        <div class="card-body">
+            @{
+                var firstDay = new DateTime(Model.Year, Model.Month, 1);
+                var daysInMonth = DateTime.DaysInMonth(Model.Year, Model.Month);
+                var startDayOfWeek = (int)firstDay.DayOfWeek;
+                var today = DateTime.Now.Date;
+            }
+
+            <div class="calendar-grid">
+                <!-- Day Headers -->
+                <div class="calendar-row calendar-header">
+                    <div class="calendar-day-header">Sunday</div>
+                    <div class="calendar-day-header">Monday</div>
+                    <div class="calendar-day-header">Tuesday</div>
+                    <div class="calendar-day-header">Wednesday</div>
+                    <div class="calendar-day-header">Thursday</div>
+                    <div class="calendar-day-header">Friday</div>
+                    <div class="calendar-day-header">Saturday</div>
+                </div>
+
+                <!-- Calendar Days -->
+                <div class="calendar-body">
+                    @for (int week = 0; week < 6; week++)
+                    {
+                        <div class="calendar-row">
+                            @for (int day = 0; day < 7; day++)
+                            {
+                                var cellNumber = week * 7 + day;
+                                var dayNumber = cellNumber - startDayOfWeek + 1;
+
+                                if (dayNumber > 0 && dayNumber <= daysInMonth)
+                                {
+                                    var currentDate = new DateTime(Model.Year, Model.Month, dayNumber);
+                                    var dayAppointments = Model.Appointments.Where(a => a.AppointmentDateTime.Date == currentDate).OrderBy(a => a.AppointmentDateTime).ToList();
+                                    var isToday = currentDate == today;
+
+                                    <div class="calendar-day @(isToday ? "today" : "")">
+                                        <div class="calendar-day-number">@dayNumber</div>
+                                        <div class="calendar-appointments">
+                                            @foreach (var apt in dayAppointments.Take(3))
+                                            {
+                                                var statusClass = apt.Status switch
+                                                {
+                                                    "Completed" => "success",
+                                                    "Cancelled" => "danger",
+                                                    "No-Show" => "warning",
+                                                    _ => "primary"
+                                                };
+
+                                                <a href="@Url.Action("Details", new { id = apt.Id })"
+                                                   class="calendar-appointment bg-@statusClass"
+                                                   title="@apt.FamilyMemberName - @apt.AppointmentType">
+                                                    <small>
+                                                        <strong>@apt.AppointmentDateTime.ToString("h:mm tt")</strong>
+                                                        @apt.FamilyMemberName
+                                                    </small>
+                                                </a>
+                                            }
+                                            @if (dayAppointments.Count > 3)
+                                            {
+                                                <div class="calendar-more text-muted">
+                                                    <small>+@(dayAppointments.Count - 3) more</small>
+                                                </div>
+                                            }
+                                        </div>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="calendar-day calendar-day-empty"></div>
+                                }
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="mt-4 text-center">
+        <a href="@Url.Action("Index")" class="btn btn-outline-secondary">
+            <i class="bi bi-list"></i> View List
+        </a>
+        <a href="@Url.Action("Calendar", new { year = DateTime.Now.Year, month = DateTime.Now.Month })" class="btn btn-outline-primary">
+            <i class="bi bi-calendar-today"></i> Today
+        </a>
+    </div>
+</div>
+
+<style>
+    .calendar-grid {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .calendar-row {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 1px;
+        background: var(--border-color);
+    }
+
+    .calendar-header {
+        background: var(--card-bg);
+        border-radius: var(--border-radius) var(--border-radius) 0 0;
+    }
+
+    .calendar-day-header {
+        background: var(--card-bg);
+        padding: 0.75rem;
+        text-align: center;
+        font-weight: 600;
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+    }
+
+    .calendar-body {
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+        background: var(--border-color);
+    }
+
+    .calendar-day {
+        background: var(--card-bg);
+        min-height: 120px;
+        padding: 0.5rem;
+        position: relative;
+    }
+
+    .calendar-day.today {
+        background: var(--primary-bg);
+        border: 2px solid var(--primary-color);
+    }
+
+    .calendar-day-empty {
+        background: var(--bg-secondary);
+    }
+
+    .calendar-day-number {
+        font-weight: 600;
+        font-size: 0.875rem;
+        color: var(--text-primary);
+        margin-bottom: 0.25rem;
+    }
+
+    .calendar-appointments {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .calendar-appointment {
+        display: block;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        text-decoration: none;
+        color: white;
+        font-size: 0.75rem;
+        transition: opacity 0.2s;
+    }
+
+    .calendar-appointment:hover {
+        opacity: 0.8;
+        color: white;
+    }
+
+    .calendar-more {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.75rem;
+    }
+</style>

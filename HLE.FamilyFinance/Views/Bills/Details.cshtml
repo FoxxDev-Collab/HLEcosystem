@@ -1,0 +1,150 @@
+@using HLE.FamilyFinance.Services.Interfaces
+@using HLE.FamilyFinance.Helpers
+@using HLE.FamilyFinance.Models.Enums
+@model BillDetailDto
+@{
+    ViewData["Title"] = Model.Name;
+    var payments = ViewData["Payments"] as List<BillPaymentDto> ?? new List<BillPaymentDto>();
+    var icon = Model.Icon ?? IconHelper.GetBillIcon(Model.Category);
+}
+
+<div class="py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2>
+                @if (icon.StartsWith("bi-"))
+                {
+                    <i class="@icon me-2" style="@(Model.Color != null ? $"color: {Model.Color}" : "")"></i>
+                }
+                @Model.Name
+            </h2>
+            <p class="text-muted mb-0">
+                @Model.Category
+                @if (Model.Payee != null) { <text>• @Model.Payee</text> }
+                @if (!Model.IsActive) { <span class="badge bg-secondary ms-2">Inactive</span> }
+            </p>
+        </div>
+        <div class="d-flex gap-2">
+            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-primary"><i class="bi-pencil me-1"></i>Edit</a>
+            <form asp-action="Delete" asp-route-id="@Model.Id" method="post" class="d-inline" onsubmit="return confirm('Are you sure you want to permanently delete this bill? This cannot be undone.');">
+                <button type="submit" class="btn btn-outline-danger"><i class="bi-trash me-1"></i>Delete</button>
+            </form>
+            <a asp-action="Index" class="btn btn-outline-secondary">Back to List</a>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Bill Details</h5>
+                </div>
+                <div class="card-body">
+                    <h2>$@Model.ExpectedAmount.ToString("N2")</h2>
+                    <p class="text-muted mb-3">
+                        @(Model.IsVariableAmount ? "Variable amount" : "Fixed amount")
+                    </p>
+
+                    <dl class="row mb-0">
+                        <dt class="col-6">Due Day</dt>
+                        <dd class="col-6">@Model.DueDayOfMonth@(Model.DueDayOfMonth == 1 ? "st" : Model.DueDayOfMonth == 2 ? "nd" : Model.DueDayOfMonth == 3 ? "rd" : "th") of month</dd>
+
+                        <dt class="col-6">Auto-Pay</dt>
+                        <dd class="col-6">
+                            @if (Model.AutoPay)
+                            {
+                                <span class="badge bg-success"><i class="bi-check"></i> Enabled</span>
+                                @if (Model.AutoPayAccountName != null)
+                                {
+                                    <br /><small class="text-muted">@Model.AutoPayAccountName</small>
+                                }
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">Disabled</span>
+                            }
+                        </dd>
+
+                        @if (Model.LinkedDebtName != null)
+                        {
+                            <dt class="col-6">Linked Debt</dt>
+                            <dd class="col-6">@Model.LinkedDebtName</dd>
+                        }
+                    </dl>
+                </div>
+            </div>
+
+            @if (!string.IsNullOrEmpty(Model.Notes))
+            {
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="bi-sticky me-2"></i>Notes</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="mb-0">@Model.Notes</p>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi-clock-history me-2"></i>Payment History</h5>
+                    <span class="text-muted">Last 12 months</span>
+                </div>
+                @if (payments.Any())
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Due Date</th>
+                                    <th>Paid Date</th>
+                                    <th class="text-end">Amount Due</th>
+                                    <th class="text-end">Amount Paid</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var payment in payments.OrderByDescending(p => p.DueDate))
+                                {
+                                    var statusBadge = payment.Status switch
+                                    {
+                                        BillPaymentStatus.Paid => "bg-success",
+                                        BillPaymentStatus.Overdue => "bg-danger",
+                                        BillPaymentStatus.Scheduled => "bg-info",
+                                        _ => "bg-warning text-dark"
+                                    };
+                                    <tr>
+                                        <td>@payment.DueDate.ToString("MMM d, yyyy")</td>
+                                        <td>@(payment.PaidDate?.ToString("MMM d, yyyy") ?? "-")</td>
+                                        <td class="text-end">$@payment.AmountDue.ToString("N2")</td>
+                                        <td class="text-end">@(payment.AmountPaid.HasValue ? $"${payment.AmountPaid.Value:N2}" : "-")</td>
+                                        <td>
+                                            <span class="badge @statusBadge">@payment.Status</span>
+                                            @if (payment.Status == BillPaymentStatus.Pending)
+                                            {
+                                                <form asp-action="MarkPaid" method="post" class="d-inline ms-2">
+                                                    <input type="hidden" name="paymentId" value="@payment.Id" />
+                                                    <button type="submit" class="btn btn-sm btn-success"><i class="bi-check"></i></button>
+                                                </form>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="card-body text-center py-5">
+                        <i class="bi-calendar-x fs-1 text-muted"></i>
+                        <p class="text-muted mt-2">No payment history yet.</p>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>

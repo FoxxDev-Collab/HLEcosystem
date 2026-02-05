@@ -1,0 +1,197 @@
+@using HLE.FamilyFinance.Services.Interfaces
+@model List<RecurringTransactionDto>
+@{
+    ViewData["Title"] = "Recurring Transactions";
+    var includeInactive = (bool)(ViewData["IncludeInactive"] ?? false);
+}
+
+<div class="py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Recurring Transactions</h2>
+        <div class="btn-group">
+            <a asp-action="Create" class="btn btn-primary">+ Add Recurring</a>
+            <a asp-action="Upcoming" class="btn btn-outline-secondary">View Upcoming</a>
+        </div>
+    </div>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show">
+            @TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show">
+            @TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            @if (includeInactive)
+            {
+                <a asp-action="Index" asp-route-includeInactive="false" class="btn btn-sm btn-outline-secondary">Hide Inactive</a>
+            }
+            else
+            {
+                <a asp-action="Index" asp-route-includeInactive="true" class="btn btn-sm btn-outline-secondary">Show Inactive</a>
+            }
+        </div>
+        <form asp-action="ProcessDue" method="post" class="d-inline">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="btn btn-sm btn-success"
+                    onclick="return confirm('Create transactions for all due recurring items?')">
+                Process Due Transactions
+            </button>
+        </form>
+    </div>
+
+    @if (!Model.Any())
+    {
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <p class="text-muted mb-3">No recurring transactions set up yet. Create templates for repeating bills and income.</p>
+                <a asp-action="Create" class="btn btn-primary">Add Recurring Transaction</a>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="card">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Name</th>
+                            <th>Type</th>
+                            <th>Amount</th>
+                            <th>Frequency</th>
+                            <th>Next Due</th>
+                            <th>Account</th>
+                            <th>Status</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model)
+                        {
+                            var typeClass = item.Type == HLE.FamilyFinance.Models.Enums.TransactionType.Income ? "text-success" : "text-danger";
+                            var daysUntil = item.NextOccurrence.ToDateTime(TimeOnly.MinValue) - DateTime.Today;
+                            <tr class="@(!item.IsActive ? "table-secondary" : "")">
+                                <td>
+                                    <strong>@item.Name</strong>
+                                    @if (!string.IsNullOrEmpty(item.Payee))
+                                    {
+                                        <br /><small class="text-muted">@item.Payee</small>
+                                    }
+                                </td>
+                                <td>
+                                    <span class="badge @(item.Type == HLE.FamilyFinance.Models.Enums.TransactionType.Income ? "bg-success" : "bg-danger")">
+                                        @item.Type
+                                    </span>
+                                </td>
+                                <td class="@typeClass">
+                                    @(item.Type == HLE.FamilyFinance.Models.Enums.TransactionType.Income ? "+" : "-")$@item.Amount.ToString("N2")
+                                </td>
+                                <td>
+                                    @if (item.FrequencyInterval == 1)
+                                    {
+                                        @item.Frequency.ToString()
+                                    }
+                                    else
+                                    {
+                                        @:Every @item.FrequencyInterval @item.Frequency.ToString().ToLower()s
+                                    }
+                                </td>
+                                <td>
+                                    @if (item.IsActive)
+                                    {
+                                        <span class="@(daysUntil.Days <= 7 ? "text-warning fw-bold" : "")">
+                                            @item.NextOccurrence.ToString("MMM d, yyyy")
+                                        </span>
+                                        @if (daysUntil.Days <= 0)
+                                        {
+                                            <span class="badge bg-danger ms-1">Due</span>
+                                        }
+                                        else if (daysUntil.Days <= 7)
+                                        {
+                                            <span class="badge bg-warning text-dark ms-1">@daysUntil.Days days</span>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">—</span>
+                                    }
+                                </td>
+                                <td>@item.AccountName</td>
+                                <td>
+                                    @if (item.IsActive)
+                                    {
+                                        <span class="badge bg-success">Active</span>
+                                        @if (item.AutoCreate)
+                                        {
+                                            <span class="badge bg-info" title="Auto-creates when due">Auto</span>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">Inactive</span>
+                                    }
+                                </td>
+                                <td class="text-end">
+                                    <div class="btn-group btn-group-sm">
+                                        @if (item.IsActive)
+                                        {
+                                            <form asp-action="Skip" asp-route-id="@item.Id" method="post" class="d-inline">
+                                                @Html.AntiForgeryToken()
+                                                <button type="submit" class="btn btn-outline-secondary" title="Skip next occurrence">Skip</button>
+                                            </form>
+                                        }
+                                        <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-outline-primary">Edit</a>
+                                        <form asp-action="Delete" asp-route-id="@item.Id" method="post" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-outline-danger"
+                                                    onclick="return confirm('Delete this recurring transaction?')">Delete</button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">Summary</h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-md-3">
+                        <h4 class="text-success">$@Model.Where(m => m.IsActive && m.Type == HLE.FamilyFinance.Models.Enums.TransactionType.Income).Sum(m => m.Amount).ToString("N2")</h4>
+                        <small class="text-muted">Monthly Income</small>
+                    </div>
+                    <div class="col-md-3">
+                        <h4 class="text-danger">$@Model.Where(m => m.IsActive && m.Type == HLE.FamilyFinance.Models.Enums.TransactionType.Expense).Sum(m => m.Amount).ToString("N2")</h4>
+                        <small class="text-muted">Monthly Expenses</small>
+                    </div>
+                    <div class="col-md-3">
+                        <h4>@Model.Count(m => m.IsActive)</h4>
+                        <small class="text-muted">Active Items</small>
+                    </div>
+                    <div class="col-md-3">
+                        @{
+                            var dueCount = Model.Count(m => m.IsActive && m.NextOccurrence <= DateOnly.FromDateTime(DateTime.Today.AddDays(7)));
+                        }
+                        <h4 class="@(dueCount > 0 ? "text-warning" : "")">@dueCount</h4>
+                        <small class="text-muted">Due Within 7 Days</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>

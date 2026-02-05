@@ -1,0 +1,101 @@
+@model EditLocationViewModel
+@{
+    ViewData["Title"] = "Edit Location";
+}
+
+<div class="container py-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-action="Index">Locations</a></li>
+            <li class="breadcrumb-item active">Edit</li>
+        </ol>
+    </nav>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">Edit Location</h4>
+                </div>
+                <div class="card-body">
+                    <form asp-action="Edit" method="post">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" asp-for="Id" />
+
+                        <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+                        <div class="mb-3">
+                            <label asp-for="Name" class="form-label">Location Name</label>
+                            <input asp-for="Name" class="form-control" />
+                            <span asp-validation-for="Name" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Description" class="form-label">Description (Optional)</label>
+                            <textarea asp-for="Description" class="form-control" rows="2"></textarea>
+                            <span asp-validation-for="Description" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-4">
+                            <label asp-for="ParentId" class="form-label">Parent Location</label>
+                            <select asp-for="ParentId" class="form-select">
+                                @foreach (var parent in Model.AvailableParents)
+                                {
+                                    <option value="@(parent.Id == 0 ? "" : parent.Id.ToString())"
+                                            selected="@(Model.ParentId.HasValue && Model.ParentId.Value == parent.Id || (!Model.ParentId.HasValue && parent.Id == 0))">
+                                        @parent.Name
+                                    </option>
+                                }
+                            </select>
+                            <small class="text-muted d-block mt-1">
+                                Current path: @(Model.CurrentPath ?? "Top Level")
+                            </small>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">Save Changes</button>
+                            <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
+                            <form asp-action="Delete" asp-route-id="@Model.Id" method="post" class="ms-auto">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-outline-danger"
+                                        onclick="return confirm('Delete this location? @(Model.AssetCount > 0 ? "This location has assets and cannot be deleted." : "Are you sure?")')"
+                                        @(Model.AssetCount > 0 ? "disabled" : "")>
+                                    Delete
+                                </button>
+                            </form>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">Location Info</h6>
+                </div>
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item">
+                        <small class="text-muted">Location ID</small>
+                        <div>#@Model.Id</div>
+                    </li>
+                    <li class="list-group-item">
+                        <small class="text-muted">Full Path</small>
+                        <div>@(Model.CurrentPath ?? "Top Level")</div>
+                    </li>
+                    <li class="list-group-item">
+                        <small class="text-muted">Assets</small>
+                        <div>@Model.AssetCount</div>
+                    </li>
+                </ul>
+            </div>
+
+            @if (Model.AssetCount > 0)
+            {
+                <div class="alert alert-info mt-3">
+                    <small>This location has @Model.AssetCount asset@(Model.AssetCount == 1 ? "" : "s") and cannot be deleted.</small>
+                </div>
+            }
+        </div>
+    </div>
+</div>

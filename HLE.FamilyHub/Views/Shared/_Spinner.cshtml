@@ -1,0 +1,21 @@
+@*
+    Spinner/Loader Component
+    Usage:
+    <partial name="_Spinner" model='new { Variant = "primary", Size = "md", Type = "border" }' />
+    Types: border, grow
+    Sizes: sm, md (default)
+*@
+@{
+    var variant = ViewData["Variant"]?.ToString() ?? "primary";
+    var size = ViewData["Size"]?.ToString() ?? "md";
+    var type = ViewData["Type"]?.ToString() ?? "border";
+    var text = ViewData["Text"]?.ToString() ?? "Loading...";
+    var cssClass = ViewData["CssClass"]?.ToString() ?? "";
+    
+    var spinnerClass = $"spinner-{type} text-{variant} {cssClass}";
+    if (size == "sm") spinnerClass += $" spinner-{type}-sm";
+}
+
+<div class="@spinnerClass" role="status">
+    <span class="visually-hidden">@text</span>
+</div>

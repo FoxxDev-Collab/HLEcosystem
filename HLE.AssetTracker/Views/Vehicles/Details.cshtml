@@ -1,0 +1,460 @@
+@model HLE.AssetTracker.Models.Entities.Vehicle
+@{
+    ViewData["Title"] = $"{Model.Year} {Model.Make} {Model.Model}";
+    var averageMPG = ViewBag.AverageMPG as decimal?;
+    var recentMPG = ViewBag.RecentMPG as decimal?;
+    var milesThisMonth = ViewBag.MilesThisMonth as int? ?? 0;
+    var fuelCostThisMonth = ViewBag.FuelCostThisMonth as decimal? ?? 0;
+}
+
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a asp-action="Index">Vehicles</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">@Model.Year @Model.Make @Model.Model</li>
+                </ol>
+            </nav>
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <h1>@Model.Year @Model.Make @Model.Model</h1>
+                    @if (!string.IsNullOrEmpty(Model.VehicleType))
+                    {
+                        <span class="badge bg-secondary">@Model.VehicleType</span>
+                    }
+                </div>
+                <div class="d-flex gap-2">
+                    <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-primary">
+                        <i data-lucide="edit" style="width: 16px; height: 16px;"></i>
+                        Edit
+                    </a>
+                    @if (Model.IsArchived)
+                    {
+                        <form asp-action="Restore" asp-route-id="@Model.Id" method="post" class="d-inline">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-outline-success">
+                                <i data-lucide="archive-restore" style="width: 16px; height: 16px;"></i>
+                                Restore
+                            </button>
+                        </form>
+                    }
+                    else
+                    {
+                        <form asp-action="Archive" asp-route-id="@Model.Id" method="post" class="d-inline">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-outline-warning" onclick="return confirm('Archive this vehicle?')">
+                                <i data-lucide="archive" style="width: 16px; height: 16px;"></i>
+                                Archive
+                            </button>
+                        </form>
+                    }
+                    <form asp-action="Delete" asp-route-id="@Model.Id" method="post" class="d-inline">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn btn-outline-danger" onclick="return confirm('⚠️ PERMANENTLY DELETE this vehicle? This cannot be undone!')">
+                            <i data-lucide="trash-2" style="width: 16px; height: 16px;"></i>
+                            Delete Permanently
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            @TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <!-- Stats Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <i data-lucide="gauge" style="width: 32px; height: 32px;" class="text-primary mb-2"></i>
+                    <h6 class="text-muted mb-1">Current Odometer</h6>
+                    <h4 class="mb-0">@Model.CurrentOdometer.ToString("N0")</h4>
+                    <small class="text-muted">@Model.OdometerUnit</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <i data-lucide="activity" style="width: 32px; height: 32px;" class="text-success mb-2"></i>
+                    <h6 class="text-muted mb-1">Average MPG</h6>
+                    <h4 class="mb-0">@(averageMPG?.ToString("N1") ?? "—")</h4>
+                    <small class="text-muted">All Time</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <i data-lucide="trending-up" style="width: 32px; height: 32px;" class="text-info mb-2"></i>
+                    <h6 class="text-muted mb-1">Recent MPG</h6>
+                    <h4 class="mb-0">@(recentMPG?.ToString("N1") ?? "—")</h4>
+                    <small class="text-muted">Last 3 Fill-ups</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <i data-lucide="dollar-sign" style="width: 32px; height: 32px;" class="text-warning mb-2"></i>
+                    <h6 class="text-muted mb-1">This Month</h6>
+                    <h4 class="mb-0">$@fuelCostThisMonth.ToString("N2")</h4>
+                    <small class="text-muted">@milesThisMonth.ToString("N0") miles</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <ul class="nav nav-tabs mb-4" id="vehicleTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview" type="button" role="tab" aria-controls="overview" aria-selected="true">
+                <i data-lucide="info" style="width: 16px; height: 16px;"></i>
+                Overview
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="odometer-tab" data-bs-toggle="tab" data-bs-target="#odometer" type="button" role="tab" aria-controls="odometer" aria-selected="false">
+                <i data-lucide="gauge" style="width: 16px; height: 16px;"></i>
+                Odometer History
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="fuel-tab" data-bs-toggle="tab" data-bs-target="#fuel" type="button" role="tab" aria-controls="fuel" aria-selected="false">
+                <i data-lucide="fuel" style="width: 16px; height: 16px;"></i>
+                Fuel Logs
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="vehicleTabContent">
+        <!-- Overview Tab -->
+        <div class="tab-pane fade show active" id="overview" role="tabpanel" aria-labelledby="overview-tab">
+            <div class="row">
+                <div class="col-lg-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Vehicle Information</h5>
+                        </div>
+                        <div class="card-body">
+                            <dl class="row mb-0">
+                                @if (!string.IsNullOrEmpty(Model.VIN))
+                                {
+                                    <dt class="col-sm-4">VIN</dt>
+                                    <dd class="col-sm-8">@Model.VIN</dd>
+                                }
+                                @if (!string.IsNullOrEmpty(Model.LicensePlate))
+                                {
+                                    <dt class="col-sm-4">License Plate</dt>
+                                    <dd class="col-sm-8">@Model.LicensePlate</dd>
+                                }
+                                @if (!string.IsNullOrEmpty(Model.Color))
+                                {
+                                    <dt class="col-sm-4">Color</dt>
+                                    <dd class="col-sm-8">@Model.Color</dd>
+                                }
+                                <dt class="col-sm-4">Created</dt>
+                                <dd class="col-sm-8">@Model.CreatedAt.ToLocalTime().ToString("MMM dd, yyyy")</dd>
+                            </dl>
+                            @if (!string.IsNullOrEmpty(Model.Notes))
+                            {
+                                <hr>
+                                <h6>Notes</h6>
+                                <p class="mb-0">@Model.Notes</p>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Recent Activity</h5>
+                        </div>
+                        <div class="card-body">
+                            @if (Model.FuelLogs.Any() || Model.OdometerReadings.Any())
+                            {
+                                var recentLogs = Model.FuelLogs.Take(3).ToList();
+                                var recentReadings = Model.OdometerReadings.Take(3).ToList();
+
+                                @foreach (var log in recentLogs)
+                                {
+                                    <div class="d-flex mb-2">
+                                        <i data-lucide="fuel" style="width: 20px; height: 20px;" class="text-primary me-2"></i>
+                                        <div>
+                                            <strong>Fuel Fill-up</strong><br>
+                                            <small class="text-muted">@log.FillUpDate.ToLocalTime().ToString("MMM dd, yyyy") - @log.Quantity.ToString("N1") @log.QuantityUnit - $@log.TotalCost.ToString("N2")</small>
+                                        </div>
+                                    </div>
+                                }
+
+                                @foreach (var reading in recentReadings)
+                                {
+                                    <div class="d-flex mb-2">
+                                        <i data-lucide="gauge" style="width: 20px; height: 20px;" class="text-success me-2"></i>
+                                        <div>
+                                            <strong>Odometer Reading</strong><br>
+                                            <small class="text-muted">@reading.ReadingDate.ToLocalTime().ToString("MMM dd, yyyy") - @reading.Odometer.ToString("N0") @Model.OdometerUnit</small>
+                                        </div>
+                                    </div>
+                                }
+                            }
+                            else
+                            {
+                                <p class="text-muted mb-0">No activity yet. Add an odometer reading or fuel log to get started!</p>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Odometer Tab -->
+        <div class="tab-pane fade" id="odometer" role="tabpanel" aria-labelledby="odometer-tab">
+            <div class="row mb-3">
+                <div class="col-12">
+                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addOdometerModal">
+                        <i data-lucide="plus" style="width: 16px; height: 16px;"></i>
+                        Add Odometer Reading
+                    </button>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Odometer History</h5>
+                </div>
+                <div class="card-body">
+                    @if (Model.OdometerReadings.Any())
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Odometer</th>
+                                        <th>Notes</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var reading in Model.OdometerReadings.OrderByDescending(r => r.ReadingDate))
+                                    {
+                                        <tr>
+                                            <td>@reading.ReadingDate.ToLocalTime().ToString("MMM dd, yyyy")</td>
+                                            <td>@reading.Odometer.ToString("N0") @Model.OdometerUnit</td>
+                                            <td>@(reading.Notes ?? "—")</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted mb-0">No odometer readings yet. Add one to start tracking!</p>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Fuel Logs Tab -->
+        <div class="tab-pane fade" id="fuel" role="tabpanel" aria-labelledby="fuel-tab">
+            <div class="row mb-3">
+                <div class="col-12">
+                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addFuelModal">
+                        <i data-lucide="plus" style="width: 16px; height: 16px;"></i>
+                        Add Fuel Log
+                    </button>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Fuel Log History</h5>
+                </div>
+                <div class="card-body">
+                    @if (Model.FuelLogs.Any())
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Odometer</th>
+                                        <th>Quantity</th>
+                                        <th>Cost</th>
+                                        <th>$/Unit</th>
+                                        <th>MPG</th>
+                                        <th>Full Tank</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var log in Model.FuelLogs.OrderByDescending(l => l.FillUpDate))
+                                    {
+                                        <tr>
+                                            <td>@log.FillUpDate.ToLocalTime().ToString("MMM dd, yyyy")</td>
+                                            <td>@log.Odometer.ToString("N0")</td>
+                                            <td>@log.Quantity.ToString("N1") @log.QuantityUnit</td>
+                                            <td>$@log.TotalCost.ToString("N2")</td>
+                                            <td>$@log.PricePerUnit.ToString("N3")</td>
+                                            <td>@(log.CalculatedMPG?.ToString("N1") ?? "—")</td>
+                                            <td>@(log.IsFullTank ? "✓" : "")</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted mb-0">No fuel logs yet. Add one to start tracking MPG!</p>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Odometer Reading Modal -->
+<div class="modal fade" id="addOdometerModal" tabindex="-1" aria-labelledby="addOdometerModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form asp-action="AddOdometerReading" method="post">
+                <input type="hidden" name="VehicleId" value="@Model.Id" />
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addOdometerModalLabel">Add Odometer Reading</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Reading Date *</label>
+                        <input type="date" name="ReadingDate" class="form-control" value="@DateTime.Now.ToString("yyyy-MM-dd")" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Odometer *</label>
+                        <input type="number" name="Odometer" class="form-control" min="@Model.CurrentOdometer" required />
+                        <small class="text-muted">Current: @Model.CurrentOdometer.ToString("N0") @Model.OdometerUnit</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Notes</label>
+                        <textarea name="Notes" class="form-control" rows="2"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Reading</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Add Fuel Log Modal -->
+<div class="modal fade" id="addFuelModal" tabindex="-1" aria-labelledby="addFuelModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form asp-action="AddFuelLog" method="post">
+                <input type="hidden" name="VehicleId" value="@Model.Id" />
+                <input type="hidden" name="QuantityUnit" value="@Model.OdometerUnit == "Miles" ? "Gallons" : "Liters")" />
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addFuelModalLabel">Add Fuel Log</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Fill-up Date *</label>
+                        <input type="date" name="FillUpDate" class="form-control" value="@DateTime.Now.ToString("yyyy-MM-dd")" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Odometer *</label>
+                        <input type="number" name="Odometer" class="form-control" min="@Model.CurrentOdometer" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Quantity (@(Model.OdometerUnit == "Miles" ? "Gallons" : "Liters")) *</label>
+                        <input type="number" step="0.01" name="Quantity" class="form-control" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Total Cost ($) *</label>
+                        <input type="number" step="0.01" name="TotalCost" class="form-control" id="totalCost" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Price Per Unit ($) *</label>
+                        <input type="number" step="0.001" name="PricePerUnit" class="form-control" id="pricePerUnit" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Fuel Type</label>
+                        <select name="FuelType" class="form-select">
+                            <option value="">Select...</option>
+                            <option value="Regular">Regular</option>
+                            <option value="Premium">Premium</option>
+                            <option value="Diesel">Diesel</option>
+                            <option value="Electric">Electric</option>
+                        </select>
+                    </div>
+                    <div class="form-check mb-3">
+                        <input type="checkbox" name="IsFullTank" class="form-check-input" id="isFullTank" checked />
+                        <label class="form-check-label" for="isFullTank">
+                            Full Tank (required for MPG calculation)
+                        </label>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Notes</label>
+                        <textarea name="Notes" class="form-control" rows="2"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Fuel Log</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            lucide.createIcons();
+
+            // Reinitialize icons when tabs are shown
+            document.querySelectorAll('button[data-bs-toggle="tab"]').forEach(function(tab) {
+                tab.addEventListener('shown.bs.tab', function() {
+                    lucide.createIcons();
+                });
+            });
+
+            // Auto-calculate price per unit
+            const totalCostInput = document.getElementById('totalCost');
+            const pricePerUnitInput = document.getElementById('pricePerUnit');
+            const quantityInput = document.querySelector('input[name="Quantity"]');
+
+            function calculatePricePerUnit() {
+                const quantity = parseFloat(quantityInput.value);
+                const totalCost = parseFloat(totalCostInput.value);
+
+                if (quantity > 0 && totalCost > 0) {
+                    pricePerUnitInput.value = (totalCost / quantity).toFixed(3);
+                }
+            }
+
+            totalCostInput.addEventListener('input', calculatePricePerUnit);
+            quantityInput.addEventListener('input', calculatePricePerUnit);
+        });
+    </script>
+}

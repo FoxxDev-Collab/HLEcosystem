@@ -1,0 +1,303 @@
+@model HLE.FamilyHub.Services.Interfaces.FamilyMemberDetailDto
+@{
+    ViewData["Title"] = $"{Model.FirstName} {Model.LastName}";
+    var dates = ViewData["Dates"] as List<HLE.FamilyHub.Services.Interfaces.ImportantDateSummaryDto> ?? new();
+    var ideas = ViewData["Ideas"] as List<HLE.FamilyHub.Services.Interfaces.GiftIdeaSummaryDto> ?? new();
+    var gifts = ViewData["Gifts"] as List<HLE.FamilyHub.Services.Interfaces.GiftSummaryDto> ?? new();
+}
+
+@{
+    ViewData["BreadcrumbItems"] = new List<(string Text, string? Url, bool IsActive)>
+    {
+        ("Home", Url.Action("Index", "Home"), false),
+        ("Family", Url.Action("Index"), false),
+        ($"{Model.FirstName} {Model.LastName}", null, true)
+    };
+}
+<partial name="_Breadcrumb" />
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2>
+            @Model.FirstName @Model.LastName
+            @if (!string.IsNullOrEmpty(Model.Nickname))
+            {
+                <span class="text-muted">(@Model.Nickname)</span>
+            }
+        </h2>
+        @if (Model.Relationship != HLE.FamilyHub.Models.Enums.Relationship.Other || !string.IsNullOrEmpty(Model.RelationshipNotes))
+        {
+            ViewData["Text"] = !string.IsNullOrEmpty(Model.RelationshipNotes) ? Model.RelationshipNotes : Model.Relationship.ToString();
+            ViewData["Variant"] = "primary";
+            <partial name="_Badge" />
+        }
+    </div>
+    <div class="d-flex gap-2">
+        @{
+            ViewData["Text"] = "Edit";
+            ViewData["Variant"] = "primary";
+            ViewData["Icon"] = "bi-pencil";
+            ViewData["Href"] = Url.Action("Edit", new { id = Model.Id });
+        }
+        <partial name="_Button" />
+
+        <form asp-action="Delete" asp-route-id="@Model.Id" method="post" style="display:inline;"
+              onsubmit="return confirm('Are you sure you want to delete this family member? This action cannot be undone.');">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="btn btn-danger">
+                <i class="bi bi-trash"></i> Delete
+            </button>
+        </form>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-8">
+        @if (!string.IsNullOrEmpty(Model.Phone) || !string.IsNullOrEmpty(Model.Email) || Model.PreferredContact != HLE.FamilyHub.Models.Enums.PreferredContactMethod.None)
+        {
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-telephone"></i> Contact Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    @if (!string.IsNullOrEmpty(Model.Phone))
+                    {
+                        <p class="mb-2">
+                            <strong>Phone:</strong> <a href="tel:@Model.Phone">@Model.Phone</a>
+                        </p>
+                    }
+                    @if (!string.IsNullOrEmpty(Model.Email))
+                    {
+                        <p class="mb-2">
+                            <strong>Email:</strong> <a href="mailto:@Model.Email">@Model.Email</a>
+                        </p>
+                    }
+                    @if (Model.PreferredContact != HLE.FamilyHub.Models.Enums.PreferredContactMethod.None)
+                    {
+                        <p class="mb-0">
+                            <strong>Preferred Contact:</strong> @Model.PreferredContact.ToString()
+                        </p>
+                    }
+                </div>
+            </div>
+        }
+
+        @if (!string.IsNullOrEmpty(Model.AddressLine1))
+        {
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-geo-alt"></i> Address
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <address class="mb-0">
+                        @Model.AddressLine1<br />
+                        @if (!string.IsNullOrEmpty(Model.AddressLine2))
+                        {
+                            @Model.AddressLine2
+                            <br />
+                        }
+                        @if (!string.IsNullOrEmpty(Model.City) || !string.IsNullOrEmpty(Model.State) || !string.IsNullOrEmpty(Model.ZipCode))
+                        {
+                            @Model.City@(string.IsNullOrEmpty(Model.State) ? "" : ", " + Model.State) @Model.ZipCode<br />
+                        }
+                        @if (!string.IsNullOrEmpty(Model.Country))
+                        {
+                            @Model.Country
+                        }
+                    </address>
+                    @if (Model.IncludeInHolidayCards)
+                    {
+                        <div class="mt-2">
+                            @{
+                                ViewData["Text"] = "Holiday Card List";
+                                ViewData["Variant"] = "success";
+                                ViewData["Icon"] = "bi-envelope-heart";
+                            }
+                            <partial name="_Badge" />
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+
+        @if (!string.IsNullOrEmpty(Model.Notes))
+        {
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-sticky"></i> Notes
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p class="mb-0 white-space-pre-line">@Model.Notes</p>
+                </div>
+            </div>
+        }
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card mb-3">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="bi bi-calendar-heart"></i> Important Dates
+                </h5>
+                <a href="@Url.Action("Create", "ImportantDates", new { familyMemberId = Model.Id })" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-plus"></i>
+                </a>
+            </div>
+            <div class="card-body p-0">
+                @if (dates.Any())
+                {
+                    <div class="list-group list-group-flush">
+                        @foreach (var date in dates)
+                        {
+                            <div class="list-group-item">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <h6 class="mb-1">
+                                            @switch (date.Type)
+                                            {
+                                                case HLE.FamilyHub.Models.Enums.ImportantDateType.Birthday:
+                                                    <i class="bi bi-cake2"></i>
+                                                    break;
+                                                case HLE.FamilyHub.Models.Enums.ImportantDateType.Anniversary:
+                                                    <i class="bi bi-heart"></i>
+                                                    break;
+                                                default:
+                                                    <i class="bi bi-calendar-event"></i>
+                                                    break;
+                                            }
+                                            @date.Label
+                                        </h6>
+                                        <p class="mb-0 text-muted small">
+                                            @date.NextOccurrence.ToString("MMM d, yyyy")
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="p-3 text-center text-muted">
+                        <p class="mb-0 small">No dates recorded</p>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="bi bi-lightbulb"></i> Gift Ideas
+                </h5>
+                <a href="@Url.Action("Create", "GiftIdeas", new { familyMemberId = Model.Id })" class="btn btn-sm btn-outline-success">
+                    <i class="bi bi-plus"></i>
+                </a>
+            </div>
+            <div class="card-body p-0">
+                @if (ideas.Any())
+                {
+                    <div class="list-group list-group-flush">
+                        @foreach (var idea in ideas)
+                        {
+                            <div class="list-group-item">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div class="flex-grow-1">
+                                        <h6 class="mb-1">@idea.Idea</h6>
+                                        @if (idea.EstimatedCost.HasValue)
+                                        {
+                                            <p class="mb-0 text-muted small">@idea.EstimatedCost.Value.ToString("C")</p>
+                                        }
+                                    </div>
+                                    <div>
+                                        @{
+                                            var priorityVariant = idea.Priority switch
+                                            {
+                                                HLE.FamilyHub.Models.Enums.GiftIdeaPriority.High => "danger",
+                                                HLE.FamilyHub.Models.Enums.GiftIdeaPriority.Medium => "warning",
+                                                _ => "secondary"
+                                            };
+                                            ViewData["Text"] = idea.Priority.ToString();
+                                            ViewData["Variant"] = priorityVariant;
+                                        }
+                                        <partial name="_Badge" />
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="p-3 text-center text-muted">
+                        <p class="mb-0 small">No gift ideas yet</p>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="bi bi-gift"></i> Recent Gifts
+                </h5>
+                <a href="@Url.Action("Create", "Gifts", new { familyMemberId = Model.Id })" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-plus"></i>
+                </a>
+            </div>
+            <div class="card-body p-0">
+                @if (gifts.Any())
+                {
+                    <div class="list-group list-group-flush">
+                        @foreach (var gift in gifts.Take(5))
+                        {
+                            <div class="list-group-item">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div class="flex-grow-1">
+                                        <h6 class="mb-1">@gift.Description</h6>
+                                        @if (gift.GiftDate.HasValue)
+                                        {
+                                            <p class="mb-0 text-muted small">@gift.GiftDate.Value.ToString("MMM dd, yyyy")</p>
+                                        }
+                                    </div>
+                                    <div>
+                                        @{
+                                            var statusVariant = gift.Status switch
+                                            {
+                                                HLE.FamilyHub.Models.Enums.GiftStatus.Given => "success",
+                                                HLE.FamilyHub.Models.Enums.GiftStatus.Wrapped => "info",
+                                                HLE.FamilyHub.Models.Enums.GiftStatus.Purchased => "warning",
+                                                _ => "secondary"
+                                            };
+                                            ViewData["Text"] = gift.Status.ToString();
+                                            ViewData["Variant"] = statusVariant;
+                                        }
+                                        <partial name="_Badge" />
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="p-3 text-center text-muted">
+                        <p class="mb-0 small">No gifts recorded</p>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .white-space-pre-line {
+        white-space: pre-line;
+    }
+</style>

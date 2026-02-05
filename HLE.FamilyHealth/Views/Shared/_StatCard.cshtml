@@ -1,0 +1,37 @@
+@*
+    Stat Card Component
+    Usage:
+    @{
+        ViewData["CardIcon"] = "<i class=\"bi bi-people\"></i>";
+        ViewData["CardTitle"] = "Family Members";
+        ViewData["CardValue"] = "5";
+        ViewData["CardSubtitle"] = "active";
+        ViewData["CardVariant"] = "primary";
+    }
+    <partial name="_StatCard" />
+*@
+@{
+    var icon = ViewData["CardIcon"]?.ToString() ?? "";
+    var title = ViewData["CardTitle"]?.ToString() ?? "";
+    var value = ViewData["CardValue"]?.ToString() ?? "0";
+    var subtitle = ViewData["CardSubtitle"]?.ToString() ?? "";
+    var variant = ViewData["CardVariant"]?.ToString() ?? "primary";
+}
+
+<div class="card h-100">
+    <div class="card-body">
+        <div class="d-flex align-items-center mb-2">
+            <div class="flex-shrink-0 text-@variant">
+                @Html.Raw(icon)
+            </div>
+            <div class="flex-grow-1 ms-2">
+                <h6 class="card-subtitle text-muted small">@title</h6>
+            </div>
+        </div>
+        <h3 class="card-title mb-1">@value</h3>
+        @if (!string.IsNullOrEmpty(subtitle))
+        {
+            <p class="card-text text-muted small mb-0">@subtitle</p>
+        }
+    </div>
+</div>

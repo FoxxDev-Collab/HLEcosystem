@@ -1,0 +1,143 @@
+@using HLE.FamilyFinance.Services.Interfaces
+@model AccountDetailDto
+@{
+    ViewData["Title"] = Model.Name;
+}
+
+<div class="py-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-action="Index">Accounts</a></li>
+            <li class="breadcrumb-item active">@Model.Name</li>
+        </ol>
+    </nav>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">@Model.Name</h4>
+                    <div class="d-flex gap-2">
+                        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-primary btn-sm">Edit</a>
+                        <form asp-action="Archive" asp-route-id="@Model.Id" method="post" class="d-inline">
+                            <button type="submit" class="btn btn-outline-warning btn-sm"><i class="bi-archive me-1"></i>Archive</button>
+                        </form>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <dl>
+                                <dt>Type</dt>
+                                <dd>@Model.Type</dd>
+                                <dt>Institution</dt>
+                                <dd>@(Model.Institution ?? "—")</dd>
+                                <dt>Account Number</dt>
+                                <dd>@(Model.AccountNumber != null ? $"•••• {Model.AccountNumber}" : "—")</dd>
+                            </dl>
+                        </div>
+                        <div class="col-md-6">
+                            <dl>
+                                <dt>Currency</dt>
+                                <dd>@Model.Currency</dd>
+                                <dt>Initial Balance</dt>
+                                <dd>$@Model.InitialBalance.ToString("N2")</dd>
+                                <dt>Current Balance</dt>
+                                <dd class="fs-4 @(Model.CurrentBalance >= 0 ? "text-success" : "text-danger")">
+                                    $@Model.CurrentBalance.ToString("N2")
+                                </dd>
+                            </dl>
+                        </div>
+                    </div>
+                    @if (!string.IsNullOrEmpty(Model.Notes))
+                    {
+                        <hr />
+                        <h6>Notes</h6>
+                        <p>@Model.Notes</p>
+                    }
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">This Month</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col">
+                            <h5 class="text-success">$@Model.MonthlyIncome.ToString("N2")</h5>
+                            <small class="text-muted">Income</small>
+                        </div>
+                        <div class="col">
+                            <h5 class="text-danger">$@Model.MonthlyExpenses.ToString("N2")</h5>
+                            <small class="text-muted">Expenses</small>
+                        </div>
+                        <div class="col">
+                            <h5>@Model.TransactionCount</h5>
+                            <small class="text-muted">Transactions</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card mb-3">
+                <div class="card-header">Actions</div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a asp-controller="Transactions" asp-action="Create" asp-route-accountId="@Model.Id" class="btn btn-primary">
+                            Add Transaction
+                        </a>
+                        <a asp-controller="Transactions" asp-action="Index" asp-route-accountId="@Model.Id" class="btn btn-outline-secondary">
+                            View Transactions
+                        </a>
+                        @if (!Model.IsArchived)
+                        {
+                            <form asp-action="Archive" asp-route-id="@Model.Id" method="post">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-outline-warning w-100" onclick="return confirm('Archive this account?')">
+                                    Archive Account
+                                </button>
+                            </form>
+                        }
+                        else
+                        {
+                            <form asp-action="Restore" asp-route-id="@Model.Id" method="post">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-outline-success w-100">Restore Account</button>
+                            </form>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <i class="bi-sliders me-1"></i>Adjust Balance
+                </div>
+                <div class="card-body">
+                    <p class="text-muted small mb-3">
+                        If your account balance doesn't match your bank statement, enter the correct balance below.
+                        This creates an adjustment transaction.
+                    </p>
+                    <form asp-action="AdjustBalance" asp-route-id="@Model.Id" method="post">
+                        @Html.AntiForgeryToken()
+                        <div class="mb-3">
+                            <label class="form-label">Correct Balance</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="text" name="newBalance" class="form-control money-input"
+                                       value="@Model.CurrentBalance" required />
+                            </div>
+                            <div class="form-text">Current: $@Model.CurrentBalance.ToString("N2")</div>
+                        </div>
+                        <button type="submit" class="btn btn-outline-primary w-100">
+                            <i class="bi-check-lg me-1"></i>Adjust Balance
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,50 @@
+@{
+    ViewData["Title"] = "Welcome";
+}
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8 text-center">
+            <h1 class="display-4 mb-4">Family Finance</h1>
+            <p class="lead mb-4">
+                Take control of your family's finances. Track expenses, plan budgets,
+                and achieve your financial goals together.
+            </p>
+            <div class="d-flex justify-content-center gap-3">
+                <a asp-controller="Account" asp-action="Login" class="btn btn-primary btn-lg">
+                    Get Started
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-5 g-4">
+        <div class="col-md-4">
+            <div class="card h-100 text-center">
+                <div class="card-body">
+                    <div class="fs-1 mb-3">💰</div>
+                    <h5 class="card-title">Track Expenses</h5>
+                    <p class="card-text">Log every transaction and see where your money goes.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100 text-center">
+                <div class="card-body">
+                    <div class="fs-1 mb-3">📊</div>
+                    <h5 class="card-title">Budget Planning</h5>
+                    <p class="card-text">Create monthly budgets and stay on track with spending.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100 text-center">
+                <div class="card-body">
+                    <div class="fs-1 mb-3">👨‍👩‍👧‍👦</div>
+                    <h5 class="card-title">Family Sharing</h5>
+                    <p class="card-text">Collaborate with family members on household finances.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

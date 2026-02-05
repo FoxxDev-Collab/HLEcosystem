@@ -1,0 +1,102 @@
+@model HLE.FamilyHealth.Models.ViewModels.VaccinationCreateDto
+@{
+    ViewData["Title"] = "Add Vaccination";
+}
+
+<div class="container-fluid py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="d-flex align-items-center mb-4">
+                <a href="@Url.Action("Index")" class="btn btn-outline-secondary me-3">
+                    <i class="bi bi-arrow-left"></i>
+                </a>
+                <div>
+                    <h2 class="mb-1">Add Vaccination</h2>
+                    <p class="text-muted mb-0">Record a vaccination for a family member</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-body">
+                    <form asp-action="Create" method="post">
+                        @Html.AntiForgeryToken()
+                        <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+                        <div class="row g-3">
+                            <div class="col-md-12">
+                                <label asp-for="FamilyMemberId" class="form-label"></label>
+                                <select asp-for="FamilyMemberId" asp-items="ViewBag.FamilyMembers" class="form-select">
+                                    <option value="">Select family member</option>
+                                </select>
+                                <span asp-validation-for="FamilyMemberId" class="text-danger"></span>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label asp-for="VaccineName" class="form-label"></label>
+                                <input asp-for="VaccineName" class="form-control" placeholder="e.g., COVID-19, Flu, MMR" />
+                                <span asp-validation-for="VaccineName" class="text-danger"></span>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label asp-for="DoseNumber" class="form-label"></label>
+                                <input asp-for="DoseNumber" class="form-control" placeholder="e.g., 1st, 2nd, Booster" />
+                                <span asp-validation-for="DoseNumber" class="text-danger"></span>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label asp-for="DateAdministered" class="form-label"></label>
+                                <input asp-for="DateAdministered" type="date" class="form-control" max="@DateTime.Now.ToString("yyyy-MM-dd")" />
+                                <span asp-validation-for="DateAdministered" class="text-danger"></span>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label asp-for="NextDoseDate" class="form-label"></label>
+                                <input asp-for="NextDoseDate" type="date" class="form-control" />
+                                <span asp-validation-for="NextDoseDate" class="text-danger"></span>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label asp-for="AdministeredBy" class="form-label"></label>
+                                <input asp-for="AdministeredBy" class="form-control" placeholder="Provider or facility" />
+                                <span asp-validation-for="AdministeredBy" class="text-danger"></span>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label asp-for="LotNumber" class="form-label"></label>
+                                <input asp-for="LotNumber" class="form-control" placeholder="Vaccine lot number" />
+                                <span asp-validation-for="LotNumber" class="text-danger"></span>
+                            </div>
+
+                            <div class="col-12">
+                                <label asp-for="Notes" class="form-label"></label>
+                                <textarea asp-for="Notes" class="form-control" rows="3" placeholder="Additional notes or reactions"></textarea>
+                                <span asp-validation-for="Notes" class="text-danger"></span>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 d-flex gap-2">
+                            @{
+                                ViewData["Text"] = "Add Vaccination";
+                                ViewData["Variant"] = "primary";
+                                ViewData["Type"] = "submit";
+                                ViewData["Icon"] = "bi bi-check-lg";
+                            }
+                            <partial name="_Button" />
+
+                            @{
+                                ViewData["Text"] = "Cancel";
+                                ViewData["Variant"] = "outline-secondary";
+                                ViewData["Href"] = Url.Action("Index");
+                            }
+                            <partial name="_Button" />
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

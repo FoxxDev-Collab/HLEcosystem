@@ -1,0 +1,240 @@
+@using HLE.FamilyFinance.Services.Interfaces
+@using HLE.FamilyFinance.Helpers
+@model DebtDetailDto
+@{
+    ViewData["Title"] = Model.Name;
+    var amortization = ViewData["Amortization"] as List<AmortizationEntryDto> ?? new List<AmortizationEntryDto>();
+    var payments = ViewData["Payments"] as List<DebtPaymentDto> ?? new List<DebtPaymentDto>();
+    var icon = Model.Icon ?? IconHelper.GetDebtIcon(Model.Type);
+    var progressPercent = Model.OriginalPrincipal > 0 ? ((Model.OriginalPrincipal - Model.CurrentBalance) / Model.OriginalPrincipal * 100) : 0;
+}
+
+<div class="py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2>
+                @if (icon.StartsWith("bi-"))
+                {
+                    <i class="@icon me-2" style="@(Model.Color != null ? $"color: {Model.Color}" : "")"></i>
+                }
+                else
+                {
+                    <span class="me-2">@icon</span>
+                }
+                @Model.Name
+            </h2>
+            <p class="text-muted mb-0">@Model.Type @(Model.Lender != null ? $"• {Model.Lender}" : "")</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-primary"><i class="bi-pencil me-1"></i>Edit</a>
+            <form asp-action="Archive" asp-route-id="@Model.Id" method="post" class="d-inline">
+                <button type="submit" class="btn btn-outline-warning"><i class="bi-archive me-1"></i>Archive</button>
+            </form>
+            <form asp-action="Delete" asp-route-id="@Model.Id" method="post" class="d-inline" onsubmit="return confirm('Are you sure you want to permanently delete this debt and all payment history? This cannot be undone.');">
+                <button type="submit" class="btn btn-outline-danger"><i class="bi-trash me-1"></i>Delete</button>
+            </form>
+            <a asp-action="Index" class="btn btn-outline-secondary">Back to List</a>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Balance Summary</h5>
+                </div>
+                <div class="card-body">
+                    <h2 class="text-danger">$@Model.CurrentBalance.ToString("N2")</h2>
+                    <p class="text-muted mb-3">Current Balance</p>
+
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between small mb-1">
+                            <span>Progress</span>
+                            <span>@progressPercent.ToString("N1")% paid off</span>
+                        </div>
+                        <div class="progress" style="height: 10px;">
+                            <div class="progress-bar bg-success" style="width: @progressPercent%"></div>
+                        </div>
+                    </div>
+
+                    <div class="row text-center">
+                        <div class="col">
+                            <small class="text-muted">Original</small>
+                            <div><strong>$@Model.OriginalPrincipal.ToString("N2")</strong></div>
+                        </div>
+                        <div class="col">
+                            <small class="text-muted">Paid Off</small>
+                            <div class="text-success"><strong>$@((Model.OriginalPrincipal - Model.CurrentBalance).ToString("N2"))</strong></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Loan Details</h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-6">Interest Rate</dt>
+                        <dd class="col-6">@Model.InterestRate.ToString("N3")%</dd>
+
+                        <dt class="col-6">Term</dt>
+                        <dd class="col-6">@Model.TermMonths months</dd>
+
+                        <dt class="col-6">Payment</dt>
+                        <dd class="col-6">$@Model.MinimumPayment.ToString("N2")/mo</dd>
+
+                        <dt class="col-6">Due Day</dt>
+                        <dd class="col-6">@Model.PaymentDayOfMonth@(Model.PaymentDayOfMonth == 1 ? "st" : Model.PaymentDayOfMonth == 2 ? "nd" : Model.PaymentDayOfMonth == 3 ? "rd" : "th") of month</dd>
+
+                        @if (Model.OriginationDate.HasValue)
+                        {
+                            <dt class="col-6">Origination Date</dt>
+                            <dd class="col-6">@Model.OriginationDate.Value.ToString("MMM d, yyyy")</dd>
+                        }
+
+                        @if (Model.LinkedAccountName != null)
+                        {
+                            <dt class="col-6">Account</dt>
+                            <dd class="col-6">@Model.LinkedAccountName</dd>
+                        }
+                    </dl>
+                </div>
+            </div>
+
+            <!-- Record Payment Form -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi-plus-circle me-2"></i>Record Payment</h5>
+                </div>
+                <div class="card-body">
+                    <form asp-action="RecordPayment" method="post">
+                        <input type="hidden" name="debtId" value="@Model.Id" />
+                        <div class="mb-3">
+                            <label class="form-label">Payment Date</label>
+                            <input name="paymentDate" type="date" class="form-control" value="@DateTime.Today.ToString("yyyy-MM-dd")" required />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Total Amount</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input name="totalAmount" type="text" class="form-control money-input" value="@Model.MinimumPayment" required />
+                            </div>
+                        </div>
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <label class="form-label small">Principal</label>
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text">$</span>
+                                    <input name="principalAmount" type="text" class="form-control money-input" />
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small">Interest</label>
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text">$</span>
+                                    <input name="interestAmount" type="text" class="form-control money-input" />
+                                </div>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-success w-100"><i class="bi-check me-1"></i>Record Payment</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-8">
+            <!-- Payment History -->
+            @if (payments.Any())
+            {
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="bi-clock-history me-2"></i>Payment History</h5>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Date</th>
+                                    <th class="text-end">Total</th>
+                                    <th class="text-end">Principal</th>
+                                    <th class="text-end">Interest</th>
+                                    <th class="text-end">Balance</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var payment in payments.OrderByDescending(p => p.PaymentDate).Take(10))
+                                {
+                                    <tr>
+                                        <td>@payment.PaymentDate.ToString("MMM d, yyyy")</td>
+                                        <td class="text-end">$@payment.TotalAmount.ToString("N2")</td>
+                                        <td class="text-end text-success">$@payment.PrincipalAmount.ToString("N2")</td>
+                                        <td class="text-end text-danger">$@payment.InterestAmount.ToString("N2")</td>
+                                        <td class="text-end">$@payment.RemainingBalance.ToString("N2")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            }
+
+            <!-- Amortization Schedule -->
+            @if (amortization.Any())
+            {
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="bi-table me-2"></i>Amortization Schedule</h5>
+                        <small class="text-muted">Next 24 months</small>
+                    </div>
+                    <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+                        <table class="table table-sm table-hover mb-0">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th>#</th>
+                                    <th>Date</th>
+                                    <th class="text-end">Payment</th>
+                                    <th class="text-end">Principal</th>
+                                    <th class="text-end">Interest</th>
+                                    <th class="text-end">Balance</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var entry in amortization.Take(24))
+                                {
+                                    <tr>
+                                        <td>@entry.PaymentNumber</td>
+                                        <td>@entry.PaymentDate.ToString("MMM yyyy")</td>
+                                        <td class="text-end">$@entry.Payment.ToString("N2")</td>
+                                        <td class="text-end text-success">$@entry.Principal.ToString("N2")</td>
+                                        <td class="text-end text-danger">$@entry.Interest.ToString("N2")</td>
+                                        <td class="text-end">$@entry.Balance.ToString("N2")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    @if (amortization.Count > 24)
+                    {
+                        <div class="card-footer text-muted text-center small">
+                            Showing first 24 of @amortization.Count payments
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(Model.Notes))
+    {
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi-sticky me-2"></i>Notes</h5>
+            </div>
+            <div class="card-body">
+                <p class="mb-0">@Model.Notes</p>
+            </div>
+        </div>
+    }
+</div>

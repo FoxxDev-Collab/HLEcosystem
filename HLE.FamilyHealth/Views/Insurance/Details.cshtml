@@ -1,0 +1,280 @@
+@model HLE.FamilyHealth.Models.Entities.Insurance
+@{
+    ViewData["Title"] = "Insurance Policy Details";
+    var isExpiring = Model.ExpirationDate.HasValue && Model.ExpirationDate.Value <= DateOnly.FromDateTime(DateTime.Now.AddDays(30));
+    var isExpired = Model.ExpirationDate.HasValue && Model.ExpirationDate.Value < DateOnly.FromDateTime(DateTime.Now);
+}
+
+<div class="container-fluid py-4">
+    <div class="d-flex align-items-center mb-4">
+        <a href="@Url.Action("Index")" class="btn btn-outline-secondary me-3">
+            <i class="bi bi-arrow-left"></i>
+        </a>
+        <div class="flex-grow-1">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <h2 class="mb-1">@Model.ProviderName</h2>
+                    <p class="text-muted mb-0">
+                        @Model.InsuranceType for @Model.FamilyMember.FirstName @Model.FamilyMember.LastName
+                        @if (Model.IsActive)
+                        {
+                            ViewData["BadgeText"] = "Active";
+                            ViewData["BadgeVariant"] = "success";
+                            ViewData["BadgePill"] = "True";
+                            <partial name="_Badge" />
+                        }
+                        else
+                        {
+                            ViewData["BadgeText"] = "Inactive";
+                            ViewData["BadgeVariant"] = "secondary";
+                            ViewData["BadgePill"] = "True";
+                            <partial name="_Badge" />
+                        }
+                        @if (isExpired)
+                        {
+                            ViewData["BadgeText"] = "Expired";
+                            ViewData["BadgeVariant"] = "danger";
+                            ViewData["BadgePill"] = "True";
+                            <partial name="_Badge" />
+                        }
+                        else if (isExpiring)
+                        {
+                            ViewData["BadgeText"] = "Expiring Soon";
+                            ViewData["BadgeVariant"] = "warning";
+                            ViewData["BadgePill"] = "True";
+                            <partial name="_Badge" />
+                        }
+                    </p>
+                </div>
+                <div>
+                    @{
+                        ViewData["Text"] = "Edit";
+                        ViewData["Variant"] = "primary";
+                        ViewData["Href"] = Url.Action("Edit", new { id = Model.Id });
+                        ViewData["Icon"] = "bi bi-pencil";
+                    }
+                    <partial name="_Button" />
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        ViewData["AlertType"] = "success";
+        ViewData["AlertMessage"] = TempData["SuccessMessage"]?.ToString();
+        ViewData["AlertDismissible"] = true;
+        <partial name="_Alert" />
+    }
+
+    @if (isExpiring && !isExpired)
+    {
+        ViewData["AlertType"] = "warning";
+        ViewData["AlertTitle"] = "Policy Expiring Soon";
+        ViewData["AlertMessage"] = $"This policy expires on {Model.ExpirationDate.Value.ToString("MMM dd, yyyy")}. Please renew to maintain coverage.";
+        ViewData["AlertDismissible"] = false;
+        <partial name="_Alert" />
+    }
+    else if (isExpired)
+    {
+        ViewData["AlertType"] = "danger";
+        ViewData["AlertTitle"] = "Policy Expired";
+        ViewData["AlertMessage"] = $"This policy expired on {Model.ExpirationDate.Value.ToString("MMM dd, yyyy")}. Coverage is no longer active.";
+        ViewData["AlertDismissible"] = false;
+        <partial name="_Alert" />
+    }
+
+    <div class="row g-4">
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">Policy Information</h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-5">Provider:</dt>
+                        <dd class="col-sm-7">@Model.ProviderName</dd>
+
+                        <dt class="col-sm-5">Type:</dt>
+                        <dd class="col-sm-7">
+                            @{
+                                var typeVariant = Model.InsuranceType switch
+                                {
+                                    "Medical" => "primary",
+                                    "Dental" => "info",
+                                    "Vision" => "success",
+                                    _ => "secondary"
+                                };
+                                ViewData["BadgeText"] = Model.InsuranceType;
+                                ViewData["BadgeVariant"] = typeVariant;
+                            }
+                            <partial name="_Badge" />
+                        </dd>
+
+                        <dt class="col-sm-5">Policy Number:</dt>
+                        <dd class="col-sm-7"><code>@Model.PolicyNumber</code></dd>
+
+                        <dt class="col-sm-5">Group Number:</dt>
+                        <dd class="col-sm-7">@(Model.GroupNumber ?? "-")</dd>
+
+                        <dt class="col-sm-5">Policy Holder:</dt>
+                        <dd class="col-sm-7">@(Model.PolicyHolderName ?? "-")</dd>
+
+                        <dt class="col-sm-5">Family Member:</dt>
+                        <dd class="col-sm-7">
+                            <a href="@Url.Action("Details", "FamilyMembers", new { id = Model.FamilyMemberId })">
+                                @Model.FamilyMember.FirstName @Model.FamilyMember.LastName
+                            </a>
+                        </dd>
+
+                        <dt class="col-sm-5">Status:</dt>
+                        <dd class="col-sm-7">
+                            @if (Model.IsActive)
+                            {
+                                ViewData["BadgeText"] = "Active";
+                                ViewData["BadgeVariant"] = "success";
+                                <partial name="_Badge" />
+                            }
+                            else
+                            {
+                                ViewData["BadgeText"] = "Inactive";
+                                ViewData["BadgeVariant"] = "secondary";
+                                <partial name="_Badge" />
+                            }
+                        </dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">Contact Information</h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-5">Phone:</dt>
+                        <dd class="col-sm-7">
+                            @if (!string.IsNullOrEmpty(Model.PhoneNumber))
+                            {
+                                <a href="tel:@Model.PhoneNumber" class="text-decoration-none">
+                                    <i class="bi bi-telephone"></i> @Model.PhoneNumber
+                                </a>
+                            }
+                            else
+                            {
+                                <span class="text-muted">Not provided</span>
+                            }
+                        </dd>
+
+                        <dt class="col-sm-5">Website:</dt>
+                        <dd class="col-sm-7">
+                            @if (!string.IsNullOrEmpty(Model.Website))
+                            {
+                                <a href="@Model.Website" target="_blank" class="text-decoration-none">
+                                    <i class="bi bi-globe"></i> Visit Website <i class="bi bi-box-arrow-up-right small"></i>
+                                </a>
+                            }
+                            else
+                            {
+                                <span class="text-muted">Not provided</span>
+                            }
+                        </dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">Coverage Dates</h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-5">Effective Date:</dt>
+                        <dd class="col-sm-7">@(Model.EffectiveDate?.ToString("MMM dd, yyyy") ?? "-")</dd>
+
+                        <dt class="col-sm-5">Expiration Date:</dt>
+                        <dd class="col-sm-7">
+                            @if (Model.ExpirationDate.HasValue)
+                            {
+                                @Model.ExpirationDate.Value.ToString("MMM dd, yyyy")
+                                if (isExpired)
+                                {
+                                    ViewData["BadgeText"] = "Expired";
+                                    ViewData["BadgeVariant"] = "danger";
+                                    <partial name="_Badge" />
+                                }
+                                else if (isExpiring)
+                                {
+                                    ViewData["BadgeText"] = "Expiring Soon";
+                                    ViewData["BadgeVariant"] = "warning";
+                                    <partial name="_Badge" />
+                                }
+                            }
+                            else
+                            {
+                                <span class="text-muted">Not specified</span>
+                            }
+                        </dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">Cost Information</h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-5">Deductible:</dt>
+                        <dd class="col-sm-7">@(Model.Deductible.HasValue ? $"${Model.Deductible.Value:N2}" : "-")</dd>
+
+                        <dt class="col-sm-5">Out-of-Pocket Max:</dt>
+                        <dd class="col-sm-7">@(Model.OutOfPocketMax.HasValue ? $"${Model.OutOfPocketMax.Value:N2}" : "-")</dd>
+
+                        <dt class="col-sm-5">Copay:</dt>
+                        <dd class="col-sm-7">@(Model.Copay.HasValue ? $"${Model.Copay.Value:N2}" : "-")</dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+
+        @if (!string.IsNullOrEmpty(Model.Notes))
+        {
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="bi bi-journal-text me-2"></i>
+                            Notes
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="mb-0">@Model.Notes</p>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    <div class="card mt-4">
+        <div class="card-footer text-muted small">
+            <div class="row">
+                <div class="col-md-6">
+                    Created: @Model.CreatedAt.ToString("MMM dd, yyyy 'at' h:mm tt")
+                </div>
+                @if (Model.UpdatedAt.HasValue)
+                {
+                    <div class="col-md-6 text-md-end">
+                        Last Updated: @Model.UpdatedAt.Value.ToString("MMM dd, yyyy 'at' h:mm tt")
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>

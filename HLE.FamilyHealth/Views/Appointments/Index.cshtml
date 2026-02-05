@@ -1,0 +1,219 @@
+@model HLE.FamilyHealth.Models.ViewModels.AppointmentIndexViewModel
+@{
+    ViewData["Title"] = "Appointments";
+}
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">Appointments</h2>
+            <p class="text-muted mb-0">Manage your family's appointments</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="@Url.Action("Calendar")" class="btn btn-outline-primary">
+                <i class="bi bi-calendar3"></i> Calendar View
+            </a>
+            @{
+                ViewData["Text"] = "New Appointment";
+                ViewData["Variant"] = "primary";
+                ViewData["Href"] = Url.Action("Create");
+                ViewData["Icon"] = "plus";
+            }
+            <partial name="_Button" />
+        </div>
+    </div>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        ViewData["AlertType"] = "success";
+        ViewData["AlertMessage"] = TempData["SuccessMessage"]?.ToString();
+        ViewData["AlertDismissible"] = true;
+        <partial name="_Alert" />
+    }
+
+    <!-- Upcoming Appointments -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">Upcoming Appointments</h5>
+        </div>
+        <div class="card-body">
+            @if (!Model.UpcomingAppointments.Any())
+            {
+                <div class="text-center py-4">
+                    <p class="text-muted mb-0">No upcoming appointments scheduled.</p>
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive table-mobile-cards-wrapper">
+                    <table class="table-themed table-hover table-mobile-cards">
+                        <thead>
+                            <tr>
+                                <th>Date & Time</th>
+                                <th>Family Member</th>
+                                <th>Type</th>
+                                <th>Provider</th>
+                                <th>Location</th>
+                                <th>Status</th>
+                                <th>Days Until</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var appointment in Model.UpcomingAppointments)
+                            {
+                                <tr>
+                                    <td data-label="Date" data-primary="true">
+                                        <strong>@appointment.AppointmentDateTime.ToString("MMM dd, yyyy")</strong><br />
+                                        <small class="text-muted">@appointment.AppointmentDateTime.ToString("h:mm tt")</small>
+                                    </td>
+                                    <td data-label="Member">@appointment.FamilyMemberName</td>
+                                    <td data-label="Type">@appointment.AppointmentType</td>
+                                    <td data-label="Provider">@(appointment.ProviderName ?? "—")</td>
+                                    <td data-label="Location">@(appointment.Location ?? "—")</td>
+                                    <td data-label="Status">
+                                        @{
+                                            var statusClass = appointment.Status switch
+                                            {
+                                                "Completed" => "success",
+                                                "Cancelled" => "danger",
+                                                "No-Show" => "warning",
+                                                "Rescheduled" => "info",
+                                                _ => "primary"
+                                            };
+                                        }
+                                        <span class="badge bg-@statusClass">@appointment.Status</span>
+                                    </td>
+                                    <td data-label="Days Until">
+                                        @if (appointment.DaysUntilAppointment.HasValue)
+                                        {
+                                            var days = appointment.DaysUntilAppointment.Value;
+                                            if (days == 0)
+                                            {
+                                                <span class="badge bg-warning">Today</span>
+                                            }
+                                            else if (days == 1)
+                                            {
+                                                <span class="badge bg-warning">Tomorrow</span>
+                                            }
+                                            else if (days <= 7)
+                                            {
+                                                <span class="badge bg-info">@days days</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">@days days</span>
+                                            }
+                                        }
+                                    </td>
+                                    <td class="text-end">
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="@Url.Action("Details", new { id = appointment.Id })" class="btn btn-outline-secondary" title="View Details">
+                                                <i class="bi bi-eye"></i>
+                                            </a>
+                                            <a href="@Url.Action("Edit", new { id = appointment.Id })" class="btn btn-outline-primary" title="Edit">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+                                            @if (!appointment.HasVisitSummary)
+                                            {
+                                                <a href="@Url.Action("Create", "VisitSummaries", new { appointmentId = appointment.Id })"
+                                                   class="btn btn-outline-success" title="Add Visit Summary">
+                                                    <i class="bi bi-file-medical"></i>
+                                                </a>
+                                            }
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Past Appointments -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">Past Appointments</h5>
+        </div>
+        <div class="card-body">
+            @if (!Model.PastAppointments.Any())
+            {
+                <div class="text-center py-4">
+                    <p class="text-muted mb-0">No past appointments.</p>
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive table-mobile-cards-wrapper">
+                    <table class="table-themed table-hover table-mobile-cards">
+                        <thead>
+                            <tr>
+                                <th>Date & Time</th>
+                                <th>Family Member</th>
+                                <th>Type</th>
+                                <th>Provider</th>
+                                <th>Status</th>
+                                <th>Visit Summary</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var appointment in Model.PastAppointments.Take(20))
+                            {
+                                <tr>
+                                    <td data-label="Date" data-primary="true">
+                                        <strong>@appointment.AppointmentDateTime.ToString("MMM dd, yyyy")</strong><br />
+                                        <small class="text-muted">@appointment.AppointmentDateTime.ToString("h:mm tt")</small>
+                                    </td>
+                                    <td data-label="Member">@appointment.FamilyMemberName</td>
+                                    <td data-label="Type">@appointment.AppointmentType</td>
+                                    <td data-label="Provider">@(appointment.ProviderName ?? "—")</td>
+                                    <td data-label="Status">
+                                        @{
+                                            var statusClass = appointment.Status switch
+                                            {
+                                                "Completed" => "success",
+                                                "Cancelled" => "danger",
+                                                "No-Show" => "warning",
+                                                _ => "secondary"
+                                            };
+                                        }
+                                        <span class="badge bg-@statusClass">@appointment.Status</span>
+                                    </td>
+                                    <td data-label="Summary">
+                                        @if (appointment.HasVisitSummary)
+                                        {
+                                            <span class="badge bg-success">
+                                                <i class="bi bi-check-circle"></i> Recorded
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">—</span>
+                                        }
+                                    </td>
+                                    <td class="text-end">
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="@Url.Action("Details", new { id = appointment.Id })" class="btn btn-outline-secondary" title="View Details">
+                                                <i class="bi bi-eye"></i>
+                                            </a>
+                                            @if (!appointment.HasVisitSummary)
+                                            {
+                                                <a href="@Url.Action("Create", "VisitSummaries", new { appointmentId = appointment.Id })"
+                                                   class="btn btn-outline-success" title="Add Visit Summary">
+                                                    <i class="bi bi-file-medical"></i>
+                                                </a>
+                                            }
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+</div>

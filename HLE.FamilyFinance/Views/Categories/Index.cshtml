@@ -1,0 +1,218 @@
+@using HLE.FamilyFinance.Services.Interfaces
+@using HLE.FamilyFinance.Helpers
+@model List<CategoryDto>
+@{
+    ViewData["Title"] = "Categories";
+    var incomeCategories = ViewData["IncomeCategories"] as List<CategoryDto> ?? new List<CategoryDto>();
+    var expenseCategories = ViewData["ExpenseCategories"] as List<CategoryDto> ?? new List<CategoryDto>();
+}
+
+<div class="py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Categories</h2>
+        <div class="btn-group">
+            <a asp-action="Create" class="btn btn-primary">+ Add Category</a>
+            @if (Model.Count == 0)
+            {
+                <form asp-action="SeedDefaults" method="post" class="d-inline">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-outline-primary">Add Default Categories</button>
+                </form>
+            }
+        </div>
+    </div>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show">
+            @TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show">
+            @TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @if (Model.Count == 0)
+    {
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <p class="text-muted mb-3">No categories yet. Add default categories to get started quickly.</p>
+                <form asp-action="SeedDefaults" method="post" class="d-inline">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-primary">Add Default Categories</button>
+                </form>
+                <span class="mx-2 text-muted">or</span>
+                <a asp-action="Create" class="btn btn-outline-primary">Create Custom Category</a>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card mb-4">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0">Income Categories</h5>
+                    </div>
+                    <div class="list-group list-group-flush">
+                        @{
+                            var incomeParents = incomeCategories.Where(c => !c.ParentCategoryId.HasValue).ToList();
+                        }
+                        @if (incomeParents.Count == 0)
+                        {
+                            <div class="list-group-item text-muted">No income categories</div>
+                        }
+                        @foreach (var category in incomeParents)
+                        {
+                            var catIcon = category.Icon ?? "bi-folder";
+                            var catStyle = !string.IsNullOrEmpty(category.Color) ? $"color: {category.Color}" : "";
+                            <div class="list-group-item d-flex justify-content-between align-items-center">
+                                <div>
+                                    @if (catIcon.StartsWith("bi-"))
+                                    {
+                                        <i class="@catIcon me-2" style="@catStyle"></i>
+                                    }
+                                    else
+                                    {
+                                        <span class="me-2" style="@catStyle">@catIcon</span>
+                                    }
+                                    <strong>@category.Name</strong>
+                                    @if (category.TransactionCount > 0)
+                                    {
+                                        <span class="badge bg-secondary ms-2">@category.TransactionCount</span>
+                                    }
+                                </div>
+                                <div class="btn-group btn-group-sm">
+                                    <a asp-action="Edit" asp-route-id="@category.Id" class="btn btn-outline-secondary">Edit</a>
+                                    <form asp-action="Delete" asp-route-id="@category.Id" method="post" class="d-inline">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="btn btn-outline-danger"
+                                                onclick="return confirm('Delete this category?')"
+                                                @(category.TransactionCount > 0 ? "disabled" : "")>Delete</button>
+                                    </form>
+                                </div>
+                            </div>
+                            var subCategories = incomeCategories.Where(c => c.ParentCategoryId == category.Id).ToList();
+                            foreach (var sub in subCategories)
+                            {
+                                var subIcon = sub.Icon ?? "bi-dot";
+                                var subStyle = !string.IsNullOrEmpty(sub.Color) ? $"color: {sub.Color}" : "";
+                                <div class="list-group-item d-flex justify-content-between align-items-center ps-5">
+                                    <div>
+                                        @if (subIcon.StartsWith("bi-"))
+                                        {
+                                            <i class="@subIcon me-2" style="@subStyle"></i>
+                                        }
+                                        else
+                                        {
+                                            <span class="me-2" style="@subStyle">@subIcon</span>
+                                        }
+                                        @sub.Name
+                                        @if (sub.TransactionCount > 0)
+                                        {
+                                            <span class="badge bg-secondary ms-2">@sub.TransactionCount</span>
+                                        }
+                                    </div>
+                                    <div class="btn-group btn-group-sm">
+                                        <a asp-action="Edit" asp-route-id="@sub.Id" class="btn btn-outline-secondary btn-sm">Edit</a>
+                                        <form asp-action="Delete" asp-route-id="@sub.Id" method="post" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-outline-danger btn-sm"
+                                                    onclick="return confirm('Delete this subcategory?')"
+                                                    @(sub.TransactionCount > 0 ? "disabled" : "")>Delete</button>
+                                        </form>
+                                    </div>
+                                </div>
+                            }
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card mb-4">
+                    <div class="card-header bg-danger text-white">
+                        <h5 class="mb-0">Expense Categories</h5>
+                    </div>
+                    <div class="list-group list-group-flush" style="max-height: 600px; overflow-y: auto;">
+                        @{
+                            var expenseParents = expenseCategories.Where(c => !c.ParentCategoryId.HasValue).ToList();
+                        }
+                        @if (expenseParents.Count == 0)
+                        {
+                            <div class="list-group-item text-muted">No expense categories</div>
+                        }
+                        @foreach (var category in expenseParents)
+                        {
+                            var expCatIcon = category.Icon ?? "bi-folder";
+                            var expCatStyle = !string.IsNullOrEmpty(category.Color) ? $"color: {category.Color}" : "";
+                            <div class="list-group-item d-flex justify-content-between align-items-center">
+                                <div>
+                                    @if (expCatIcon.StartsWith("bi-"))
+                                    {
+                                        <i class="@expCatIcon me-2" style="@expCatStyle"></i>
+                                    }
+                                    else
+                                    {
+                                        <span class="me-2" style="@expCatStyle">@expCatIcon</span>
+                                    }
+                                    <strong>@category.Name</strong>
+                                    @if (category.TransactionCount > 0)
+                                    {
+                                        <span class="badge bg-secondary ms-2">@category.TransactionCount</span>
+                                    }
+                                </div>
+                                <div class="btn-group btn-group-sm">
+                                    <a asp-action="Edit" asp-route-id="@category.Id" class="btn btn-outline-secondary">Edit</a>
+                                    <form asp-action="Delete" asp-route-id="@category.Id" method="post" class="d-inline">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="btn btn-outline-danger"
+                                                onclick="return confirm('Delete this category?')"
+                                                @(category.TransactionCount > 0 ? "disabled" : "")>Delete</button>
+                                    </form>
+                                </div>
+                            </div>
+                            var expenseSubCategories = expenseCategories.Where(c => c.ParentCategoryId == category.Id).ToList();
+                            foreach (var sub in expenseSubCategories)
+                            {
+                                var expSubIcon = sub.Icon ?? "bi-dot";
+                                var expSubStyle = !string.IsNullOrEmpty(sub.Color) ? $"color: {sub.Color}" : "";
+                                <div class="list-group-item d-flex justify-content-between align-items-center ps-5">
+                                    <div>
+                                        @if (expSubIcon.StartsWith("bi-"))
+                                        {
+                                            <i class="@expSubIcon me-2" style="@expSubStyle"></i>
+                                        }
+                                        else
+                                        {
+                                            <span class="me-2" style="@expSubStyle">@expSubIcon</span>
+                                        }
+                                        @sub.Name
+                                        @if (sub.TransactionCount > 0)
+                                        {
+                                            <span class="badge bg-secondary ms-2">@sub.TransactionCount</span>
+                                        }
+                                    </div>
+                                    <div class="btn-group btn-group-sm">
+                                        <a asp-action="Edit" asp-route-id="@sub.Id" class="btn btn-outline-secondary btn-sm">Edit</a>
+                                        <form asp-action="Delete" asp-route-id="@sub.Id" method="post" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-outline-danger btn-sm"
+                                                    onclick="return confirm('Delete this subcategory?')"
+                                                    @(sub.TransactionCount > 0 ? "disabled" : "")>Delete</button>
+                                        </form>
+                                    </div>
+                                </div>
+                            }
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>

@@ -1,0 +1,117 @@
+@model HLE.FamilyHealth.Models.ViewModels.HealthProfileIndexViewModel
+@{
+    ViewData["Title"] = "Health Profiles";
+}
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">Health Profiles</h2>
+            <p class="text-muted mb-0">View and manage family health profiles</p>
+        </div>
+        @{
+            ViewData["Text"] = "Add Health Profile";
+            ViewData["Variant"] = "primary";
+            ViewData["Href"] = Url.Action("Create");
+            ViewData["Icon"] = "bi bi-plus";
+        }
+        <partial name="_Button" />
+    </div>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        ViewData["AlertType"] = "success";
+        ViewData["AlertMessage"] = TempData["SuccessMessage"]?.ToString();
+        ViewData["AlertDismissible"] = true;
+        <partial name="_Alert" />
+    }
+
+    <div class="card">
+        <div class="card-body">
+            @if (!Model.HealthProfiles.Any())
+            {
+                <div class="text-center py-5">
+                    <i class="bi bi-heart-pulse text-muted" style="font-size: 3rem;"></i>
+                    <p class="text-muted mb-3 mt-3">No health profiles found. Create a profile to track medical information.</p>
+                    <a href="@Url.Action("Create")" class="btn btn-primary">
+                        <i class="bi bi-plus"></i> Create Health Profile
+                    </a>
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table-themed table-hover">
+                        <thead>
+                            <tr>
+                                <th>Family Member</th>
+                                <th>Blood Type</th>
+                                <th>Primary Care Provider</th>
+                                <th>Allergies</th>
+                                <th>Chronic Conditions</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var profile in Model.HealthProfiles)
+                            {
+                                <tr>
+                                    <td>
+                                        <strong>@profile.FamilyMemberName</strong>
+                                    </td>
+                                    <td>
+                                        @if (!string.IsNullOrEmpty(profile.BloodType))
+                                        {
+                                            ViewData["BadgeText"] = profile.BloodType;
+                                            ViewData["BadgeVariant"] = "danger";
+                                            <partial name="_Badge" />
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">-</span>
+                                        }
+                                    </td>
+                                    <td>@(profile.PrimaryCareProvider ?? "-")</td>
+                                    <td>
+                                        @if (profile.HasAllergies)
+                                        {
+                                            ViewData["BadgeText"] = "Yes";
+                                            ViewData["BadgeVariant"] = "warning";
+                                            <partial name="_Badge" />
+                                        }
+                                        else
+                                        {
+                                            ViewData["BadgeText"] = "None";
+                                            ViewData["BadgeVariant"] = "secondary";
+                                            <partial name="_Badge" />
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (profile.HasChronicConditions)
+                                        {
+                                            ViewData["BadgeText"] = "Yes";
+                                            ViewData["BadgeVariant"] = "info";
+                                            <partial name="_Badge" />
+                                        }
+                                        else
+                                        {
+                                            ViewData["BadgeText"] = "None";
+                                            ViewData["BadgeVariant"] = "secondary";
+                                            <partial name="_Badge" />
+                                        }
+                                    </td>
+                                    <td class="text-end">
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="@Url.Action("Details", new { id = profile.Id })" class="btn btn-outline-primary btn-sm">View</a>
+                                            <a href="@Url.Action("Edit", new { id = profile.Id })" class="btn btn-outline-secondary btn-sm">Edit</a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+</div>

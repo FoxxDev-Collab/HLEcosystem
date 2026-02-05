@@ -1,0 +1,267 @@
+@model HLE.FamilyHealth.Models.Entities.HealthProfile
+@{
+    ViewData["Title"] = "Health Profile Details";
+}
+
+<div class="container-fluid py-4">
+    <div class="d-flex align-items-center mb-4">
+        <a href="@Url.Action("Index")" class="btn btn-outline-secondary me-3">
+            <i class="bi bi-arrow-left"></i>
+        </a>
+        <div class="flex-grow-1">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <h2 class="mb-1">Health Profile</h2>
+                    <p class="text-muted mb-0">@Model.FamilyMember.FirstName @Model.FamilyMember.LastName</p>
+                </div>
+                <div>
+                    @{
+                        ViewData["Text"] = "Edit Profile";
+                        ViewData["Variant"] = "primary";
+                        ViewData["Href"] = Url.Action("Edit", new { id = Model.Id });
+                        ViewData["Icon"] = "bi bi-pencil";
+                    }
+                    <partial name="_Button" />
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        ViewData["AlertType"] = "success";
+        ViewData["AlertMessage"] = TempData["SuccessMessage"]?.ToString();
+        ViewData["AlertDismissible"] = true;
+        <partial name="_Alert" />
+    }
+
+    <div class="row g-4">
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">Basic Information</h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-5">Blood Type:</dt>
+                        <dd class="col-sm-7">
+                            @if (!string.IsNullOrEmpty(Model.BloodType))
+                            {
+                                ViewData["BadgeText"] = Model.BloodType;
+                                ViewData["BadgeVariant"] = "danger";
+                                ViewData["BadgePill"] = "True";
+                                <partial name="_Badge" />
+                            }
+                            else
+                            {
+                                <span class="text-muted">Not specified</span>
+                            }
+                        </dd>
+
+                        <dt class="col-sm-5">Height:</dt>
+                        <dd class="col-sm-7">
+                            @if (Model.HeightCm.HasValue)
+                            {
+                                @Model.HeightCm.Value.ToString("F1") <text> cm</text>
+                            }
+                            else
+                            {
+                                <span class="text-muted">Not specified</span>
+                            }
+                        </dd>
+
+                        <dt class="col-sm-5">Weight:</dt>
+                        <dd class="col-sm-7">
+                            @if (Model.WeightKg.HasValue)
+                            {
+                                @Model.WeightKg.Value.ToString("F1") <text> kg</text>
+                            }
+                            else
+                            {
+                                <span class="text-muted">Not specified</span>
+                            }
+                        </dd>
+                        @{
+                            decimal? bmi = null;
+                            string? bmiCategory = null;
+                            string? bmiVariant = null;
+
+                            if (Model.HeightCm.HasValue && Model.WeightKg.HasValue)
+                            {
+                                var heightInMeters = Model.HeightCm.Value / 100;
+                                bmi = Model.WeightKg.Value / (heightInMeters * heightInMeters);
+
+                                if (bmi < 18.5m)
+                                {
+                                    bmiCategory = "Underweight";
+                                    bmiVariant = "warning";
+                                }
+                                else if (bmi >= 18.5m && bmi < 25m)
+                                {
+                                    bmiCategory = "Normal";
+                                    bmiVariant = "success";
+                                }
+                                else if (bmi >= 25m && bmi < 30m)
+                                {
+                                    bmiCategory = "Overweight";
+                                    bmiVariant = "warning";
+                                }
+                                else
+                                {
+                                    bmiCategory = "Obese";
+                                    bmiVariant = "danger";
+                                }
+                            }
+                        }
+                        @if (bmi.HasValue)
+                        {
+                            <dt class="col-sm-5">BMI:</dt>
+                            <dd class="col-sm-7">
+                                @bmi.Value.ToString("F1")
+                                @{
+                                    ViewData["BadgeText"] = bmiCategory;
+                                    ViewData["BadgeVariant"] = bmiVariant;
+                                    ViewData["BadgePill"] = "True";
+                                }
+                                <partial name="_Badge" />
+                            </dd>
+                        }
+
+                        <dt class="col-sm-5">Organ Donor:</dt>
+                        <dd class="col-sm-7">
+                            @if (Model.IsOrganDonor)
+                            {
+                                ViewData["BadgeText"] = "Yes";
+                                ViewData["BadgeVariant"] = "success";
+                                <partial name="_Badge" />
+                            }
+                            else
+                            {
+                                ViewData["BadgeText"] = "No";
+                                ViewData["BadgeVariant"] = "secondary";
+                                <partial name="_Badge" />
+                            }
+                        </dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">Care Providers</h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-5">Primary Care:</dt>
+                        <dd class="col-sm-7">@(Model.PrimaryCareProvider ?? "-")</dd>
+
+                        <dt class="col-sm-5">Preferred Hospital:</dt>
+                        <dd class="col-sm-7">@(Model.PreferredHospital ?? "-")</dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-exclamation-triangle-fill text-warning me-2"></i>
+                        Allergies
+                    </h5>
+                </div>
+                <div class="card-body">
+                    @if (!string.IsNullOrEmpty(Model.Allergies))
+                    {
+                        <div class="alert alert-warning mb-0">
+                            @Model.Allergies
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted mb-0">No known allergies</p>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-heart-pulse me-2"></i>
+                        Chronic Conditions
+                    </h5>
+                </div>
+                <div class="card-body">
+                    @if (!string.IsNullOrEmpty(Model.ChronicConditions))
+                    {
+                        <div class="alert alert-info mb-0">
+                            @Model.ChronicConditions
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted mb-0">No chronic conditions reported</p>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-clipboard2-pulse me-2"></i>
+                        Major Surgeries
+                    </h5>
+                </div>
+                <div class="card-body">
+                    @if (!string.IsNullOrEmpty(Model.MajorSurgeries))
+                    {
+                        <p class="mb-0">@Model.MajorSurgeries</p>
+                    }
+                    else
+                    {
+                        <p class="text-muted mb-0">No major surgeries reported</p>
+                    }
+                </div>
+            </div>
+        </div>
+
+        @if (!string.IsNullOrEmpty(Model.MedicalNotes))
+        {
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="bi bi-journal-medical me-2"></i>
+                            Medical Notes
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="mb-0">@Model.MedicalNotes</p>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    <div class="card mt-4">
+        <div class="card-footer text-muted small">
+            <div class="row">
+                <div class="col-md-6">
+                    Created: @Model.CreatedAt.ToString("MMM dd, yyyy 'at' h:mm tt")
+                </div>
+                @if (Model.UpdatedAt.HasValue)
+                {
+                    <div class="col-md-6 text-md-end">
+                        Last Updated: @Model.UpdatedAt.Value.ToString("MMM dd, yyyy 'at' h:mm tt")
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>

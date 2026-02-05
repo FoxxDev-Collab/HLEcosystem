@@ -1,0 +1,137 @@
+@model HLE.FamilyHealth.Models.ViewModels.FamilyMemberIndexViewModel
+@{
+    ViewData["Title"] = "Family Members";
+}
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">Family Members</h2>
+            <p class="text-muted mb-0">Manage your family members</p>
+        </div>
+        @{
+            ViewData["Text"] = "Add Family Member";
+            ViewData["Variant"] = "primary";
+            ViewData["Href"] = Url.Action("Create");
+            ViewData["Icon"] = "plus";
+        }
+        <partial name="_Button" />
+    </div>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        ViewData["AlertType"] = "success";
+        ViewData["AlertMessage"] = TempData["SuccessMessage"]?.ToString();
+        ViewData["AlertDismissible"] = true;
+        <partial name="_Alert" />
+    }
+
+    <div class="row g-4 mb-4">
+        <div class="col-md-4">
+            @{
+                ViewData["CardIcon"] = "<i class=\"bi bi-people-fill\" style=\"font-size: 24px;\"></i>";
+                ViewData["CardTitle"] = "Total Members";
+                ViewData["CardValue"] = Model.TotalMembers.ToString();
+                ViewData["CardSubtitle"] = "in family";
+                ViewData["CardVariant"] = "primary";
+            }
+            <partial name="_StatCard" />
+        </div>
+        <div class="col-md-4">
+            @{
+                ViewData["CardIcon"] = "<i class=\"bi bi-person-check-fill\" style=\"font-size: 24px;\"></i>";
+                ViewData["CardTitle"] = "Active";
+                ViewData["CardValue"] = Model.ActiveMembers.ToString();
+                ViewData["CardSubtitle"] = "members";
+                ViewData["CardVariant"] = "success";
+            }
+            <partial name="_StatCard" />
+        </div>
+        <div class="col-md-4">
+            @{
+                ViewData["CardIcon"] = "<i class=\"bi bi-heart-pulse-fill\" style=\"font-size: 24px;\"></i>";
+                ViewData["CardTitle"] = "Health Profiles";
+                ViewData["CardValue"] = Model.FamilyMembers.Count(f => f.HasHealthProfile).ToString();
+                ViewData["CardSubtitle"] = "completed";
+                ViewData["CardVariant"] = "info";
+            }
+            <partial name="_StatCard" />
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            @if (!Model.FamilyMembers.Any())
+            {
+                <div class="text-center py-5">
+                    <p class="text-muted mb-0">No family members found. Add your first family member to get started.</p>
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive table-mobile-cards-wrapper">
+                    <table class="table-themed table-hover table-mobile-cards">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Age</th>
+                                <th>Relationship</th>
+                                <th>Health Profile</th>
+                                <th>Emergency Contacts</th>
+                                <th>Insurance</th>
+                                <th>Status</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var member in Model.FamilyMembers)
+                            {
+                                <tr>
+                                    <td data-label="Name" data-primary="true"><strong>@member.FullName</strong></td>
+                                    <td data-label="Age">@member.Age</td>
+                                    <td data-label="Relationship">@(member.Relationship ?? "-")</td>
+                                    <td data-label="Health Profile">
+                                        @if (member.HasHealthProfile)
+                                        {
+                                            <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Yes</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary">No</span>
+                                        }
+                                    </td>
+                                    <td data-label="Emergency">
+                                        <span class="badge bg-@(member.EmergencyContactsCount > 0 ? "primary" : "secondary")">
+                                            @member.EmergencyContactsCount
+                                        </span>
+                                    </td>
+                                    <td data-label="Insurance">
+                                        <span class="badge bg-@(member.InsurancePoliciesCount > 0 ? "info" : "secondary")">
+                                            @member.InsurancePoliciesCount
+                                        </span>
+                                    </td>
+                                    <td data-label="Status">
+                                        @if (member.IsActive)
+                                        {
+                                            <span class="badge bg-success">Active</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary">Inactive</span>
+                                        }
+                                    </td>
+                                    <td class="text-end">
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="@Url.Action("Details", new { id = member.Id })" class="btn btn-outline-primary btn-sm">View</a>
+                                            <a href="@Url.Action("Edit", new { id = member.Id })" class="btn btn-outline-secondary btn-sm">Edit</a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+</div>

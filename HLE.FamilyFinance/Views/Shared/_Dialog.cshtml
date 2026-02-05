@@ -1,0 +1,63 @@
+@*
+    Dialog/Modal Component
+    Usage:
+    <partial name="_Dialog" model='new { Id = "myModal", Title = "Modal Title", Body = "Modal content", Size = "md" }' />
+    Sizes: sm, md, lg, xl
+*@
+@{
+    var id = ViewData["Id"]?.ToString() ?? "modal-" + Guid.NewGuid().ToString("N").Substring(0, 8);
+    var title = ViewData["Title"]?.ToString() ?? "Dialog";
+    var body = ViewData["Body"]?.ToString() ?? "";
+    var footer = ViewData["Footer"]?.ToString() ?? "";
+    var size = ViewData["Size"]?.ToString() ?? "md";
+    var centered = ViewData["Centered"]?.ToString() == "True";
+    var scrollable = ViewData["Scrollable"]?.ToString() == "True";
+    var backdrop = ViewData["Backdrop"]?.ToString() ?? "true"; // true, false, static
+    var keyboard = ViewData["Keyboard"]?.ToString() ?? "true";
+    var showCloseButton = ViewData["ShowCloseButton"]?.ToString() != "False";
+    var showFooter = ViewData["ShowFooter"]?.ToString() != "False";
+    
+    var sizeClass = size switch
+    {
+        "sm" => "modal-sm",
+        "lg" => "modal-lg",
+        "xl" => "modal-xl",
+        _ => ""
+    };
+    
+    var dialogClass = $"modal-dialog {sizeClass}";
+    if (centered) dialogClass += " modal-dialog-centered";
+    if (scrollable) dialogClass += " modal-dialog-scrollable";
+}
+
+<div class="modal fade" id="@id" tabindex="-1" aria-labelledby="@(id)Label" aria-hidden="true" 
+     data-bs-backdrop="@backdrop" data-bs-keyboard="@keyboard">
+    <div class="@dialogClass">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="@(id)Label">@title</h5>
+                @if (showCloseButton)
+                {
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                }
+            </div>
+            <div class="modal-body">
+                @Html.Raw(body)
+            </div>
+            @if (showFooter)
+            {
+                <div class="modal-footer">
+                    @if (!string.IsNullOrEmpty(footer))
+                    {
+                        @Html.Raw(footer)
+                    }
+                    else
+                    {
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-primary">Save changes</button>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+</div>

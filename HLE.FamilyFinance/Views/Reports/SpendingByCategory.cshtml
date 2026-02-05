@@ -1,0 +1,161 @@
+@using HLE.FamilyFinance.Services.Interfaces
+@model List<SpendingByCategoryDto>
+@{
+    ViewData["Title"] = "Spending by Category";
+    var year = (int?)ViewData["Year"] ?? DateTime.Now.Year;
+    var totalSpending = Model.Sum(m => m.Amount);
+}
+
+<div class="py-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-action="Index">Reports</a></li>
+            <li class="breadcrumb-item active">Spending by Category</li>
+        </ol>
+    </nav>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Spending by Category</h2>
+        <div class="btn-group">
+            <a asp-action="SpendingByCategory" asp-route-year="@(year - 1)" class="btn btn-outline-secondary">&laquo; @(year - 1)</a>
+            <span class="btn btn-primary disabled">@year</span>
+            <a asp-action="SpendingByCategory" asp-route-year="@(year + 1)" class="btn btn-outline-secondary">@(year + 1) &raquo;</a>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card bg-danger text-white">
+                <div class="card-body">
+                    <h6 class="text-white-50">Total Spending (@year)</h6>
+                    <h3 class="mb-0">$@totalSpending.ToString("N2")</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <h6 class="text-white-50">Categories Used</h6>
+                    <h3 class="mb-0">@Model.Count</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <h6 class="text-white-50">Total Transactions</h6>
+                    <h3 class="mb-0">@Model.Sum(m => m.TransactionCount)</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (!Model.Any())
+    {
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <p class="text-muted mb-3">No spending data for @year. Start adding expense transactions to see your spending breakdown.</p>
+                <a asp-controller="Transactions" asp-action="Create" class="btn btn-primary">Add Transaction</a>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="row">
+            <div class="col-lg-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Category Breakdown</h5>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Category</th>
+                                    <th class="text-end">Amount</th>
+                                    <th class="text-end">Transactions</th>
+                                    <th style="width: 30%">Share</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var category in Model.OrderByDescending(c => c.Amount))
+                                {
+                                    var colors = new[] { "#ef4444", "#f97316", "#f59e0b", "#eab308", "#84cc16", "#22c55e", "#10b981", "#14b8a6", "#06b6d4", "#0ea5e9", "#3b82f6", "#6366f1", "#8b5cf6", "#a855f7", "#d946ef", "#ec4899" };
+                                    var colorIndex = Model.OrderByDescending(c => c.Amount).ToList().IndexOf(category) % colors.Length;
+                                    var barColor = category.Color ?? colors[colorIndex];
+                                    <tr>
+                                        <td>
+                                            <span class="me-2">@(category.Icon ?? "📁")</span>
+                                            <strong>@category.CategoryName</strong>
+                                        </td>
+                                        <td class="text-end">$@category.Amount.ToString("N2")</td>
+                                        <td class="text-end">@category.TransactionCount</td>
+                                        <td>
+                                            <div class="d-flex align-items-center gap-2">
+                                                <div class="progress flex-grow-1" style="height: 20px;">
+                                                    <div class="progress-bar" role="progressbar"
+                                                         style="width: @category.Percentage%; background-color: @barColor;">
+                                                    </div>
+                                                </div>
+                                                <span class="text-muted" style="width: 45px; text-align: right;">
+                                                    @category.Percentage.ToString("N1")%
+                                                </span>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                            <tfoot class="table-light fw-bold">
+                                <tr>
+                                    <td>TOTAL</td>
+                                    <td class="text-end">$@totalSpending.ToString("N2")</td>
+                                    <td class="text-end">@Model.Sum(m => m.TransactionCount)</td>
+                                    <td>100%</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Top 5 Categories</h5>
+                    </div>
+                    <div class="list-group list-group-flush">
+                        @foreach (var category in Model.OrderByDescending(c => c.Amount).Take(5))
+                        {
+                            <div class="list-group-item d-flex justify-content-between align-items-center">
+                                <div>
+                                    <span class="me-2">@(category.Icon ?? "📁")</span>
+                                    @category.CategoryName
+                                </div>
+                                <span class="badge bg-danger rounded-pill">
+                                    $@category.Amount.ToString("N0")
+                                </span>
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <div class="card mt-3">
+                    <div class="card-header">
+                        <h5 class="mb-0">Insights</h5>
+                    </div>
+                    <div class="card-body">
+                        @if (Model.Any())
+                        {
+                            var topCategory = Model.OrderByDescending(c => c.Amount).First();
+                            var avgPerCategory = Model.Any() ? totalSpending / Model.Count : 0;
+                            <ul class="mb-0">
+                                <li><strong>@topCategory.CategoryName</strong> is your largest expense at @topCategory.Percentage.ToString("N1")% of total spending.</li>
+                                <li>Average spending per category: <strong>$@avgPerCategory.ToString("N2")</strong></li>
+                                <li>Monthly average total: <strong>$@((totalSpending / 12).ToString("N2"))</strong></li>
+                            </ul>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>

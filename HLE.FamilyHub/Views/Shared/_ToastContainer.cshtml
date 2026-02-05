@@ -1,0 +1,16 @@
+@*
+    Toast Container Component
+    Add this to your _Layout.cshtml before the closing </body> tag
+    Usage in JavaScript: Toast.show({ message: 'Hello!', variant: 'success' })
+*@
+@{
+    var position = ViewData["Position"]?.ToString() ?? "top-end"; // top-start, top-center, top-end, middle-start, middle-center, middle-end, bottom-start, bottom-center, bottom-end
+}
+
+<div class="toast-container position-fixed @position p-3" id="toastContainer" style="z-index: 9999;">
+    <!-- Toasts will be dynamically added here -->
+</div>
+
+@section Scripts {
+    <script src="~/js/toast.js" asp-append-version="true"></script>
+}

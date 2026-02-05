@@ -1,0 +1,124 @@
+@model HLE.FamilyHealth.Models.ViewModels.VisitSummaryIndexViewModel
+@{
+    ViewData["Title"] = "Visit Summaries";
+}
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">Visit Summaries</h2>
+            <p class="text-muted mb-0">Medical visit records and treatment history</p>
+        </div>
+        @{
+            ViewData["Text"] = "New Visit Summary";
+            ViewData["Variant"] = "primary";
+            ViewData["Href"] = Url.Action("Create");
+            ViewData["Icon"] = "plus";
+        }
+        <partial name="_Button" />
+    </div>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        ViewData["AlertType"] = "success";
+        ViewData["AlertMessage"] = TempData["SuccessMessage"]?.ToString();
+        ViewData["AlertDismissible"] = true;
+        <partial name="_Alert" />
+    }
+
+    <div class="card">
+        <div class="card-body">
+            @if (!Model.VisitSummaries.Any())
+            {
+                <div class="text-center py-5">
+                    <i class="bi bi-file-medical" style="font-size: 3rem; color: var(--text-secondary);"></i>
+                    <p class="text-muted mb-3 mt-3">No visit summaries found. Add your first visit record to get started.</p>
+                    <a asp-action="Create" class="btn btn-primary">
+                        <i class="bi bi-plus-circle"></i> Add Visit Summary
+                    </a>
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive table-mobile-cards-wrapper">
+                    <table class="table-themed table-hover table-mobile-cards">
+                        <thead>
+                            <tr>
+                                <th>Visit Date</th>
+                                <th>Family Member</th>
+                                <th>Provider</th>
+                                <th>Visit Type</th>
+                                <th>Chief Complaint</th>
+                                <th>Diagnosis</th>
+                                <th>Next Visit</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var visit in Model.VisitSummaries)
+                            {
+                                <tr>
+                                    <td data-label="Date" data-primary="true">
+                                        <strong>@visit.VisitDate.ToString("MMM dd, yyyy")</strong>
+                                    </td>
+                                    <td data-label="Member">@visit.FamilyMemberName</td>
+                                    <td data-label="Provider">@(visit.ProviderName ?? "—")</td>
+                                    <td data-label="Type">
+                                        @if (!string.IsNullOrEmpty(visit.VisitType))
+                                        {
+                                            <span class="badge bg-info">@visit.VisitType</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">—</span>
+                                        }
+                                    </td>
+                                    <td data-label="Complaint">
+                                        @if (!string.IsNullOrEmpty(visit.ChiefComplaint))
+                                        {
+                                            @(visit.ChiefComplaint.Length > 50 ? visit.ChiefComplaint.Substring(0, 50) + "..." : visit.ChiefComplaint)
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">—</span>
+                                        }
+                                    </td>
+                                    <td data-label="Diagnosis">
+                                        @if (!string.IsNullOrEmpty(visit.Diagnosis))
+                                        {
+                                            @(visit.Diagnosis.Length > 50 ? visit.Diagnosis.Substring(0, 50) + "..." : visit.Diagnosis)
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">—</span>
+                                        }
+                                    </td>
+                                    <td data-label="Next Visit">
+                                        @if (visit.NextVisitRecommended.HasValue)
+                                        {
+                                            <span>@visit.NextVisitRecommended.Value.ToString("MMM dd, yyyy")</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">—</span>
+                                        }
+                                    </td>
+                                    <td class="text-end">
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="@Url.Action("Details", new { id = visit.Id })" class="btn btn-outline-secondary" title="View Details">
+                                                <i class="bi bi-eye"></i>
+                                            </a>
+                                            <a href="@Url.Action("Edit", new { id = visit.Id })" class="btn btn-outline-primary" title="Edit">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+</div>

@@ -1,0 +1,112 @@
+@model HLE.FileServer.Models.Group
+@{
+    ViewData["Title"] = "Create Group";
+}
+
+<div class="mobile-breadcrumb">
+    <a href="@Url.Action("Index", "Groups")" class="mobile-breadcrumb-item">Groups</a>
+    <span class="mobile-breadcrumb-separator">/</span>
+    <span class="mobile-breadcrumb-item active">Create</span>
+</div>
+
+<div class="mobile-page-header">
+    <h1 class="mobile-page-title">Create Group</h1>
+    <p class="mobile-page-subtitle">Set up a new collaborative space</p>
+</div>
+
+<form asp-action="Create" asp-controller="Groups" method="post">
+    <div asp-validation-summary="All" class="mobile-alert mobile-alert-error" style="display: none;"></div>
+
+    <div class="mobile-form-group">
+        <label asp-for="Name" class="mobile-form-label">
+            Group Name <span style="color: var(--destructive);">*</span>
+        </label>
+        <input asp-for="Name" class="mobile-form-input" placeholder="Enter group name" maxlength="100" required autofocus />
+        <span asp-validation-for="Name" style="color: var(--destructive); font-size: 0.8125rem;"></span>
+        <p class="mobile-form-hint">Choose a clear, descriptive name for your group.</p>
+    </div>
+
+    <div class="mobile-form-group">
+        <label asp-for="Description" class="mobile-form-label">Description</label>
+        <textarea asp-for="Description" class="mobile-form-input" rows="3" placeholder="Enter a description (optional)" maxlength="500" style="resize: vertical;"></textarea>
+        <span asp-validation-for="Description" style="color: var(--destructive); font-size: 0.8125rem;"></span>
+        <p class="mobile-form-hint">Briefly describe the purpose of this group.</p>
+    </div>
+
+    <div class="mobile-form-group">
+        <label class="mobile-form-label">Storage Quota</label>
+        <div style="display: flex; gap: 8px;">
+            <input type="number" id="quotaInput" class="mobile-form-input" placeholder="Amount" min="0" step="1" style="flex: 1;" />
+            <select id="quotaUnit" class="mobile-form-input" style="width: auto; min-width: 120px;">
+                <option value="0">Unlimited</option>
+                <option value="1048576">MB</option>
+                <option value="1073741824" selected>GB</option>
+                <option value="1099511627776">TB</option>
+            </select>
+        </div>
+        <input type="hidden" asp-for="StorageQuotaBytes" id="hiddenQuotaBytes" />
+        <p class="mobile-form-hint">Set a storage limit for this group.</p>
+    </div>
+
+    <div class="mobile-card" style="background: var(--accent); margin-bottom: 20px;">
+        <div style="display: flex; align-items: flex-start; gap: 12px;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; margin-top: 2px;">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="16" x2="12" y2="12"></line>
+                <line x1="12" y1="8" x2="12.01" y2="8"></line>
+            </svg>
+            <div style="font-size: 0.8125rem; color: var(--muted-foreground);">
+                <strong style="color: var(--foreground);">Group Info</strong>
+                <ul style="margin: 8px 0 0; padding-left: 16px;">
+                    <li>You will be the owner with full permissions</li>
+                    <li>You can add members and manage their access</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    @Html.AntiForgeryToken()
+
+    <button type="submit" class="mobile-btn mobile-btn-primary mobile-btn-full" style="margin-bottom: 12px;">Create Group</button>
+    <a href="@Url.Action("Index")" class="mobile-btn mobile-btn-secondary mobile-btn-full">Cancel</a>
+</form>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const quotaInput = document.getElementById('quotaInput');
+            const quotaUnit = document.getElementById('quotaUnit');
+            const hiddenQuotaBytes = document.getElementById('hiddenQuotaBytes');
+
+            if (!hiddenQuotaBytes.value) {
+                hiddenQuotaBytes.value = '0';
+            }
+
+            function updateHiddenQuota() {
+                const value = parseFloat(quotaInput.value) || 0;
+                const unit = parseInt(quotaUnit.value);
+                hiddenQuotaBytes.value = unit === 0 ? '0' : Math.floor(value * unit).toString();
+            }
+
+            quotaInput.addEventListener('input', updateHiddenQuota);
+            quotaUnit.addEventListener('change', function() {
+                if (this.value === '0') {
+                    quotaInput.value = '';
+                    quotaInput.disabled = true;
+                    hiddenQuotaBytes.value = '0';
+                } else {
+                    quotaInput.disabled = false;
+                    if (!quotaInput.value) quotaInput.value = '1';
+                }
+                updateHiddenQuota();
+            });
+
+            // Initialize
+            quotaUnit.value = '0';
+            quotaInput.value = '';
+            quotaInput.disabled = true;
+            hiddenQuotaBytes.value = '0';
+        });
+    </script>
+}

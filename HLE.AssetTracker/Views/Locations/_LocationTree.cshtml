@@ -1,0 +1,43 @@
+@model LocationTreeItemDto
+
+<div class="location-item">
+    <div class="location-header">
+        <div class="location-name">
+            @Model.Name
+            @if (Model.AssetCount > 0)
+            {
+                <span class="badge bg-secondary ms-2">@Model.AssetCount asset@(Model.AssetCount == 1 ? "" : "s")</span>
+            }
+        </div>
+        @if (!string.IsNullOrWhiteSpace(Model.Description))
+        {
+            <div class="location-description">@Model.Description</div>
+        }
+        <div class="location-actions">
+            <a asp-action="Create" asp-route-parentId="@Model.Id" class="btn btn-sm btn-outline-primary" title="Add Sub-location">
+                + Sub
+            </a>
+            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-sm btn-outline-secondary" title="Edit">
+                Edit
+            </a>
+            <form asp-action="Delete" asp-route-id="@Model.Id" method="post" class="d-inline">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete"
+                        onclick="return confirm('Delete this location? @(Model.AssetCount > 0 ? "This location has assets and cannot be deleted." : Model.Children.Any() ? "This location has sub-locations and cannot be deleted." : "Are you sure?")')"
+                        @(Model.AssetCount > 0 || Model.Children.Any() ? "disabled" : "")>
+                    Delete
+                </button>
+            </form>
+        </div>
+    </div>
+
+    @if (Model.Children.Any())
+    {
+        <div class="location-children">
+            @foreach (var child in Model.Children)
+            {
+                @await Html.PartialAsync("_LocationTree", child)
+            }
+        </div>
+    }
+</div>

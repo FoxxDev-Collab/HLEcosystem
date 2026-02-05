@@ -1,0 +1,196 @@
+================================================================================
+FINANCE.APP - PLANNING DOCUMENT
+================================================================================
+
+PROJECT OVERVIEW
+--------------------------------------------------------------------------------
+A simple, family-focused finance tracker for budgeting, expense tracking, and 
+net worth monitoring. Integrates with HomeAssetTracker.App for asset valuations.
+
+NOT a replacement for enterprise tools like Quicken/YNAB - this is homelab-scale
+tracking focused on visibility and awareness, not complex accounting.
+
+
+CORE FEATURES
+--------------------------------------------------------------------------------
+
+Phase 1: Basic Expense Tracking (Months 1-2)
+---------------------------------------------
+- Manual expense entry (date, amount, category, description)
+- Income tracking
+- Basic categories (Groceries, Gas, Entertainment, Utilities, etc.)
+- Monthly/yearly summary views
+- Simple filtering by date range and category
+
+Phase 2: Budget Management (Months 3-4)
+----------------------------------------
+- Monthly budget creation (category-based)
+- Budget vs actual tracking
+- Visual indicators (over/under budget)
+- Rollover handling (if under budget, carry forward?)
+- Budget templates for recurring months
+
+Phase 3: Net Worth Tracking (Months 5-6)
+-----------------------------------------
+- Manual asset entry (bank accounts, investments, retirement)
+- Integration with HomeAssetTracker for physical asset values
+- Liability tracking (mortgage, car loans, credit cards)
+- Net worth trend over time
+- Simple charts/graphs showing growth
+
+Phase 4: Reports & Insights (Months 7-8)
+-----------------------------------------
+- Spending trends by category
+- Month-over-month comparisons
+- Year-over-year comparisons
+- Export to CSV for external analysis
+- Simple "insights" (biggest expense this month, savings rate, etc.)
+
+
+DATA MODELS (High Level)
+--------------------------------------------------------------------------------
+
+Accounts
+--------
+- Id, Name, Type (Checking, Savings, Credit Card, Investment, Loan)
+- CurrentBalance, Institution
+- IsActive, LastUpdated
+
+Transactions
+------------
+- Id, AccountId, Date, Amount, Category
+- Description, Type (Income/Expense)
+- IsRecurring, RecurrencePattern (if applicable)
+
+Categories
+----------
+- Id, Name, Type (Income/Expense), ParentCategoryId (for subcategories)
+- BudgetAmount (monthly default)
+- Color (for charts)
+
+Budgets
+-------
+- Id, Month, Year
+- CategoryId, AllocatedAmount, ActualSpent
+- Notes
+
+NetWorthSnapshots
+-----------------
+- Id, Date, TotalAssets, TotalLiabilities, NetWorth
+- Notes (optional context for big changes)
+
+Assets (Integration Point)
+---------------------------
+- Pull current values from HomeAssetTracker.App
+- Map asset types to financial categories
+- Include in net worth calculations
+
+
+USER STORIES
+--------------------------------------------------------------------------------
+
+As a family member, I want to:
+- Quickly log an expense from my phone (mobile-friendly input)
+- See how much I've spent this month in each category
+- Know if we're over/under budget without doing math
+- Track our net worth growth over time
+- See where our money actually goes each month
+
+As the primary finance manager, I want to:
+- Set monthly budgets that reflect our actual spending patterns
+- See trends over 6-12 months to identify problems
+- Export data for tax preparation
+- Track both shared and individual expenses
+- Get reminders about recurring bills
+
+
+TECHNICAL CONSIDERATIONS
+--------------------------------------------------------------------------------
+
+Database Schema: PostgreSQL 'finance' schema
+Authentication: Shared ASP.NET Identity (FoxxLab.Shared.Auth)
+UI Framework: Bootstrap with modern overrides (consistent with Dashboard.App)
+
+Integration Points:
+- HomeAssetTracker.App API for asset valuations
+- Shared authentication for single sign-on
+- Optional: Dashboard.App widget showing current month budget status
+
+Security Considerations:
+- Financial data is sensitive - encrypt at rest
+- Role-based access (some family members may have read-only access)
+- Audit log for all changes to accounts/transactions
+
+Mobile Responsiveness:
+- CRITICAL: Expense entry must work well on phones
+- Dashboard view should be mobile-friendly
+- Charts should scale appropriately
+
+
+PHASE 1 DEVELOPMENT PRIORITIES
+--------------------------------------------------------------------------------
+
+Week 1-2: Foundation
+- Project scaffolding
+- Database schema creation
+- Basic authentication integration
+- Account management CRUD
+
+Week 3-4: Transaction Entry
+- Transaction CRUD operations
+- Category management
+- Mobile-optimized expense entry form
+- Basic transaction list view
+
+Week 5-6: Monthly Summary
+- Current month spending by category
+- Simple income vs expense view
+- Basic filtering and search
+
+Week 7-8: Polish & Testing
+- UI refinement for spouse acceptance
+- Mobile testing on actual devices
+- Family user acceptance testing
+- Bug fixes and adjustments
+
+
+SUCCESS METRICS
+--------------------------------------------------------------------------------
+
+Phase 1 Success:
+- Can enter 20+ transactions without frustration
+- Spouse uses it without asking for help
+- Mobile entry takes <30 seconds per transaction
+- Monthly summary answers "where did our money go?"
+
+Long-term Success:
+- Daily active use for expense tracking
+- Monthly budget review becomes routine
+- Net worth tracking shows progress over time
+- Reduces "surprise" expenses through awareness
+
+
+FUTURE ENHANCEMENTS (Post-Phase 4)
+--------------------------------------------------------------------------------
+
+- Receipt photo attachment for transactions
+- Automatic transaction import (bank CSV uploads)
+- Bill payment reminders
+- Savings goals tracking
+- Split transactions (shared expenses)
+- Multi-currency support (if international travel)
+- Tax category tagging for deductions
+
+
+NOTES
+--------------------------------------------------------------------------------
+
+Keep it simple. This is NOT enterprise accounting software.
+
+Focus on awareness and visibility, not complex financial modeling.
+
+The goal is to answer: "Where does our money go?" and "Are we on track?"
+
+If it takes more than 30 seconds to log an expense, it won't get used.
+
+Spouse acceptance factor is CRITICAL - if it's not intuitive, it fails.

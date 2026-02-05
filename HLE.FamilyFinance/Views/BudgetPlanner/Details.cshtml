@@ -1,0 +1,383 @@
+@using HLE.FamilyFinance.Models.ViewModels
+@using HLE.FamilyFinance.Models.Enums
+@using HLE.FamilyFinance.Services.Interfaces
+@model BudgetPlannerProjectDetailsViewModel
+@{
+    ViewData["Title"] = Model.Name;
+    var icon = Model.Icon ?? "bi-folder";
+    var statusBadge = Model.Status switch
+    {
+        BudgetPlannerProjectStatus.Planning => "bg-secondary",
+        BudgetPlannerProjectStatus.Active => "bg-primary",
+        BudgetPlannerProjectStatus.Completed => "bg-success",
+        BudgetPlannerProjectStatus.Cancelled => "bg-danger",
+        _ => "bg-secondary"
+    };
+    var purchasedCount = Model.Items.Count(i => i.IsPurchased);
+    var progressPercent = Model.Items.Count > 0 ? (decimal)purchasedCount / Model.Items.Count * 100 : 0;
+}
+
+<div class="py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2>
+                @if (icon.StartsWith("bi-"))
+                {
+                    <i class="@icon me-2" style="@(Model.Color != null ? $"color: {Model.Color}" : "")"></i>
+                }
+                else
+                {
+                    <span class="me-2">@icon</span>
+                }
+                @Model.Name
+                <span class="badge @statusBadge fs-6 align-middle">@Model.Status</span>
+            </h2>
+            @if (!string.IsNullOrEmpty(Model.Description))
+            {
+                <p class="text-muted mb-0">@Model.Description</p>
+            }
+        </div>
+        <div class="d-flex gap-2">
+            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-primary"><i class="bi-pencil me-1"></i>Edit</a>
+            <form asp-action="Delete" asp-route-id="@Model.Id" method="post" class="d-inline" onsubmit="return confirm('Are you sure you want to permanently delete this project and all its items? This cannot be undone.');">
+                <button type="submit" class="btn btn-outline-danger"><i class="bi-trash me-1"></i>Delete</button>
+            </form>
+            <a asp-action="Index" class="btn btn-outline-secondary">Back to List</a>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Left Column - Summary & Add Item -->
+        <div class="col-lg-4">
+            <!-- Cost Summary -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Cost Summary</h5>
+                </div>
+                <div class="card-body">
+                    <h2 class="text-primary">$@Model.TotalCost.ToString("N2")</h2>
+                    <p class="text-muted mb-3">Total Project Cost</p>
+
+                    @if (Model.Items.Count > 0)
+                    {
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between small mb-1">
+                                <span>Items Purchased</span>
+                                <span>@purchasedCount / @Model.Items.Count</span>
+                            </div>
+                            <div class="progress" style="height: 8px;">
+                                <div class="progress-bar bg-success" style="width: @progressPercent%"></div>
+                            </div>
+                        </div>
+                    }
+
+                    <hr />
+
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-muted">Available Balance:</span>
+                        <strong class="text-success">$@Model.AvailableBalance.ToString("N2")</strong>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="text-muted">After This Project:</span>
+                        @if (Model.CanAfford)
+                        {
+                            <strong class="text-success">$@((Model.AvailableBalance - Model.TotalCost).ToString("N2"))</strong>
+                        }
+                        else
+                        {
+                            <strong class="text-danger">-$@Model.Shortfall.ToString("N2")</strong>
+                        }
+                    </div>
+
+                    @if (!Model.CanAfford)
+                    {
+                        <div class="alert alert-warning mt-3 mb-0 small">
+                            <i class="bi-exclamation-triangle me-1"></i>
+                            You need $@Model.Shortfall.ToString("N2") more to afford this project.
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- Quick Status Change -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Quick Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        @if (Model.Status != BudgetPlannerProjectStatus.Active)
+                        {
+                            <form asp-action="UpdateStatus" method="post">
+                                <input type="hidden" name="id" value="@Model.Id" />
+                                <input type="hidden" name="status" value="@BudgetPlannerProjectStatus.Active" />
+                                <button type="submit" class="btn btn-outline-primary w-100">
+                                    <i class="bi-play me-1"></i>Mark as Active
+                                </button>
+                            </form>
+                        }
+                        @if (Model.Status != BudgetPlannerProjectStatus.Completed)
+                        {
+                            <form asp-action="UpdateStatus" method="post">
+                                <input type="hidden" name="id" value="@Model.Id" />
+                                <input type="hidden" name="status" value="@BudgetPlannerProjectStatus.Completed" />
+                                <button type="submit" class="btn btn-outline-success w-100">
+                                    <i class="bi-check-circle me-1"></i>Mark as Completed
+                                </button>
+                            </form>
+                        }
+                        <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#duplicateModal">
+                            <i class="bi-copy me-1"></i>Duplicate Project
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Add Item Form -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi-plus-circle me-2"></i>Add Item</h5>
+                </div>
+                <div class="card-body">
+                    <form asp-action="AddItem" method="post">
+                        <input type="hidden" name="projectId" value="@Model.Id" />
+                        <div class="mb-3">
+                            <label class="form-label">Item Name</label>
+                            <input name="Name" class="form-control" placeholder="e.g., Sprinkler Heads" required />
+                        </div>
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <label class="form-label">Quantity</label>
+                                <input name="Quantity" type="number" step="0.01" class="form-control" value="1" min="0.01" required />
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label">Unit Cost</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input name="UnitCost" type="text" class="form-control money-input" required />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Description (Optional)</label>
+                            <input name="Description" class="form-control" placeholder="Brief description" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Reference URL (Optional)</label>
+                            <input name="ReferenceUrl" type="url" class="form-control" placeholder="https://..." />
+                        </div>
+                        <button type="submit" class="btn btn-success w-100"><i class="bi-plus me-1"></i>Add Item</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column - Items Table -->
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi-list-ul me-2"></i>Items (@Model.Items.Count)</h5>
+                    @if (Model.Items.Count > 0)
+                    {
+                        <span class="text-muted">Total: $@Model.Items.Sum(i => i.LineTotal).ToString("N2")</span>
+                    }
+                </div>
+                @if (Model.Items.Count == 0)
+                {
+                    <div class="card-body text-center py-5">
+                        <i class="bi-inbox fs-1 text-muted"></i>
+                        <p class="text-muted mb-0 mt-2">No items yet. Add your first item using the form.</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 40px;"></th>
+                                    <th>Item</th>
+                                    <th class="text-end">Qty</th>
+                                    <th class="text-end">Unit Cost</th>
+                                    <th class="text-end">Total</th>
+                                    <th style="width: 120px;"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in Model.Items)
+                                {
+                                    <tr class="@(item.IsPurchased ? "table-success" : "")">
+                                        <td>
+                                            <form asp-action="ToggleItemPurchased" method="post" style="display: inline;">
+                                                <input type="hidden" name="projectId" value="@Model.Id" />
+                                                <input type="hidden" name="itemId" value="@item.Id" />
+                                                <button type="submit" class="btn btn-sm btn-link p-0" title="@(item.IsPurchased ? "Mark as not purchased" : "Mark as purchased")">
+                                                    <i class="@(item.IsPurchased ? "bi-check-circle-fill text-success" : "bi-circle text-muted") fs-5"></i>
+                                                </button>
+                                            </form>
+                                        </td>
+                                        <td>
+                                            <div class="@(item.IsPurchased ? "text-decoration-line-through" : "")">
+                                                <strong>@item.Name</strong>
+                                                @if (!string.IsNullOrEmpty(item.Description))
+                                                {
+                                                    <br /><small class="text-muted">@item.Description</small>
+                                                }
+                                                @if (!string.IsNullOrEmpty(item.ReferenceUrl))
+                                                {
+                                                    <br /><a href="@item.ReferenceUrl" target="_blank" class="small"><i class="bi-link me-1"></i>Link</a>
+                                                }
+                                            </div>
+                                        </td>
+                                        <td class="text-end">@item.Quantity.ToString("N2")</td>
+                                        <td class="text-end">$@item.UnitCost.ToString("N2")</td>
+                                        <td class="text-end"><strong>$@item.LineTotal.ToString("N2")</strong></td>
+                                        <td class="text-end">
+                                            <button type="button" class="btn btn-sm btn-outline-primary"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#editItemModal"
+                                                    data-item-id="@item.Id"
+                                                    data-item-name="@item.Name"
+                                                    data-item-description="@item.Description"
+                                                    data-item-quantity="@item.Quantity"
+                                                    data-item-unitcost="@item.UnitCost"
+                                                    data-item-referenceurl="@item.ReferenceUrl"
+                                                    data-item-ispurchased="@item.IsPurchased.ToString().ToLower()">
+                                                <i class="bi-pencil"></i>
+                                            </button>
+                                            <form asp-action="DeleteItem" method="post" style="display: inline;" onsubmit="return confirm('Remove this item?');">
+                                                <input type="hidden" name="projectId" value="@Model.Id" />
+                                                <input type="hidden" name="itemId" value="@item.Id" />
+                                                <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi-trash"></i></button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                            <tfoot class="table-light">
+                                <tr>
+                                    <td colspan="4" class="text-end"><strong>Total:</strong></td>
+                                    <td class="text-end"><strong>$@Model.TotalCost.ToString("N2")</strong></td>
+                                    <td></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                }
+            </div>
+
+            @if (!string.IsNullOrEmpty(Model.Notes))
+            {
+                <div class="card mt-4">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="bi-sticky me-2"></i>Notes</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="mb-0">@Model.Notes</p>
+                    </div>
+                </div>
+            }
+
+            <div class="mt-4 text-muted small">
+                <p class="mb-1">Created: @Model.CreatedAt.ToString("MMM d, yyyy h:mm tt")</p>
+                @if (Model.UpdatedAt.HasValue)
+                {
+                    <p class="mb-0">Last updated: @Model.UpdatedAt.Value.ToString("MMM d, yyyy h:mm tt")</p>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Duplicate Project Modal -->
+<div class="modal fade" id="duplicateModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form asp-action="Duplicate" method="post">
+                <input type="hidden" name="id" value="@Model.Id" />
+                <div class="modal-header">
+                    <h5 class="modal-title">Duplicate Project</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">New Project Name</label>
+                        <input name="newName" class="form-control" value="@Model.Name (Copy)" required />
+                    </div>
+                    <p class="text-muted small mb-0">This will create a copy of the project with all items. Status will be reset to Planning and purchased flags will be cleared.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Duplicate</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Item Modal -->
+<div class="modal fade" id="editItemModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form asp-action="UpdateItem" method="post">
+                <input type="hidden" name="projectId" value="@Model.Id" />
+                <input type="hidden" name="itemId" id="editItemId" />
+                <input type="hidden" name="SortOrder" value="0" />
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit Item</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Item Name</label>
+                        <input name="Name" id="editItemName" class="form-control" required />
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label">Quantity</label>
+                            <input name="Quantity" id="editItemQuantity" type="number" step="0.01" class="form-control" min="0.01" required />
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">Unit Cost</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input name="UnitCost" id="editItemUnitCost" type="text" class="form-control money-input" required />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <input name="Description" id="editItemDescription" class="form-control" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Reference URL</label>
+                        <input name="ReferenceUrl" id="editItemReferenceUrl" type="url" class="form-control" />
+                    </div>
+                    <div class="form-check">
+                        <input name="IsPurchased" id="editItemIsPurchased" type="checkbox" class="form-check-input" value="true" />
+                        <label class="form-check-label">Mark as purchased</label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.getElementById('editItemModal').addEventListener('show.bs.modal', function (event) {
+            var button = event.relatedTarget;
+            document.getElementById('editItemId').value = button.getAttribute('data-item-id');
+            document.getElementById('editItemName').value = button.getAttribute('data-item-name');
+            document.getElementById('editItemDescription').value = button.getAttribute('data-item-description') || '';
+            document.getElementById('editItemQuantity').value = button.getAttribute('data-item-quantity');
+            document.getElementById('editItemUnitCost').value = button.getAttribute('data-item-unitcost');
+            document.getElementById('editItemReferenceUrl').value = button.getAttribute('data-item-referenceurl') || '';
+            document.getElementById('editItemIsPurchased').checked = button.getAttribute('data-item-ispurchased') === 'true';
+        });
+    </script>
+}

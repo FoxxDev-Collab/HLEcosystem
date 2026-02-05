@@ -1,0 +1,71 @@
+@using HLE.FamilyFinance.Services.Interfaces
+@using HLE.FamilyFinance.Helpers
+@model List<AssetSummaryDto>
+@{
+    ViewData["Title"] = "Assets";
+    var totalValue = (decimal)(ViewData["TotalValue"] ?? 0m);
+}
+
+<div class="py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="@IconHelper.Nav.Assets me-2"></i>Assets</h2>
+        <a asp-action="Create" class="btn btn-primary"><i class="bi-plus-lg me-1"></i>Add Asset</a>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <h6 class="text-white-50">Total Asset Value</h6>
+                    <h3 class="mb-0">$@totalValue.ToString("N2")</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (Model.Count == 0)
+    {
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <i class="bi-building fs-1 text-muted"></i>
+                <p class="text-muted mb-3 mt-2">No assets tracked yet. Add your first asset to start tracking.</p>
+                <a asp-action="Create" class="btn btn-primary">Add Asset</a>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="row g-3">
+            @foreach (var asset in Model)
+            {
+                var icon = asset.Icon ?? IconHelper.GetAssetIcon(asset.Type);
+                <div class="col-md-6 col-lg-4">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    @if (icon.StartsWith("bi-"))
+                                    {
+                                        <i class="@icon fs-3 me-2" style="@(asset.Color != null ? $"color: {asset.Color}" : "")"></i>
+                                    }
+                                    else
+                                    {
+                                        <span class="fs-3 me-2">@icon</span>
+                                    }
+                                    <h5 class="d-inline">@asset.Name</h5>
+                                    <p class="text-muted mb-2">@asset.Type</p>
+                                </div>
+                            </div>
+                            <h3 class="text-success">$@asset.CurrentValue.ToString("N2")</h3>
+                            <small class="text-muted">As of @asset.ValueAsOfDate.ToString("MMM d, yyyy")</small>
+                        </div>
+                        <div class="card-footer bg-transparent">
+                            <a asp-action="Details" asp-route-id="@asset.Id" class="btn btn-sm btn-outline-primary">View</a>
+                            <a asp-action="Edit" asp-route-id="@asset.Id" class="btn btn-sm btn-outline-secondary">Edit</a>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>

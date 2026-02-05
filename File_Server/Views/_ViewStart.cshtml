@@ -1,0 +1,10 @@
+﻿@{
+    if (MobileDetection.ShouldUseMobileView(Context))
+    {
+        Layout = "_LayoutMobile";
+    }
+    else
+    {
+        Layout = "_Layout";
+    }
+}

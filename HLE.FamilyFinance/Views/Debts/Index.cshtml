@@ -1,0 +1,74 @@
+@using HLE.FamilyFinance.Services.Interfaces
+@using HLE.FamilyFinance.Helpers
+@model List<DebtSummaryDto>
+@{
+    ViewData["Title"] = "Debts";
+    var totalDebt = (decimal)(ViewData["TotalDebt"] ?? 0m);
+}
+
+<div class="py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="@IconHelper.Nav.Debts me-2"></i>Debts</h2>
+        <a asp-action="Create" class="btn btn-primary"><i class="bi-plus-lg me-1"></i>Add Debt</a>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card bg-danger text-white">
+                <div class="card-body">
+                    <h6 class="text-white-50">Total Debt</h6>
+                    <h3 class="mb-0">$@totalDebt.ToString("N2")</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (Model.Count == 0)
+    {
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <i class="bi-file-text fs-1 text-muted"></i>
+                <p class="text-muted mb-3 mt-2">No debts tracked yet. Add your first debt to start tracking.</p>
+                <a asp-action="Create" class="btn btn-primary">Add Debt</a>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="row g-3">
+            @foreach (var debt in Model)
+            {
+                var icon = debt.Icon ?? IconHelper.GetDebtIcon(debt.Type);
+                <div class="col-md-6 col-lg-4">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    @if (icon.StartsWith("bi-"))
+                                    {
+                                        <i class="@icon fs-3 me-2" style="@(debt.Color != null ? $"color: {debt.Color}" : "")"></i>
+                                    }
+                                    else
+                                    {
+                                        <span class="fs-3 me-2">@icon</span>
+                                    }
+                                    <h5 class="d-inline">@debt.Name</h5>
+                                    <p class="text-muted mb-2">@debt.Type @(debt.Lender != null ? $"• {debt.Lender}" : "")</p>
+                                </div>
+                            </div>
+                            <h3 class="text-danger">$@debt.CurrentBalance.ToString("N2")</h3>
+                            <div class="d-flex justify-content-between text-muted small">
+                                <span>@debt.InterestRate.ToString("N2")% APR</span>
+                                <span>$@debt.MinimumPayment.ToString("N2")/mo</span>
+                            </div>
+                        </div>
+                        <div class="card-footer bg-transparent">
+                            <a asp-action="Details" asp-route-id="@debt.Id" class="btn btn-sm btn-outline-primary">View</a>
+                            <a asp-action="Edit" asp-route-id="@debt.Id" class="btn btn-sm btn-outline-secondary">Edit</a>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>

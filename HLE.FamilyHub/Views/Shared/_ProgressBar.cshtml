@@ -1,0 +1,34 @@
+@*
+    Progress Bar Component
+    Usage:
+    <partial name="_ProgressBar" model='new { Value = 75, Variant = "success", Striped = "True", Animated = "True" }' />
+*@
+@{
+    var value = int.Parse(ViewData["Value"]?.ToString() ?? "0");
+    var variant = ViewData["Variant"]?.ToString() ?? "primary";
+    var striped = ViewData["Striped"]?.ToString() == "True";
+    var animated = ViewData["Animated"]?.ToString() == "True";
+    var label = ViewData["Label"]?.ToString() ?? "";
+    var height = ViewData["Height"]?.ToString() ?? "";
+    var cssClass = ViewData["CssClass"]?.ToString() ?? "";
+    
+    var progressBarClass = $"progress-bar bg-{variant}";
+    if (striped || animated) progressBarClass += " progress-bar-striped";
+    if (animated) progressBarClass += " progress-bar-animated";
+    
+    var showLabel = !string.IsNullOrEmpty(label) || ViewData["ShowPercentage"]?.ToString() == "True";
+    var displayLabel = !string.IsNullOrEmpty(label) ? label : $"{value}%";
+}
+
+<div class="progress @cssClass" @(string.IsNullOrEmpty(height) ? "" : $"style=\"height: {height};\"")>
+    <div class="@progressBarClass" role="progressbar" 
+         style="width: @value%;" 
+         aria-valuenow="@value" 
+         aria-valuemin="0" 
+         aria-valuemax="100">
+        @if (showLabel)
+        {
+            @displayLabel
+        }
+    </div>
+</div>

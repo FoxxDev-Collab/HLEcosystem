@@ -1,0 +1,146 @@
+@model HLE.FamilyHealth.Models.ViewModels.InsuranceIndexViewModel
+@{
+    ViewData["Title"] = "Insurance Policies";
+}
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">Insurance Policies</h2>
+            <p class="text-muted mb-0">Manage family insurance information</p>
+        </div>
+        @{
+            ViewData["Text"] = "Add Insurance Policy";
+            ViewData["Variant"] = "primary";
+            ViewData["Href"] = Url.Action("Create");
+            ViewData["Icon"] = "bi bi-plus";
+        }
+        <partial name="_Button" />
+    </div>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        ViewData["AlertType"] = "success";
+        ViewData["AlertMessage"] = TempData["SuccessMessage"]?.ToString();
+        ViewData["AlertDismissible"] = true;
+        <partial name="_Alert" />
+    }
+
+    @{
+        var expiringPolicies = Model.InsurancePolicies.Where(i => i.IsExpiringSoon).ToList();
+    }
+
+    @if (expiringPolicies.Any())
+    {
+        ViewData["AlertType"] = "warning";
+        ViewData["AlertTitle"] = "Expiring Insurance";
+        ViewData["AlertMessage"] = $"You have {expiringPolicies.Count} insurance {(expiringPolicies.Count == 1 ? "policy" : "policies")} expiring within 30 days.";
+        ViewData["AlertDismissible"] = false;
+        <partial name="_Alert" />
+    }
+
+    <div class="card">
+        <div class="card-body">
+            @if (!Model.InsurancePolicies.Any())
+            {
+                <div class="text-center py-5">
+                    <i class="bi bi-shield-check text-muted" style="font-size: 3rem;"></i>
+                    <p class="text-muted mb-3 mt-3">No insurance policies found. Add policies to track coverage information.</p>
+                    <a href="@Url.Action("Create")" class="btn btn-primary">
+                        <i class="bi bi-plus"></i> Add Insurance Policy
+                    </a>
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive table-mobile-cards-wrapper">
+                    <table class="table-themed table-hover table-mobile-cards">
+                        <thead>
+                            <tr>
+                                <th>Family Member</th>
+                                <th>Provider</th>
+                                <th>Type</th>
+                                <th>Policy Number</th>
+                                <th>Expiration Date</th>
+                                <th>Status</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var insurance in Model.InsurancePolicies.OrderBy(i => i.FamilyMemberId).ThenByDescending(i => i.IsActive))
+                            {
+                                var isExpired = insurance.ExpirationDate.HasValue && insurance.ExpirationDate.Value < DateOnly.FromDateTime(DateTime.Now);
+
+                                <tr class="@(isExpired ? "table-danger" : insurance.IsExpiringSoon ? "table-warning" : "")">
+                                    <td data-label="Member" data-primary="true">
+                                        <strong>@insurance.FamilyMemberName</strong>
+                                    </td>
+                                    <td data-label="Provider">@insurance.ProviderName</td>
+                                    <td data-label="Type">
+                                        @{
+                                            var typeVariant = insurance.InsuranceType switch
+                                            {
+                                                "Medical" => "primary",
+                                                "Dental" => "info",
+                                                "Vision" => "success",
+                                                _ => "secondary"
+                                            };
+                                            ViewData["BadgeText"] = insurance.InsuranceType;
+                                            ViewData["BadgeVariant"] = typeVariant;
+                                        }
+                                        <partial name="_Badge" />
+                                    </td>
+                                    <td data-label="Policy #">@insurance.PolicyNumber</td>
+                                    <td data-label="Expires">
+                                        @if (insurance.ExpirationDate.HasValue)
+                                        {
+                                            @insurance.ExpirationDate.Value.ToString("MMM dd, yyyy")
+                                            if (isExpired)
+                                            {
+                                                ViewData["BadgeText"] = "Expired";
+                                                ViewData["BadgeVariant"] = "danger";
+                                                ViewData["BadgePill"] = "True";
+                                                <partial name="_Badge" />
+                                            }
+                                            else if (insurance.IsExpiringSoon)
+                                            {
+                                                ViewData["BadgeText"] = "Expiring Soon";
+                                                ViewData["BadgeVariant"] = "warning";
+                                                ViewData["BadgePill"] = "True";
+                                                <partial name="_Badge" />
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">-</span>
+                                        }
+                                    </td>
+                                    <td data-label="Status">
+                                        @if (insurance.IsActive)
+                                        {
+                                            ViewData["BadgeText"] = "Active";
+                                            ViewData["BadgeVariant"] = "success";
+                                            <partial name="_Badge" />
+                                        }
+                                        else
+                                        {
+                                            ViewData["BadgeText"] = "Inactive";
+                                            ViewData["BadgeVariant"] = "secondary";
+                                            <partial name="_Badge" />
+                                        }
+                                    </td>
+                                    <td class="text-end">
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="@Url.Action("Details", new { id = insurance.Id })" class="btn btn-outline-primary btn-sm">View</a>
+                                            <a href="@Url.Action("Edit", new { id = insurance.Id })" class="btn btn-outline-secondary btn-sm">Edit</a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+</div>

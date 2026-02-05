@@ -1,0 +1,213 @@
+@using HLE.FamilyFinance.Services.Interfaces
+@model List<CashFlowDto>
+@{
+    ViewData["Title"] = "Income vs Expenses";
+    var totalIncome = (decimal)(ViewData["TotalIncome"] ?? 0m);
+    var totalExpenses = (decimal)(ViewData["TotalExpenses"] ?? 0m);
+    var avgMonthlyIncome = (decimal)(ViewData["AverageMonthlyIncome"] ?? 0m);
+    var avgMonthlyExpenses = (decimal)(ViewData["AverageMonthlyExpenses"] ?? 0m);
+    var totalSavings = (decimal)(ViewData["TotalSavings"] ?? 0m);
+    var savingsRate = (decimal)(ViewData["SavingsRate"] ?? 0m);
+}
+
+<div class="py-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-action="Index">Reports</a></li>
+            <li class="breadcrumb-item active">Income vs Expenses</li>
+        </ol>
+    </nav>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Income vs Expenses</h2>
+        <div class="btn-group">
+            <a asp-action="IncomeVsExpenses" asp-route-months="6" class="btn btn-outline-secondary">6 Months</a>
+            <a asp-action="IncomeVsExpenses" asp-route-months="12" class="btn btn-outline-secondary">12 Months</a>
+            <a asp-action="IncomeVsExpenses" asp-route-months="24" class="btn btn-outline-secondary">24 Months</a>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-2">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <h6 class="text-white-50">Total Income</h6>
+                    <h4 class="mb-0">$@totalIncome.ToString("N0")</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card bg-danger text-white">
+                <div class="card-body">
+                    <h6 class="text-white-50">Total Expenses</h6>
+                    <h4 class="mb-0">$@totalExpenses.ToString("N0")</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card @(totalSavings >= 0 ? "bg-primary" : "bg-warning") text-white">
+                <div class="card-body">
+                    <h6 class="text-white-50">Total Saved</h6>
+                    <h4 class="mb-0">$@totalSavings.ToString("N0")</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <h6 class="text-white-50">Savings Rate</h6>
+                    <h4 class="mb-0">@savingsRate.ToString("N1")%</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card bg-secondary text-white">
+                <div class="card-body">
+                    <h6 class="text-white-50">Avg Income/Mo</h6>
+                    <h4 class="mb-0">$@avgMonthlyIncome.ToString("N0")</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card bg-secondary text-white">
+                <div class="card-body">
+                    <h6 class="text-white-50">Avg Expenses/Mo</h6>
+                    <h4 class="mb-0">$@avgMonthlyExpenses.ToString("N0")</h4>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (!Model.Any())
+    {
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <p class="text-muted mb-3">No data available yet. Start adding transactions to compare income vs expenses.</p>
+                <a asp-controller="Transactions" asp-action="Create" class="btn btn-primary">Add Transaction</a>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="row">
+            <div class="col-lg-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Monthly Comparison</h5>
+                    </div>
+                    <div class="card-body">
+                        @{
+                            var maxValue = Model.Any() ? Model.Max(m => Math.Max(m.Income, m.Expenses)) : 1;
+                        }
+                        @foreach (var month in Model)
+                        {
+                            var incomeWidth = maxValue > 0 ? (month.Income / maxValue) * 100 : 0;
+                            var expenseWidth = maxValue > 0 ? (month.Expenses / maxValue) * 100 : 0;
+                            <div class="mb-4">
+                                <div class="d-flex justify-content-between mb-1">
+                                    <strong>@month.MonthName @month.Year</strong>
+                                    <span class="@(month.NetCashFlow >= 0 ? "text-success" : "text-danger")">
+                                        @(month.NetCashFlow >= 0 ? "+" : "")$@month.NetCashFlow.ToString("N0")
+                                    </span>
+                                </div>
+                                <div class="row g-2">
+                                    <div class="col-6">
+                                        <div class="d-flex align-items-center">
+                                            <small class="text-muted me-2" style="width: 60px;">Income</small>
+                                            <div class="progress flex-grow-1" style="height: 24px;">
+                                                <div class="progress-bar bg-success" style="width: @incomeWidth%;">
+                                                    $@month.Income.ToString("N0")
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="d-flex align-items-center">
+                                            <small class="text-muted me-2" style="width: 60px;">Expenses</small>
+                                            <div class="progress flex-grow-1" style="height: 24px;">
+                                                <div class="progress-bar bg-danger" style="width: @expenseWidth%;">
+                                                    $@month.Expenses.ToString("N0")
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h5 class="mb-0">Financial Health</h5>
+                    </div>
+                    <div class="card-body">
+                        @{
+                            var healthStatus = savingsRate >= 20 ? "Excellent" :
+                                              savingsRate >= 10 ? "Good" :
+                                              savingsRate >= 0 ? "Fair" : "Needs Attention";
+                            var healthColor = savingsRate >= 20 ? "success" :
+                                             savingsRate >= 10 ? "info" :
+                                             savingsRate >= 0 ? "warning" : "danger";
+                        }
+                        <div class="text-center mb-3">
+                            <h1 class="display-4 text-@healthColor">@savingsRate.ToString("N0")%</h1>
+                            <p class="text-muted mb-0">Savings Rate</p>
+                        </div>
+                        <div class="alert alert-@healthColor text-center">
+                            <strong>@healthStatus</strong>
+                        </div>
+                        <ul class="small mb-0">
+                            @if (savingsRate >= 20)
+                            {
+                                <li class="text-success">You're saving more than 20% of your income - great job!</li>
+                            }
+                            else if (savingsRate >= 10)
+                            {
+                                <li class="text-info">You're meeting the 10% savings benchmark. Consider increasing to 20%.</li>
+                            }
+                            else if (savingsRate >= 0)
+                            {
+                                <li class="text-warning">You're breaking even. Try to build up savings to at least 10%.</li>
+                            }
+                            else
+                            {
+                                <li class="text-danger">You're spending more than you earn. Review your expenses.</li>
+                            }
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Best & Worst Months</h5>
+                    </div>
+                    <div class="list-group list-group-flush">
+                        @if (Model.Any())
+                        {
+                            var bestMonth = Model.OrderByDescending(m => m.NetCashFlow).First();
+                            var worstMonth = Model.OrderBy(m => m.NetCashFlow).First();
+                            <div class="list-group-item d-flex justify-content-between align-items-center">
+                                <div>
+                                    <span class="text-success me-2">Best</span>
+                                    @bestMonth.MonthName @bestMonth.Year
+                                </div>
+                                <span class="badge bg-success rounded-pill">+$@bestMonth.NetCashFlow.ToString("N0")</span>
+                            </div>
+                            <div class="list-group-item d-flex justify-content-between align-items-center">
+                                <div>
+                                    <span class="text-danger me-2">Worst</span>
+                                    @worstMonth.MonthName @worstMonth.Year
+                                </div>
+                                <span class="badge @(worstMonth.NetCashFlow >= 0 ? "bg-success" : "bg-danger") rounded-pill">
+                                    @(worstMonth.NetCashFlow >= 0 ? "+" : "")$@worstMonth.NetCashFlow.ToString("N0")
+                                </span>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>

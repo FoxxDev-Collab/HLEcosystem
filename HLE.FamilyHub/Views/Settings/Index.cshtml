@@ -1,0 +1,140 @@
+@model HLE.FamilyHub.Models.ViewModels.SettingsViewModel
+@{
+    ViewData["Title"] = "Settings";
+}
+
+@{
+    ViewData["BreadcrumbItems"] = new List<(string Text, string? Url, bool IsActive)>
+    {
+        ("Home", Url.Action("Index", "Home"), false),
+        ("Settings", null, true)
+    };
+}
+<partial name="_Breadcrumb" />
+
+<h2>
+    <i class="bi bi-gear"></i> Settings
+</h2>
+
+<div class="row">
+    <div class="col-lg-6">
+        <form asp-action="Index" method="post">
+            @Html.AntiForgeryToken()
+
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="mb-0">Household Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label asp-for="HouseholdName" class="form-label"></label>
+                        <input asp-for="HouseholdName" class="form-control" placeholder="e.g., The Smith Family" />
+                        <span asp-validation-for="HouseholdName" class="text-danger"></span>
+                        <div class="form-text">This name will appear in various places throughout the app</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex gap-2 mb-4">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-check-circle"></i> Save Settings
+                </button>
+            </div>
+        </form>
+
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Your Family Members</h5>
+            </div>
+            <div class="card-body">
+                @if (Model.FamilyMembers != null && Model.FamilyMembers.Any())
+                {
+                    <div class="list-group list-group-flush">
+                        @foreach (var member in Model.FamilyMembers.OrderBy(m => m.LastName).ThenBy(m => m.FirstName))
+                        {
+                            <div class="list-group-item d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>@member.FirstName @member.LastName</strong>
+                                    @if (member.Relationship != null)
+                                    {
+                                        <br />
+                                        <span class="text-muted small">@member.Relationship.ToString()</span>
+                                    }
+                                </div>
+                                <div>
+                                    @{
+                                        ViewData["Text"] = "View";
+                                        ViewData["Variant"] = "outline-primary";
+                                        ViewData["Size"] = "sm";
+                                        ViewData["Href"] = Url.Action("Details", "FamilyMembers", new { id = member.Id });
+                                    }
+                                    <partial name="_Button" />
+                                </div>
+                            </div>
+                        }
+                    </div>
+                    <div class="mt-3">
+                        <p class="text-muted small mb-0">
+                            <i class="bi bi-info-circle"></i> Total: @Model.FamilyMembers.Count family members
+                        </p>
+                    </div>
+                }
+                else
+                {
+                    <p class="text-muted mb-0">No family members added yet.</p>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">About Family Hub</h5>
+            </div>
+            <div class="card-body">
+                <p>Family Hub helps you manage family relationships, track important dates, and never forget gift ideas.</p>
+                <p class="mb-0">
+                    <strong>Features:</strong>
+                </p>
+                <ul>
+                    <li>Track family member contact information and important dates</li>
+                    <li>View upcoming birthdays, anniversaries, and events</li>
+                    <li>Capture gift ideas year-round</li>
+                    <li>Build a gift history to avoid repeating gifts</li>
+                    <li>Generate holiday card address lists</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5 class="mb-0">Quick Statistics</h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6 mb-3">
+                        <div class="display-6 text-primary">@(Model.FamilyMembers?.Count ?? 0)</div>
+                        <div class="text-muted small">Family Members</div>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <div class="display-6 text-warning">@Model.TotalDates</div>
+                        <div class="text-muted small">Important Dates</div>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <div class="display-6 text-info">@Model.TotalGiftIdeas</div>
+                        <div class="text-muted small">Gift Ideas</div>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <div class="display-6 text-success">@Model.TotalGifts</div>
+                        <div class="text-muted small">Gifts Recorded</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

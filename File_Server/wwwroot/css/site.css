@@ -1,0 +1,335 @@
+html {
+  font-size: 14px;
+  position: relative;
+  min-height: 100%;
+}
+
+@media (min-width: 768px) {
+  html {
+    font-size: 16px;
+  }
+}
+
+body {
+  margin-bottom: 60px;
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Focus styles */
+.btn:focus, 
+.btn:active:focus, 
+.btn-link.nav-link:focus, 
+.form-control:focus, 
+.form-check-input:focus {
+  box-shadow: 0 0 0 0.1rem var(--background), 0 0 0 0.25rem var(--ring);
+}
+
+/* Form floating labels */
+.form-floating > .form-control-plaintext::placeholder, 
+.form-floating > .form-control::placeholder {
+  color: var(--muted-foreground);
+  text-align: end;
+}
+
+.form-floating > .form-control-plaintext:focus::placeholder, 
+.form-floating > .form-control:focus::placeholder {
+  text-align: start;
+}
+
+/* Container adjustments */
+.container, 
+.container-fluid {
+  padding-top: 1rem;
+  padding-bottom: 1rem;
+}
+
+/* Link styling */
+a {
+  color: var(--primary);
+  text-decoration: none;
+  transition: opacity 0.2s ease;
+}
+
+a:hover {
+  opacity: 0.8;
+}
+
+/* Enhanced accessibility */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* Text selection */
+::selection {
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+}
+
+/* Improved text rendering */
+body, 
+input, 
+textarea, 
+select, 
+button {
+  font-feature-settings: 'kern' 1;
+  text-rendering: optimizeLegibility;
+}
+
+/* Code blocks */
+code {
+  font-family: var(--font-mono);
+  font-size: 0.875em;
+  background-color: var(--muted);
+  padding: 0.125rem 0.25rem;
+  border-radius: var(--radius-sm);
+}
+
+pre {
+  background-color: var(--muted);
+  padding: 1rem;
+  border-radius: var(--radius-md);
+  overflow-x: auto;
+}
+
+pre code {
+  background-color: transparent;
+  padding: 0;
+}
+
+/* Horizontal rules */
+hr {
+  border: 0;
+  border-top: 1px solid var(--border);
+  margin: 1.5rem 0;
+}
+
+/* Images */
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* ============================================
+   Bootstrap Dark Mode Overrides
+   ============================================ */
+
+/* Close button (X in modals/alerts) */
+.btn-close {
+  filter: var(--bs-btn-close-white-filter, none);
+  opacity: 0.5;
+}
+
+.dark .btn-close {
+  filter: invert(1) grayscale(100%) brightness(200%);
+}
+
+.btn-close:hover {
+  opacity: 0.75;
+}
+
+/* Text utilities */
+.text-muted {
+  color: var(--muted-foreground) !important;
+}
+
+.text-dark {
+  color: var(--foreground) !important;
+}
+
+.text-light {
+  color: var(--muted-foreground) !important;
+}
+
+/* Background utilities */
+.bg-light {
+  background-color: var(--muted) !important;
+  color: var(--foreground) !important;
+}
+
+.bg-dark {
+  background-color: var(--card) !important;
+  color: var(--foreground) !important;
+}
+
+/* Border utilities */
+.border {
+  border-color: var(--border) !important;
+}
+
+.border-top,
+.border-bottom,
+.border-start,
+.border-end {
+  border-color: var(--border) !important;
+}
+
+/* List group */
+.list-group-item {
+  background-color: var(--card);
+  color: var(--foreground);
+  border-color: var(--border);
+}
+
+.list-group-item:hover {
+  background-color: var(--accent);
+}
+
+.list-group-item.active {
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+  border-color: var(--primary);
+}
+
+/* Dropdown */
+.dropdown-menu {
+  background-color: var(--popover);
+  color: var(--popover-foreground);
+  border-color: var(--border);
+}
+
+.dropdown-item {
+  color: var(--popover-foreground);
+}
+
+.dropdown-item:hover,
+.dropdown-item:focus {
+  background-color: var(--accent);
+  color: var(--accent-foreground);
+}
+
+.dropdown-divider {
+  border-top-color: var(--border);
+}
+
+/* Navbar */
+.navbar {
+  background-color: var(--card) !important;
+  border-bottom: 1px solid var(--border);
+}
+
+.navbar-brand,
+.nav-link {
+  color: var(--foreground) !important;
+}
+
+.nav-link:hover,
+.nav-link:focus {
+  color: var(--primary) !important;
+}
+
+/* Buttons - ensure proper contrast */
+.btn-primary {
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+  border-color: var(--primary);
+}
+
+.btn-primary:hover {
+  background-color: color-mix(in srgb, var(--primary) 90%, black);
+  color: var(--primary-foreground);
+}
+
+.btn-secondary {
+  background-color: var(--secondary);
+  color: var(--secondary-foreground);
+  border-color: var(--secondary);
+}
+
+.btn-success {
+  background-color: var(--chart-2);
+  color: white;
+  border-color: var(--chart-2);
+}
+
+.btn-danger {
+  background-color: var(--destructive);
+  color: var(--destructive-foreground);
+  border-color: var(--destructive);
+}
+
+.btn-warning {
+  background-color: var(--chart-3);
+  color: var(--foreground);
+  border-color: var(--chart-3);
+}
+
+.btn-outline-primary {
+  color: var(--primary);
+  border-color: var(--primary);
+}
+
+.btn-outline-primary:hover {
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.btn-outline-danger {
+  color: var(--destructive);
+  border-color: var(--destructive);
+}
+
+.btn-outline-danger:hover {
+  background-color: var(--destructive);
+  color: var(--destructive-foreground);
+}
+
+/* Input groups */
+.input-group-text {
+  background-color: var(--muted);
+  color: var(--foreground);
+  border-color: var(--border);
+}
+
+/* Tooltips and popovers */
+.tooltip-inner {
+  background-color: var(--popover);
+  color: var(--popover-foreground);
+}
+
+.popover {
+  background-color: var(--popover);
+  border-color: var(--border);
+}
+
+.popover-header {
+  background-color: var(--muted);
+  color: var(--foreground);
+  border-bottom-color: var(--border);
+}
+
+.popover-body {
+  color: var(--popover-foreground);
+}
+
+/* Pagination */
+.page-link {
+  background-color: var(--card);
+  color: var(--foreground);
+  border-color: var(--border);
+}
+
+.page-link:hover {
+  background-color: var(--accent);
+  color: var(--accent-foreground);
+}
+
+.page-item.active .page-link {
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+  border-color: var(--primary);
+}
+
+.page-item.disabled .page-link {
+  background-color: var(--muted);
+  color: var(--muted-foreground);
+  border-color: var(--border);
+}

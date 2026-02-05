@@ -1,0 +1,33 @@
+@*
+    Card Component
+    Usage:
+    <partial name="_Card" model='new { Title = "Card Title", Body = "Card content", Footer = "Optional footer", Variant = "default" }' />
+    Variants: default, primary, success, warning, danger, info
+*@
+@{
+    var title = ViewData["Title"]?.ToString() ?? "";
+    var body = ViewData["Body"]?.ToString() ?? "";
+    var footer = ViewData["Footer"]?.ToString() ?? "";
+    var variant = ViewData["Variant"]?.ToString() ?? "default";
+    var cssClass = ViewData["CssClass"]?.ToString() ?? "";
+    var headerClass = ViewData["HeaderClass"]?.ToString() ?? "";
+    var bodyClass = ViewData["BodyClass"]?.ToString() ?? "";
+}
+
+<div class="card card-@variant @cssClass">
+    @if (!string.IsNullOrEmpty(title))
+    {
+        <div class="card-header @headerClass">
+            @Html.Raw(title)
+        </div>
+    }
+    <div class="card-body @bodyClass">
+        @Html.Raw(body)
+    </div>
+    @if (!string.IsNullOrEmpty(footer))
+    {
+        <div class="card-footer">
+            @Html.Raw(footer)
+        </div>
+    }
+</div>

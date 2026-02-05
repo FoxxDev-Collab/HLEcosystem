@@ -1,0 +1,88 @@
+@model HLE.FamilyHealth.Models.Entities.Vaccination
+@{
+    ViewData["Title"] = "Vaccination Details";
+}
+
+<div class="container-fluid py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="d-flex align-items-center mb-4">
+                <a href="@Url.Action("Index")" class="btn btn-outline-secondary me-3">
+                    <i class="bi bi-arrow-left"></i>
+                </a>
+                <div>
+                    <h2 class="mb-1">Vaccination Details</h2>
+                    <p class="text-muted mb-0">View vaccination record</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-body">
+                    <dl class="row">
+                        <dt class="col-sm-4">Family Member</dt>
+                        <dd class="col-sm-8">@Model.FamilyMember.FirstName @Model.FamilyMember.LastName</dd>
+
+                        <dt class="col-sm-4">Vaccine Name</dt>
+                        <dd class="col-sm-8">@Model.VaccineName</dd>
+
+                        <dt class="col-sm-4">Dose Number</dt>
+                        <dd class="col-sm-8">@(Model.DoseNumber ?? "-")</dd>
+
+                        <dt class="col-sm-4">Date Administered</dt>
+                        <dd class="col-sm-8">@Model.DateAdministered.ToString("MMMM dd, yyyy")</dd>
+
+                        <dt class="col-sm-4">Next Dose Date</dt>
+                        <dd class="col-sm-8">@(Model.NextDoseDate?.ToString("MMMM dd, yyyy") ?? "-")</dd>
+
+                        <dt class="col-sm-4">Administered By</dt>
+                        <dd class="col-sm-8">@(Model.AdministeredBy ?? "-")</dd>
+
+                        <dt class="col-sm-4">Lot Number</dt>
+                        <dd class="col-sm-8">@(Model.LotNumber ?? "-")</dd>
+
+                        <dt class="col-sm-4">Notes</dt>
+                        <dd class="col-sm-8">@(Model.Notes ?? "-")</dd>
+
+                        <dt class="col-sm-4">Created</dt>
+                        <dd class="col-sm-8">@Model.CreatedAt.ToString("MMMM dd, yyyy")</dd>
+
+                        @if (Model.UpdatedAt.HasValue)
+                        {
+                            <dt class="col-sm-4">Last Updated</dt>
+                            <dd class="col-sm-8">@Model.UpdatedAt.Value.ToString("MMMM dd, yyyy")</dd>
+                        }
+                    </dl>
+
+                    <div class="mt-4 d-flex gap-2">
+                        @{
+                            ViewData["Text"] = "Edit";
+                            ViewData["Variant"] = "primary";
+                            ViewData["Href"] = Url.Action("Edit", new { id = Model.Id });
+                            ViewData["Icon"] = "bi bi-pencil";
+                        }
+                        <partial name="_Button" />
+
+                        <form asp-action="Delete" method="post" class="d-inline">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="id" value="@Model.Id" />
+                            @{
+                                ViewData["Text"] = "Delete";
+                                ViewData["Variant"] = "danger";
+                                ViewData["Type"] = "submit";
+                                ViewData["Icon"] = "bi bi-trash";
+                            }
+                            <partial name="_Button" />
+                        </form>
+
+                        @{
+                            ViewData["Text"] = "Back to List";
+                            ViewData["Variant"] = "outline-secondary";
+                            ViewData["Href"] = Url.Action("Index");
+                        }
+                        <partial name="_Button" />
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,119 @@
+html {
+  font-size: 14px;
+  position: relative;
+  min-height: 100%;
+}
+
+@media (min-width: 768px) {
+  html {
+    font-size: 16px;
+  }
+}
+
+body {
+  margin-bottom: 60px;
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Focus styles */
+.btn:focus, 
+.btn:active:focus, 
+.btn-link.nav-link:focus, 
+.form-control:focus, 
+.form-check-input:focus {
+  box-shadow: 0 0 0 0.1rem var(--background), 0 0 0 0.25rem var(--ring);
+}
+
+/* Form floating labels */
+.form-floating > .form-control-plaintext::placeholder, 
+.form-floating > .form-control::placeholder {
+  color: var(--muted-foreground);
+  text-align: end;
+}
+
+.form-floating > .form-control-plaintext:focus::placeholder, 
+.form-floating > .form-control:focus::placeholder {
+  text-align: start;
+}
+
+/* Container adjustments */
+.container, 
+.container-fluid {
+  padding-top: 1rem;
+  padding-bottom: 1rem;
+}
+
+/* Link styling */
+a {
+  color: var(--primary);
+  text-decoration: none;
+  transition: opacity 0.2s ease;
+}
+
+a:hover {
+  opacity: 0.8;
+}
+
+/* Enhanced accessibility */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* Text selection */
+::selection {
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+}
+
+/* Improved text rendering */
+body, 
+input, 
+textarea, 
+select, 
+button {
+  font-feature-settings: 'kern' 1;
+  text-rendering: optimizeLegibility;
+}
+
+/* Code blocks */
+code {
+  font-family: var(--font-mono);
+  font-size: 0.875em;
+  background-color: var(--muted);
+  padding: 0.125rem 0.25rem;
+  border-radius: var(--radius-sm);
+}
+
+pre {
+  background-color: var(--muted);
+  padding: 1rem;
+  border-radius: var(--radius-md);
+  overflow-x: auto;
+}
+
+pre code {
+  background-color: transparent;
+  padding: 0;
+}
+
+/* Horizontal rules */
+hr {
+  border: 0;
+  border-top: 1px solid var(--border);
+  margin: 1.5rem 0;
+}
+
+/* Images */
+img {
+  max-width: 100%;
+  height: auto;
+}

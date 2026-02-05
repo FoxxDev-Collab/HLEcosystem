@@ -1,0 +1,236 @@
+@using HLE.FamilyFinance.Services.Interfaces
+@using HLE.FamilyFinance.Helpers
+@model HLE.FamilyFinance.Models.ViewModels.DashboardViewModel
+@{
+    ViewData["Title"] = "Dashboard";
+}
+
+<div class="py-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h2 class="mb-1">Welcome back, @Model.UserName!</h2>
+            <p class="text-muted">@Model.HouseholdName</p>
+        </div>
+        <div class="col-auto">
+            <a asp-controller="Transactions" asp-action="Create" class="btn btn-primary">
+                + Add Transaction
+            </a>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-6 col-lg-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-subtitle mb-1 text-white-50">Net Worth</h6>
+                            <h2 class="card-title mb-0">$@Model.Stats.NetWorth.ToString("N2")</h2>
+                        </div>
+                        <i class="@IconHelper.Dashboard.NetWorth fs-1 opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 col-lg-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-subtitle mb-1 text-white-50">Monthly Income</h6>
+                            <h2 class="card-title mb-0">$@Model.Stats.MonthlyIncome.ToString("N2")</h2>
+                        </div>
+                        <i class="@IconHelper.Dashboard.Income fs-1 opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 col-lg-3">
+            <div class="card bg-danger text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-subtitle mb-1 text-white-50">Monthly Expenses</h6>
+                            <h2 class="card-title mb-0">$@Model.Stats.MonthlyExpenses.ToString("N2")</h2>
+                        </div>
+                        <i class="@IconHelper.Dashboard.Expenses fs-1 opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 col-lg-3">
+            <div class="card @(Model.Stats.MonthlySavings >= 0 ? "bg-info" : "bg-warning") text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-subtitle mb-1 text-white-50">Monthly Savings</h6>
+                            <h2 class="card-title mb-0">$@Model.Stats.MonthlySavings.ToString("N2")</h2>
+                        </div>
+                        <i class="@IconHelper.Dashboard.Savings fs-1 opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Budget Progress -->
+    @if (Model.Stats.BudgetUsedPercent > 0)
+    {
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h6 class="mb-0">Budget Usage</h6>
+                    <span class="badge @(Model.Stats.BudgetUsedPercent > 100 ? "bg-danger" : Model.Stats.BudgetUsedPercent > 80 ? "bg-warning" : "bg-success")">
+                        @Model.Stats.BudgetUsedPercent.ToString("N1")%
+                    </span>
+                </div>
+                <div class="progress" style="height: 20px;">
+                    <div class="progress-bar @(Model.Stats.BudgetUsedPercent > 100 ? "bg-danger" : Model.Stats.BudgetUsedPercent > 80 ? "bg-warning" : "bg-success")"
+                         role="progressbar" style="width: @Math.Min(Model.Stats.BudgetUsedPercent, 100)%">
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <div class="row g-4">
+        <!-- Accounts -->
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Accounts</h5>
+                    <a asp-controller="Accounts" asp-action="Index" class="btn btn-sm btn-outline-primary">View All</a>
+                </div>
+                <div class="card-body p-0">
+                    @if (Model.Accounts.Count == 0)
+                    {
+                        <div class="p-4 text-center text-muted">
+                            <p class="mb-2">No accounts yet.</p>
+                            <a asp-controller="Accounts" asp-action="Create" class="btn btn-primary btn-sm">Add your first account</a>
+                        </div>
+                    }
+                    else
+                    {
+                        <ul class="list-group list-group-flush">
+                            @foreach (var account in Model.Accounts.Take(5))
+                            {
+                                var acctIcon = account.Icon ?? IconHelper.GetAccountIcon(account.Type);
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        @if (acctIcon.StartsWith("bi-"))
+                                        {
+                                            <i class="@acctIcon me-2"></i>
+                                        }
+                                        else
+                                        {
+                                            <span class="me-2">@acctIcon</span>
+                                        }
+                                        <a asp-controller="Accounts" asp-action="Details" asp-route-id="@account.Id" class="text-decoration-none">
+                                            @account.Name
+                                        </a>
+                                        <br />
+                                        <small class="text-muted">@account.Type</small>
+                                    </div>
+                                    <strong class="@(account.CurrentBalance >= 0 ? "text-success" : "text-danger")">
+                                        $@account.CurrentBalance.ToString("N2")
+                                    </strong>
+                                </li>
+                            }
+                        </ul>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Upcoming Bills -->
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Upcoming Bills</h5>
+                    <span class="badge bg-warning">@Model.Stats.UpcomingBillsCount upcoming</span>
+                </div>
+                <div class="card-body p-0">
+                    @if (Model.UpcomingBills.Count == 0)
+                    {
+                        <div class="p-4 text-center text-muted">
+                            No upcoming bills in the next 14 days.
+                        </div>
+                    }
+                    else
+                    {
+                        <ul class="list-group list-group-flush">
+                            @foreach (var bill in Model.UpcomingBills)
+                            {
+                                var badgeClass = bill.DaysUntil <= 3 ? "bg-danger" : bill.DaysUntil <= 7 ? "bg-warning" : "bg-secondary";
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <strong>@bill.Name</strong>
+                                        <br />
+                                        <small class="text-muted">@bill.Date.ToString("MMM d") - @bill.AccountName</small>
+                                    </div>
+                                    <div class="text-end">
+                                        <span class="badge @badgeClass">@bill.DaysUntil days</span>
+                                        <br />
+                                        <strong class="text-danger">$@bill.Amount.ToString("N2")</strong>
+                                    </div>
+                                </li>
+                            }
+                        </ul>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Transactions -->
+    <div class="card mt-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Recent Transactions</h5>
+            <a asp-controller="Transactions" asp-action="Index" class="btn btn-sm btn-outline-primary">View All</a>
+        </div>
+        <div class="card-body p-0">
+            @if (Model.RecentTransactions.Count == 0)
+            {
+                <div class="p-4 text-center text-muted">
+                    No transactions yet.
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Description</th>
+                                <th>Category</th>
+                                <th>Account</th>
+                                <th class="text-end">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var tx in Model.RecentTransactions)
+                            {
+                                var amountClass = tx.Type == "Income" ? "text-success" : tx.Type == "Expense" ? "text-danger" : "text-info";
+                                <tr>
+                                    <td>@tx.Date.ToString("MMM d")</td>
+                                    <td>
+                                        <a asp-controller="Transactions" asp-action="Details" asp-route-id="@tx.Id" class="text-decoration-none">
+                                            @(tx.Payee ?? "—")
+                                        </a>
+                                    </td>
+                                    <td class="text-muted">@(tx.CategoryName ?? "—")</td>
+                                    <td class="text-muted">@tx.AccountName</td>
+                                    <td class="text-end @amountClass">
+                                        @(tx.Type == "Income" ? "+" : tx.Type == "Expense" ? "-" : "")$@tx.Amount.ToString("N2")
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+</div>

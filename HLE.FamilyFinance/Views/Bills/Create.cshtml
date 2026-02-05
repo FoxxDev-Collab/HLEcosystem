@@ -1,0 +1,123 @@
+@using HLE.FamilyFinance.Services.Interfaces
+@using HLE.FamilyFinance.Models.Enums
+@model BillCreateDto?
+@{
+    ViewData["Title"] = "Add Bill";
+}
+
+<div class="py-4">
+    <h2><i class="bi-plus-circle me-2"></i>Add Monthly Bill</h2>
+    <p class="text-muted">Set up a recurring bill to track payments.</p>
+
+    <form asp-action="Create" method="post">
+        <div class="row">
+            <div class="col-lg-8">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Bill Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Bill Name</label>
+                                <input asp-for="Name" class="form-control" required placeholder="e.g., Electric Bill" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Category</label>
+                                <select asp-for="Category" asp-items="@(ViewData["Categories"] as SelectList)" class="form-select"></select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Payee</label>
+                                <input asp-for="Payee" class="form-control" placeholder="e.g., Power Company" />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Due Day of Month</label>
+                                <input asp-for="DueDayOfMonth" class="form-control" type="number" min="1" max="31" value="1" required />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Expected Amount</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input asp-for="ExpectedAmount" class="form-control money-input" type="text" required />
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="form-check">
+                                    <input asp-for="IsVariableAmount" class="form-check-input" type="checkbox" />
+                                    <label class="form-check-label">Amount varies each month</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Auto-Pay Settings</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-check mb-3">
+                            <input asp-for="AutoPay" class="form-check-input" type="checkbox" id="autoPay" />
+                            <label class="form-check-label" for="autoPay">This bill is on auto-pay</label>
+                        </div>
+                        <div class="row g-3" id="autoPayDetails" style="display: none;">
+                            <div class="col-md-6">
+                                <label class="form-label">Auto-Pay Account</label>
+                                <select asp-for="AutoPayAccountId" asp-items="@(ViewData["Accounts"] as SelectList)" class="form-select">
+                                    <option value="">Select account...</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Link to Existing Debt (Optional)</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted small">If this bill is a payment for an existing debt (like a car loan or mortgage), link it here.</p>
+                        <select asp-for="LinkedDebtId" asp-items="@(ViewData["Debts"] as SelectList)" class="form-select">
+                            <option value="">No linked debt</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">Notes</label>
+                            <textarea asp-for="Notes" class="form-control" rows="3" placeholder="Account number, website login, etc."></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary"><i class="bi-check-lg me-1"></i>Create Bill</button>
+                    <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
+                </div>
+            </div>
+
+            <div class="col-lg-4">
+                <div class="card hint-card">
+                    <div class="card-body">
+                        <h6><i class="bi-lightbulb me-2"></i>Tips</h6>
+                        <ul class="small text-muted mb-0">
+                            <li>Set up auto-pay tracking to remember which bills are paid automatically</li>
+                            <li>Variable amount bills will remind you to verify the actual amount each month</li>
+                            <li>Link bills to debts to track loan payments and see remaining balances</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+<script>
+    document.getElementById('autoPay').addEventListener('change', function() {
+        document.getElementById('autoPayDetails').style.display = this.checked ? 'flex' : 'none';
+    });
+</script>
+}

@@ -1,0 +1,211 @@
+@model HLE.FamilyHub.Models.ViewModels.FamilyMemberEditViewModel
+@{
+    ViewData["Title"] = "Edit Family Member";
+}
+
+@{
+    ViewData["BreadcrumbItems"] = new List<(string Text, string? Url, bool IsActive)>
+    {
+        ("Home", Url.Action("Index", "Home"), false),
+        ("Family", Url.Action("Index"), false),
+        ("Edit", null, true)
+    };
+}
+<partial name="_Breadcrumb" />
+
+<h2>
+    <i class="bi bi-pencil"></i> Edit Family Member
+</h2>
+
+<div class="row">
+    <div class="col-lg-8">
+        <form asp-action="Edit" asp-route-id="@Model.Id" method="post">
+            @Html.AntiForgeryToken()
+
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="mb-0">Basic Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="FirstName" class="form-label"></label>
+                            <input asp-for="FirstName" class="form-control" />
+                            <span asp-validation-for="FirstName" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="LastName" class="form-label"></label>
+                            <input asp-for="LastName" class="form-control" />
+                            <span asp-validation-for="LastName" class="text-danger"></span>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Nickname" class="form-label"></label>
+                        <input asp-for="Nickname" class="form-control" />
+                        <span asp-validation-for="Nickname" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Relationship" class="form-label"></label>
+                        <select asp-for="Relationship" class="form-select">
+                            <option value="">Select relationship...</option>
+                            <option value="Parent">Parent</option>
+                            <option value="Spouse">Spouse</option>
+                            <option value="Child">Child</option>
+                            <option value="Sibling">Sibling</option>
+                            <option value="Grandparent">Grandparent</option>
+                            <option value="Grandchild">Grandchild</option>
+                            <option value="Aunt">Aunt</option>
+                            <option value="Uncle">Uncle</option>
+                            <option value="Cousin">Cousin</option>
+                            <option value="Niece">Niece</option>
+                            <option value="Nephew">Nephew</option>
+                            <option value="Friend">Friend</option>
+                            <option value="Other">Other</option>
+                        </select>
+                        <span asp-validation-for="Relationship" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="RelationshipNotes" class="form-label"></label>
+                        <input asp-for="RelationshipNotes" class="form-control" />
+                        <span asp-validation-for="RelationshipNotes" class="text-danger"></span>
+                        <div class="form-text">e.g., "Sister-in-law", "College friend"</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="mb-0">Important Dates</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="Birthday" class="form-label"></label>
+                            <input asp-for="Birthday" type="date" class="form-control" />
+                            <span asp-validation-for="Birthday" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="Anniversary" class="form-label"></label>
+                            <input asp-for="Anniversary" type="date" class="form-control" />
+                            <span asp-validation-for="Anniversary" class="text-danger"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="mb-0">Contact Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="Phone" class="form-label"></label>
+                            <input asp-for="Phone" class="form-control" />
+                            <span asp-validation-for="Phone" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="Email" class="form-label"></label>
+                            <input asp-for="Email" type="email" class="form-control" />
+                            <span asp-validation-for="Email" class="text-danger"></span>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="PreferredContact" class="form-label"></label>
+                        <select asp-for="PreferredContact" class="form-select">
+                            <option value="">Select preferred contact method...</option>
+                            <option value="Phone">Phone</option>
+                            <option value="Email">Email</option>
+                            <option value="Text">Text</option>
+                            <option value="Mail">Mail</option>
+                        </select>
+                        <span asp-validation-for="PreferredContact" class="text-danger"></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="mb-0">Address</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label asp-for="AddressLine1" class="form-label"></label>
+                        <input asp-for="AddressLine1" class="form-control" />
+                        <span asp-validation-for="AddressLine1" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="AddressLine2" class="form-label"></label>
+                        <input asp-for="AddressLine2" class="form-control" />
+                        <span asp-validation-for="AddressLine2" class="text-danger"></span>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="City" class="form-label"></label>
+                            <input asp-for="City" class="form-control" />
+                            <span asp-validation-for="City" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label asp-for="State" class="form-label"></label>
+                            <input asp-for="State" class="form-control" />
+                            <span asp-validation-for="State" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label asp-for="ZipCode" class="form-label"></label>
+                            <input asp-for="ZipCode" class="form-control" />
+                            <span asp-validation-for="ZipCode" class="text-danger"></span>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Country" class="form-label"></label>
+                        <input asp-for="Country" class="form-control" />
+                        <span asp-validation-for="Country" class="text-danger"></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="mb-0">Additional</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label asp-for="Notes" class="form-label"></label>
+                        <textarea asp-for="Notes" class="form-control" rows="4"></textarea>
+                        <span asp-validation-for="Notes" class="text-danger"></span>
+                    </div>
+
+                    <div class="form-check">
+                        <input asp-for="IncludeInHolidayCards" class="form-check-input" type="checkbox" />
+                        <label asp-for="IncludeInHolidayCards" class="form-check-label"></label>
+                        <span asp-validation-for="IncludeInHolidayCards" class="text-danger"></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex gap-2 mb-4">
+                @{
+                    ViewData["Text"] = "Cancel";
+                    ViewData["Variant"] = "secondary";
+                    ViewData["Href"] = Url.Action("Details", new { id = Model.Id });
+                }
+                <partial name="_Button" />
+
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-check-circle"></i> Save Changes
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

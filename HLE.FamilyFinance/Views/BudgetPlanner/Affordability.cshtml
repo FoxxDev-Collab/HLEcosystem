@@ -1,0 +1,185 @@
+@using HLE.FamilyFinance.Models.ViewModels
+@using HLE.FamilyFinance.Models.Enums
+@model AffordabilityViewModel
+@{
+    ViewData["Title"] = "Affordability Summary";
+}
+
+<div class="py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi-cash-coin me-2"></i>Affordability Summary</h2>
+        <a asp-action="Index" class="btn btn-outline-secondary">Back to Projects</a>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <h6 class="text-white-50">Available Balance</h6>
+                    <h3 class="mb-0">$@Model.TotalAvailableBalance.ToString("N2")</h3>
+                    <small class="text-white-50">From @Model.AccountBalances.Count account(s)</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <h6 class="text-white-50">Total Planned Costs</h6>
+                    <h3 class="mb-0">$@Model.TotalPlannedCosts.ToString("N2")</h3>
+                    <small class="text-white-50">@Model.ActiveProjects.Count active project(s)</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card @(Model.CanAffordAll ? "bg-success" : "bg-danger") text-white">
+                <div class="card-body">
+                    <h6 class="text-white-50">@(Model.CanAffordAll ? "Remaining After Projects" : "Shortfall")</h6>
+                    <h3 class="mb-0">$@Math.Abs(Model.RemainingAfterProjects).ToString("N2")</h3>
+                    <small class="text-white-50">@(Model.CanAffordAll ? "You can afford all projects" : "Need more savings")</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Account Balances -->
+        <div class="col-lg-5">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi-bank me-2"></i>Available Accounts</h5>
+                </div>
+                @if (Model.AccountBalances.Count == 0)
+                {
+                    <div class="card-body text-center py-4">
+                        <p class="text-muted mb-0">No accounts with available balance found.</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Account</th>
+                                    <th class="text-end">Balance</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var account in Model.AccountBalances.OrderByDescending(a => a.Balance))
+                                {
+                                    <tr>
+                                        <td>@account.AccountName</td>
+                                        <td class="text-end text-success">$@account.Balance.ToString("N2")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                            <tfoot class="table-light">
+                                <tr>
+                                    <td><strong>Total Available</strong></td>
+                                    <td class="text-end"><strong class="text-success">$@Model.TotalAvailableBalance.ToString("N2")</strong></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                }
+                <div class="card-footer text-muted small">
+                    <i class="bi-info-circle me-1"></i>Includes Checking, Savings, and Cash accounts that are not archived.
+                </div>
+            </div>
+        </div>
+
+        <!-- Active Projects -->
+        <div class="col-lg-7">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi-list-check me-2"></i>Planning & Active Projects</h5>
+                </div>
+                @if (Model.ActiveProjects.Count == 0)
+                {
+                    <div class="card-body text-center py-4">
+                        <p class="text-muted mb-0">No active or planning projects. <a asp-action="Create">Create one</a></p>
+                    </div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Project</th>
+                                    <th>Status</th>
+                                    <th class="text-end">Cost</th>
+                                    <th class="text-end">Running Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @{
+                                    decimal runningTotal = 0;
+                                }
+                                @foreach (var project in Model.ActiveProjects.OrderBy(p => p.Status).ThenBy(p => p.Name))
+                                {
+                                    runningTotal += project.TotalCost;
+                                    var canAffordThisProject = Model.TotalAvailableBalance >= runningTotal;
+                                    var statusBadge = project.Status == BudgetPlannerProjectStatus.Active ? "bg-primary" : "bg-secondary";
+
+                                    <tr>
+                                        <td>
+                                            <a asp-action="Details" asp-route-id="@project.Id">@project.Name</a>
+                                            @if (!string.IsNullOrEmpty(project.Description))
+                                            {
+                                                <br /><small class="text-muted">@project.Description</small>
+                                            }
+                                        </td>
+                                        <td><span class="badge @statusBadge">@project.Status</span></td>
+                                        <td class="text-end">$@project.TotalCost.ToString("N2")</td>
+                                        <td class="text-end @(canAffordThisProject ? "text-success" : "text-danger")">
+                                            $@runningTotal.ToString("N2")
+                                            @if (!canAffordThisProject)
+                                            {
+                                                <i class="bi-exclamation-triangle ms-1" title="Exceeds available balance"></i>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                            <tfoot class="table-light">
+                                <tr>
+                                    <td colspan="2"><strong>Total Planned</strong></td>
+                                    <td class="text-end"><strong>$@Model.TotalPlannedCosts.ToString("N2")</strong></td>
+                                    <td></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                }
+            </div>
+
+            <!-- Summary Analysis -->
+            <div class="card mt-4">
+                <div class="card-body">
+                    @if (Model.CanAffordAll)
+                    {
+                        <div class="d-flex align-items-center text-success">
+                            <i class="bi-check-circle-fill fs-1 me-3"></i>
+                            <div>
+                                <h5 class="mb-1">You can afford all planned projects!</h5>
+                                <p class="mb-0">After completing all projects, you'll have $@Model.RemainingAfterProjects.ToString("N2") remaining.</p>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="d-flex align-items-center text-danger">
+                            <i class="bi-exclamation-triangle-fill fs-1 me-3"></i>
+                            <div>
+                                <h5 class="mb-1">Insufficient funds for all projects</h5>
+                                <p class="mb-0">You need an additional $@Math.Abs(Model.RemainingAfterProjects).ToString("N2") to complete all planned projects.</p>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

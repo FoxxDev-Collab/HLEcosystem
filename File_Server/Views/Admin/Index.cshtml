@@ -1,0 +1,296 @@
+@using HLE.FileServer.Models
+@using HLE.FileServer.Services
+@model AdminDashboardViewModel
+@{
+    ViewData["Title"] = "Admin Dashboard";
+}
+
+@functions {
+    string FormatBytes(long bytes)
+    {
+        string[] sizes = { "B", "KB", "MB", "GB", "TB" };
+        int order = 0;
+        double size = bytes;
+        while (size >= 1024 && order < sizes.Length - 1)
+        {
+            order++;
+            size /= 1024;
+        }
+        return $"{size:0.##} {sizes[order]}";
+    }
+
+    int GetPercentage(long used, long total)
+    {
+        if (total == 0) return 0;
+        return (int)Math.Min(100, (used * 100) / total);
+    }
+}
+
+<div class="container py-4">
+    @{
+        ViewData["Items"] = new List<dynamic> {
+            new { Text = "Home", Url = Url.Action("Index", "Home") },
+            new { Text = "Admin", Url = "" }
+        };
+    }
+    <partial name="_Breadcrumb" />
+
+    <h2 class="mb-4">Admin Dashboard</h2>
+
+    <!-- Storage Configuration -->
+    <div class="row g-4 mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Storage Configuration</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-3">
+                        Storage paths are configured via environment variables or appsettings.json.
+                        Changes require an application restart.
+                    </p>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">User Files Path</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control font-monospace" value="@Model.UserFilesPath" readonly />
+                                    <span class="input-group-text bg-secondary text-white">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                            <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+                                            <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/>
+                                        </svg>
+                                    </span>
+                                </div>
+                                <small class="text-muted">Environment variable: <code>Storage__UserFilesPath</code></small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Group Files Path</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control font-monospace" value="@Model.GroupFilesPath" readonly />
+                                    <span class="input-group-text bg-secondary text-white">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                            <path d="M9.828 3h3.982a2 2 0 0 1 1.992 2.181l-.637 7A2 2 0 0 1 13.174 14H2.825a2 2 0 0 1-1.991-1.819l-.637-7a1.99 1.99 0 0 1 .342-1.31L.5 3a2 2 0 0 1 2-2h3.672a2 2 0 0 1 1.414.586l.828.828A2 2 0 0 0 9.828 3zm-8.322.12C1.72 3.042 1.95 3 2.19 3h5.396l-.707-.707A1 1 0 0 0 6.172 2H2.5a1 1 0 0 0-1 .981l.006.139z"/>
+                                        </svg>
+                                    </span>
+                                </div>
+                                <small class="text-muted">Environment variable: <code>Storage__GroupFilesPath</code></small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Storage Overview -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">User Files Storage</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Used</span>
+                        <span class="fw-semibold">@FormatBytes(Model.UserFilesStats.UsedBytes)</span>
+                    </div>
+                    <div class="progress mb-3" style="height: 20px;">
+                        @{
+                            var userPercent = GetPercentage(Model.UserFilesStats.UsedBytes, Model.UserFilesStats.TotalBytes);
+                        }
+                        <div class="progress-bar bg-primary" role="progressbar" style="width: @userPercent%;"
+                             aria-valuenow="@userPercent" aria-valuemin="0" aria-valuemax="100">
+                            @userPercent%
+                        </div>
+                    </div>
+                    <div class="row text-center">
+                        <div class="col">
+                            <div class="text-muted small">Files</div>
+                            <div class="fw-semibold">@Model.UserFilesStats.FileCount</div>
+                        </div>
+                        <div class="col">
+                            <div class="text-muted small">Directories</div>
+                            <div class="fw-semibold">@Model.UserFilesStats.DirectoryCount</div>
+                        </div>
+                        <div class="col">
+                            <div class="text-muted small">Disk Available</div>
+                            <div class="fw-semibold">@FormatBytes(Model.UserFilesStats.AvailableBytes)</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">Group Files Storage</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Used</span>
+                        <span class="fw-semibold">@FormatBytes(Model.GroupFilesStats.UsedBytes)</span>
+                    </div>
+                    <div class="progress mb-3" style="height: 20px;">
+                        @{
+                            var groupPercent = GetPercentage(Model.GroupFilesStats.UsedBytes, Model.GroupFilesStats.TotalBytes);
+                        }
+                        <div class="progress-bar bg-success" role="progressbar" style="width: @groupPercent%;"
+                             aria-valuenow="@groupPercent" aria-valuemin="0" aria-valuemax="100">
+                            @groupPercent%
+                        </div>
+                    </div>
+                    <div class="row text-center">
+                        <div class="col">
+                            <div class="text-muted small">Files</div>
+                            <div class="fw-semibold">@Model.GroupFilesStats.FileCount</div>
+                        </div>
+                        <div class="col">
+                            <div class="text-muted small">Directories</div>
+                            <div class="fw-semibold">@Model.GroupFilesStats.DirectoryCount</div>
+                        </div>
+                        <div class="col">
+                            <div class="text-muted small">Disk Available</div>
+                            <div class="fw-semibold">@FormatBytes(Model.GroupFilesStats.AvailableBytes)</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Storage Breakdown -->
+    <div class="row g-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Storage by User</h5>
+                    <span class="badge bg-primary">@Model.TotalUsers users</span>
+                </div>
+                <div class="card-body">
+                    @if (Model.UserStorageBreakdown.Any())
+                    {
+                        <div class="table-responsive">
+                            <table class="table-themed table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>User</th>
+                                        <th class="text-end">Files</th>
+                                        <th class="text-end">Size</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var user in Model.UserStorageBreakdown.Take(10))
+                                    {
+                                        <tr>
+                                            <td>@user.Email</td>
+                                            <td class="text-end">@user.FileCount</td>
+                                            <td class="text-end">@FormatBytes(user.TotalBytes)</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                        @if (Model.UserStorageBreakdown.Count > 10)
+                        {
+                            <div class="text-center p-2 text-muted small">
+                                Showing top 10 of @Model.UserStorageBreakdown.Count users
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="text-center text-muted py-4">
+                            No user files uploaded yet
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Storage by Group</h5>
+                    <span class="badge bg-success">@Model.TotalGroups groups</span>
+                </div>
+                <div class="card-body">
+                    @if (Model.GroupStorageBreakdown.Any())
+                    {
+                        <div class="table-responsive">
+                            <table class="table-themed table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Group</th>
+                                        <th class="text-end">Files</th>
+                                        <th class="text-end">Size</th>
+                                        <th class="text-end">Quota</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var group in Model.GroupStorageBreakdown.Take(10))
+                                    {
+                                        <tr>
+                                            <td>@group.GroupName</td>
+                                            <td class="text-end">@group.FileCount</td>
+                                            <td class="text-end">@FormatBytes(group.TotalBytes)</td>
+                                            <td class="text-end">
+                                                @if (group.QuotaBytes > 0)
+                                                {
+                                                    <span class="badge @(group.TotalBytes > group.QuotaBytes * 0.9 ? "bg-warning" : "bg-secondary")">
+                                                        @FormatBytes(group.QuotaBytes)
+                                                    </span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted">Unlimited</span>
+                                                }
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                        @if (Model.GroupStorageBreakdown.Count > 10)
+                        {
+                            <div class="text-center p-2 text-muted small">
+                                Showing top 10 of @Model.GroupStorageBreakdown.Count groups
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="text-center text-muted py-4">
+                            No groups created yet
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Docker Configuration Help -->
+    <div class="row g-4 mt-2">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Docker Configuration</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">
+                        To configure storage paths in Docker, set environment variables and map volumes accordingly:
+                    </p>
+                    <pre class="bg-dark text-light p-3 rounded"><code>services:
+  fileserver:
+    environment:
+      - Storage__UserFilesPath=/data/uploads
+      - Storage__GroupFilesPath=/data/group_files
+    volumes:
+      - /host/path/uploads:/data/uploads
+      - /host/path/groups:/data/group_files</code></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

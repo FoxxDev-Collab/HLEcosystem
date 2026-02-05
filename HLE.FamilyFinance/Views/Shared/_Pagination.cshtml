@@ -1,0 +1,74 @@
+@*
+    Pagination Component
+    Usage:
+    @{
+        ViewData["CurrentPage"] = 3;
+        ViewData["TotalPages"] = 10;
+        ViewData["BaseUrl"] = "/items";
+    }
+    <partial name="_Pagination" />
+*@
+@{
+    var currentPage = int.Parse(ViewData["CurrentPage"]?.ToString() ?? "1");
+    var totalPages = int.Parse(ViewData["TotalPages"]?.ToString() ?? "1");
+    var baseUrl = ViewData["BaseUrl"]?.ToString() ?? "#";
+    var size = ViewData["Size"]?.ToString() ?? "md"; // sm, md, lg
+    var showFirstLast = ViewData["ShowFirstLast"]?.ToString() != "False";
+    var maxVisible = int.Parse(ViewData["MaxVisible"]?.ToString() ?? "5");
+    
+    var sizeClass = size switch
+    {
+        "sm" => "pagination-sm",
+        "lg" => "pagination-lg",
+        _ => ""
+    };
+    
+    int startPage = Math.Max(1, currentPage - maxVisible / 2);
+    int endPage = Math.Min(totalPages, startPage + maxVisible - 1);
+    
+    if (endPage - startPage < maxVisible - 1)
+    {
+        startPage = Math.Max(1, endPage - maxVisible + 1);
+    }
+}
+
+<nav aria-label="Page navigation">
+    <ul class="pagination @sizeClass">
+        @if (showFirstLast)
+        {
+            <li class="page-item @(currentPage == 1 ? "disabled" : "")">
+                <a class="page-link" href="@(baseUrl)?page=1" aria-label="First">
+                    <span aria-hidden="true">&laquo;&laquo;</span>
+                </a>
+            </li>
+        }
+        
+        <li class="page-item @(currentPage == 1 ? "disabled" : "")">
+            <a class="page-link" href="@(baseUrl)?page=@(currentPage - 1)" aria-label="Previous">
+                <span aria-hidden="true">&laquo;</span>
+            </a>
+        </li>
+        
+        @for (int i = startPage; i <= endPage; i++)
+        {
+            <li class="page-item @(i == currentPage ? "active" : "")">
+                <a class="page-link" href="@(baseUrl)?page=@i">@i</a>
+            </li>
+        }
+        
+        <li class="page-item @(currentPage == totalPages ? "disabled" : "")">
+            <a class="page-link" href="@(baseUrl)?page=@(currentPage + 1)" aria-label="Next">
+                <span aria-hidden="true">&raquo;</span>
+            </a>
+        </li>
+        
+        @if (showFirstLast)
+        {
+            <li class="page-item @(currentPage == totalPages ? "disabled" : "")">
+                <a class="page-link" href="@(baseUrl)?page=@totalPages" aria-label="Last">
+                    <span aria-hidden="true">&raquo;&raquo;</span>
+                </a>
+            </li>
+        }
+    </ul>
+</nav>

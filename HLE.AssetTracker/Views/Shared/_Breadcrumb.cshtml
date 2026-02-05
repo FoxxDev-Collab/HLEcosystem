@@ -1,0 +1,40 @@
+@*
+    Breadcrumb Component
+    Usage:
+    @{ 
+        ViewData["Items"] = new List<dynamic> {
+            new { Text = "Home", Url = "/" },
+            new { Text = "Library", Url = "/library" },
+            new { Text = "Data", Url = "" }
+        };
+    }
+    <partial name="_Breadcrumb" />
+*@
+@{
+    var items = ViewData["Items"] as IEnumerable<dynamic> ?? new List<dynamic>();
+    var cssClass = ViewData["CssClass"]?.ToString() ?? "";
+}
+
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb @cssClass">
+        @{
+            var itemList = items.ToList();
+            for (int i = 0; i < itemList.Count; i++)
+            {
+                var item = itemList[i];
+                var isLast = i == itemList.Count - 1;
+                var text = item.GetType().GetProperty("Text")?.GetValue(item)?.ToString() ?? "";
+                var url = item.GetType().GetProperty("Url")?.GetValue(item)?.ToString() ?? "";
+
+                if (isLast || string.IsNullOrEmpty(url))
+                {
+                    <li class="breadcrumb-item active" aria-current="page">@text</li>
+                }
+                else
+                {
+                    <li class="breadcrumb-item"><a href="@url">@text</a></li>
+                }
+            }
+        }
+    </ol>
+</nav>

@@ -1,0 +1,189 @@
+@model HLE.FamilyFinance.Models.ViewModels.BudgetPlanningViewModel
+@{
+    ViewData["Title"] = "Budget Planning";
+    var prevMonth = Model.Month == 1 ? 12 : Model.Month - 1;
+    var prevYear = Model.Month == 1 ? Model.Year - 1 : Model.Year;
+    var nextMonth = Model.Month == 12 ? 1 : Model.Month + 1;
+    var nextYear = Model.Month == 12 ? Model.Year + 1 : Model.Year;
+}
+
+<div class="py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Budget Planning</h2>
+        <div class="btn-group">
+            <a asp-action="Create" class="btn btn-primary">+ Add Budget</a>
+            <a asp-action="Trends" class="btn btn-outline-secondary">View Trends</a>
+        </div>
+    </div>
+
+    <div class="d-flex justify-content-center align-items-center mb-4">
+        <a asp-action="Index" asp-route-year="@prevYear" asp-route-month="@prevMonth" class="btn btn-outline-secondary">
+            &laquo; Previous
+        </a>
+        <h3 class="mx-4 mb-0">@Model.MonthName @Model.Year</h3>
+        <a asp-action="Index" asp-route-year="@nextYear" asp-route-month="@nextMonth" class="btn btn-outline-secondary">
+            Next &raquo;
+        </a>
+    </div>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show">
+            @TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show">
+            @TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <h6 class="text-white-50">Total Budgeted</h6>
+                    <h3 class="mb-0">$@Model.TotalBudgeted.ToString("N2")</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-danger text-white">
+                <div class="card-body">
+                    <h6 class="text-white-50">Total Spent</h6>
+                    <h3 class="mb-0">$@Model.TotalSpent.ToString("N2")</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card @(Model.RemainingBudget >= 0 ? "bg-success" : "bg-warning") text-white">
+                <div class="card-body">
+                    <h6 class="text-white-50">Remaining</h6>
+                    <h3 class="mb-0">$@Model.RemainingBudget.ToString("N2")</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (!Model.Categories.Any())
+    {
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <p class="text-muted mb-3">No budget categories set up. Add expense categories first, then create budgets.</p>
+                <a asp-controller="Categories" asp-action="Index" class="btn btn-primary">Manage Categories</a>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="card mb-3">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Category Budgets</h5>
+                @if (Model.Categories.Any(c => c.BudgetId.HasValue))
+                {
+                    <form asp-action="CopyFromPreviousMonth" method="post" class="d-inline">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="year" value="@nextYear" />
+                        <input type="hidden" name="month" value="@nextMonth" />
+                        <button type="submit" class="btn btn-sm btn-outline-secondary">
+                            Copy to Next Month
+                        </button>
+                    </form>
+                }
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 30%">Category</th>
+                            <th style="width: 20%">Budgeted</th>
+                            <th style="width: 20%">Spent</th>
+                            <th style="width: 20%">Progress</th>
+                            <th style="width: 10%"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var category in Model.Categories)
+                        {
+                            var progressClass = category.PercentUsed > 100 ? "bg-danger" :
+                                               category.PercentUsed > 80 ? "bg-warning" : "bg-success";
+                            <tr>
+                                <td>
+                                    <span class="me-2">@(category.CategoryIcon ?? "📁")</span>
+                                    <strong>@category.CategoryName</strong>
+                                </td>
+                                <td>
+                                    @if (category.BudgetId.HasValue)
+                                    {
+                                        <form asp-action="SetBudget" method="post" class="d-inline budget-form">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="categoryId" value="@category.CategoryId" />
+                                            <input type="hidden" name="year" value="@Model.Year" />
+                                            <input type="hidden" name="month" value="@Model.Month" />
+                                            <div class="input-group input-group-sm" style="width: 140px;">
+                                                <span class="input-group-text">$</span>
+                                                <input type="number" name="amount" value="@category.BudgetedAmount"
+                                                       class="form-control" step="0.01" min="0" />
+                                                <button type="submit" class="btn btn-outline-primary">Save</button>
+                                            </div>
+                                        </form>
+                                    }
+                                    else
+                                    {
+                                        <form asp-action="SetBudget" method="post" class="d-inline budget-form">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="categoryId" value="@category.CategoryId" />
+                                            <input type="hidden" name="year" value="@Model.Year" />
+                                            <input type="hidden" name="month" value="@Model.Month" />
+                                            <div class="input-group input-group-sm" style="width: 140px;">
+                                                <span class="input-group-text">$</span>
+                                                <input type="number" name="amount" class="form-control"
+                                                       step="0.01" min="0" placeholder="0.00" />
+                                                <button type="submit" class="btn btn-outline-success">Set</button>
+                                            </div>
+                                        </form>
+                                    }
+                                </td>
+                                <td class="@(category.SpentAmount > category.BudgetedAmount && category.BudgetedAmount > 0 ? "text-danger" : "")">
+                                    $@category.SpentAmount.ToString("N2")
+                                </td>
+                                <td>
+                                    @if (category.BudgetedAmount > 0)
+                                    {
+                                        <div class="progress" style="height: 20px;">
+                                            <div class="progress-bar @progressClass" role="progressbar"
+                                                 style="width: @Math.Min(category.PercentUsed, 100)%">
+                                                @category.PercentUsed.ToString("N0")%
+                                            </div>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">No budget set</span>
+                                    }
+                                </td>
+                                <td class="text-end">
+                                    @if (category.BudgetId.HasValue)
+                                    {
+                                        <form asp-action="Delete" asp-route-id="@category.BudgetId" method="post" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="year" value="@Model.Year" />
+                                            <input type="hidden" name="month" value="@Model.Month" />
+                                            <button type="submit" class="btn btn-sm btn-outline-danger"
+                                                    onclick="return confirm('Remove this budget?')">
+                                                Remove
+                                            </button>
+                                        </form>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+</div>

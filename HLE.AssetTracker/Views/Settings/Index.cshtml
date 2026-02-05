@@ -1,0 +1,97 @@
+@{
+    ViewData["Title"] = "Settings";
+}
+
+<div class="container py-4" style="max-width: 900px;">
+    <h1 class="mb-4">Settings</h1>
+
+    <div class="row g-4">
+        <!-- User Profile Card -->
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">User Profile</h5>
+                </div>
+                <div class="card-body">
+                    @{
+                        ViewData["Message"] = "Your profile is managed through Authentik. To update your information, password, or other settings, please visit your Authentik profile.";
+                        ViewData["Variant"] = "info";
+                        ViewData["Icon"] = "info-circle";
+                    }
+                    <partial name="_Alert" />
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Username</label>
+                        <p class="form-control-plaintext">@ViewData["UserName"]</p>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Email</label>
+                        <p class="form-control-plaintext">@ViewData["Email"]</p>
+                    </div>
+
+                    @if (ViewData["PreferredUsername"] != null)
+                    {
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Preferred Username</label>
+                            <p class="form-control-plaintext">@ViewData["PreferredUsername"]</p>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- App Preferences Card -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Application Preferences</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Theme</label>
+                        <p class="text-muted">Theme preference is saved automatically when you use the theme toggle in the navigation bar.</p>
+                    </div>
+
+                    <div class="alert alert-secondary" role="alert">
+                        <strong>Note:</strong> Additional application-specific settings can be added here as your app grows.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Links Card -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Account Management</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted small mb-3">
+                        Manage your account settings, profile, and security through Authentik.
+                    </p>
+                    <div class="d-grid gap-2">
+                        <a href="#" class="btn btn-outline-primary btn-sm" target="_blank">
+                            <i class="bi bi-person-circle"></i> Edit Profile in Authentik
+                        </a>
+                        <a href="#" class="btn btn-outline-primary btn-sm" target="_blank">
+                            <i class="bi bi-shield-lock"></i> Security Settings
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h6 class="mb-0">About This Application</h6>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted small mb-2">
+                        <strong>Version:</strong> 1.0.0
+                    </p>
+                    <p class="text-muted small mb-0">
+                        <strong>Template:</strong> HLE Template v2.0
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

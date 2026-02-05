@@ -1,0 +1,187 @@
+@model List<HLE.FamilyHub.Services.Interfaces.GiftSummaryDto>
+@{
+    ViewData["Title"] = "Gift History";
+}
+
+@{
+    ViewData["BreadcrumbItems"] = new List<(string Text, string? Url, bool IsActive)>
+    {
+        ("Home", Url.Action("Index", "Home"), false),
+        ("Gift History", null, true)
+    };
+}
+<partial name="_Breadcrumb" />
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>
+        <i class="bi bi-gift"></i> Gift History
+    </h2>
+    @{
+        ViewData["Text"] = "Record Gift";
+        ViewData["Variant"] = "primary";
+        ViewData["Icon"] = "bi-gift";
+        ViewData["Href"] = Url.Action("Create");
+    }
+    <partial name="_Button" />
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-6">
+        <form method="get" class="row g-2">
+            <div class="col">
+                <select name="familyMemberId" class="form-select">
+                    <option value="">All Family Members</option>
+                    @if (ViewBag.FamilyMembers != null)
+                    {
+                        foreach (var member in ViewBag.FamilyMembers as List<HLE.FamilyHub.Services.Interfaces.FamilyMemberSummaryDto>)
+                        {
+                            <option value="@member.Id" selected="@(ViewData["SelectedMemberId"]?.ToString() == member.Id.ToString())">
+                                @member.FirstName @member.LastName
+                            </option>
+                        }
+                    }
+                </select>
+            </div>
+            <div class="col-auto">
+                <button class="btn btn-outline-secondary" type="submit">
+                    <i class="bi bi-funnel"></i> Filter
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@if (Model.Any())
+{
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Description</th>
+                            <th>For</th>
+                            <th>Occasion</th>
+                            <th>Status</th>
+                            <th>Cost</th>
+                            <th>Rating</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var gift in Model.OrderByDescending(g => g.GiftDate))
+                        {
+                            <tr>
+                                <td>
+                                    @if (gift.GiftDate.HasValue)
+                                    {
+                                        @gift.GiftDate.Value.ToString("MMM dd, yyyy")
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">-</span>
+                                    }
+                                </td>
+                                <td>
+                                    <strong>@gift.Description</strong>
+                                </td>
+                                <td>@gift.FamilyMemberName</td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(gift.Occasion))
+                                    {
+                                        @gift.Occasion
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">-</span>
+                                    }
+                                </td>
+                                <td>
+                                    @{
+                                        var statusVariant = gift.Status switch
+                                        {
+                                            HLE.FamilyHub.Models.Enums.GiftStatus.Given => "success",
+                                            HLE.FamilyHub.Models.Enums.GiftStatus.Wrapped => "info",
+                                            HLE.FamilyHub.Models.Enums.GiftStatus.Purchased => "warning",
+                                            _ => "secondary"
+                                        };
+                                        ViewData["Text"] = gift.Status.ToString();
+                                        ViewData["Variant"] = statusVariant;
+                                    }
+                                    <partial name="_Badge" />
+                                </td>
+                                <td>
+                                    @if (gift.ActualCost.HasValue)
+                                    {
+                                        @gift.ActualCost.Value.ToString("C")
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">-</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (gift.Rating.HasValue)
+                                    {
+                                        for (int i = 1; i <= 5; i++)
+                                        {
+                                            if (i <= gift.Rating.Value)
+                                            {
+                                                <i class="bi bi-star-fill text-warning"></i>
+                                            }
+                                            else
+                                            {
+                                                <i class="bi bi-star text-muted"></i>
+                                            }
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">-</span>
+                                    }
+                                </td>
+                                <td>
+                                    <div class="d-flex gap-1">
+                                        @{
+                                            ViewData["Text"] = "View";
+                                            ViewData["Variant"] = "outline-primary";
+                                            ViewData["Size"] = "sm";
+                                            ViewData["Href"] = Url.Action("Details", new { id = gift.Id });
+                                        }
+                                        <partial name="_Button" />
+
+                                        @{
+                                            ViewData["Text"] = "Edit";
+                                            ViewData["Variant"] = "outline-secondary";
+                                            ViewData["Size"] = "sm";
+                                            ViewData["Href"] = Url.Action("Edit", new { id = gift.Id });
+                                        }
+                                        <partial name="_Button" />
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <div class="card">
+        <div class="card-body text-center py-5">
+            <i class="bi bi-gift display-1 text-muted d-block mb-3"></i>
+            <h4>No Gifts Recorded</h4>
+            <p class="text-muted">Start recording gifts you've purchased, wrapped, or given to build a history and avoid repeating gifts.</p>
+            @{
+                ViewData["Text"] = "Record Your First Gift";
+                ViewData["Variant"] = "primary";
+                ViewData["Icon"] = "bi-gift";
+                ViewData["Href"] = Url.Action("Create");
+            }
+            <partial name="_Button" />
+        </div>
+    </div>
+}

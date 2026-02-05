@@ -1,0 +1,238 @@
+@model HLE.FamilyHub.Services.Interfaces.GiftDetailDto
+@{
+    ViewData["Title"] = "Gift Details";
+}
+
+@{
+    ViewData["BreadcrumbItems"] = new List<(string Text, string? Url, bool IsActive)>
+    {
+        ("Home", Url.Action("Index", "Home"), false),
+        ("Gift History", Url.Action("Index"), false),
+        ("Details", null, true)
+    };
+}
+<partial name="_Breadcrumb" />
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>@Model.Description</h2>
+    <div class="d-flex gap-2">
+        @{
+            ViewData["Text"] = "Edit";
+            ViewData["Variant"] = "primary";
+            ViewData["Icon"] = "bi-pencil";
+            ViewData["Href"] = Url.Action("Edit", new { id = Model.Id });
+        }
+        <partial name="_Button" />
+
+        <form asp-action="Delete" asp-route-id="@Model.Id" method="post" style="display:inline;"
+              onsubmit="return confirm('Are you sure you want to delete this gift?');">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="btn btn-danger">
+                <i class="bi bi-trash"></i> Delete
+            </button>
+        </form>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-8">
+        <div class="card mb-3">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-gift"></i> Gift Information
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <p class="mb-2">
+                            <strong>For:</strong> @Model.FamilyMemberName
+                        </p>
+                        @if (Model.GiftDate.HasValue)
+                        {
+                            <p class="mb-2">
+                                <strong>Date:</strong> @Model.GiftDate.Value.ToString("MMMM d, yyyy")
+                            </p>
+                        }
+                        @if (!string.IsNullOrEmpty(Model.Occasion))
+                        {
+                            <p class="mb-2">
+                                <strong>Occasion:</strong> @Model.Occasion
+                            </p>
+                        }
+                    </div>
+                    <div class="col-md-6">
+                        <p class="mb-2">
+                            <strong>Status:</strong>
+                            @{
+                                var statusVariant = Model.Status switch
+                                {
+                                    HLE.FamilyHub.Models.Enums.GiftStatus.Given => "success",
+                                    HLE.FamilyHub.Models.Enums.GiftStatus.Wrapped => "info",
+                                    HLE.FamilyHub.Models.Enums.GiftStatus.Purchased => "warning",
+                                    _ => "secondary"
+                                };
+                                ViewData["Text"] = Model.Status.ToString();
+                                ViewData["Variant"] = statusVariant;
+                            }
+                            <partial name="_Badge" />
+                        </p>
+                        @if (Model.EstimatedCost.HasValue)
+                        {
+                            <p class="mb-2">
+                                <strong>Estimated Cost:</strong> @Model.EstimatedCost.Value.ToString("C")
+                            </p>
+                        }
+                        @if (Model.ActualCost.HasValue)
+                        {
+                            <p class="mb-2">
+                                <strong>Actual Cost:</strong> @Model.ActualCost.Value.ToString("C")
+                            </p>
+                        }
+                        @if (Model.Rating.HasValue)
+                        {
+                            <p class="mb-2">
+                                <strong>Rating:</strong>
+                                @for (int i = 1; i <= 5; i++)
+                                {
+                                    if (i <= Model.Rating.Value)
+                                    {
+                                        <i class="bi bi-star-fill text-warning"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-star text-muted"></i>
+                                    }
+                                }
+                            </p>
+                        }
+                    </div>
+                </div>
+
+                @if (!string.IsNullOrEmpty(Model.Notes))
+                {
+                    <div class="mt-3">
+                        <strong>Notes:</strong>
+                        <p class="mt-2 white-space-pre-line">@Model.Notes</p>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-arrow-repeat"></i> Status Progress
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex gap-2 flex-wrap">
+                    @if (Model.Status == HLE.FamilyHub.Models.Enums.GiftStatus.Idea)
+                    {
+                        <form asp-action="UpdateStatus" asp-route-id="@Model.Id" method="post" style="display:inline;">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="status" value="Purchased" />
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-cart-check"></i> Mark as Purchased
+                            </button>
+                        </form>
+                    }
+
+                    @if (Model.Status == HLE.FamilyHub.Models.Enums.GiftStatus.Purchased)
+                    {
+                        <form asp-action="UpdateStatus" asp-route-id="@Model.Id" method="post" style="display:inline;">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="status" value="Wrapped" />
+                            <button type="submit" class="btn btn-info">
+                                <i class="bi bi-box-seam"></i> Mark as Wrapped
+                            </button>
+                        </form>
+                    }
+
+                    @if (Model.Status == HLE.FamilyHub.Models.Enums.GiftStatus.Wrapped)
+                    {
+                        <form asp-action="UpdateStatus" asp-route-id="@Model.Id" method="post" style="display:inline;">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="status" value="Given" />
+                            <button type="submit" class="btn btn-success">
+                                <i class="bi bi-gift"></i> Mark as Given
+                            </button>
+                        </form>
+                    }
+
+                    @if (Model.Status == HLE.FamilyHub.Models.Enums.GiftStatus.Given)
+                    {
+                        <div class="alert alert-success mb-0">
+                            <i class="bi bi-check-circle"></i> This gift has been given!
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-clock-history"></i> Timeline
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="timeline">
+                    <div class="timeline-item">
+                        <div class="timeline-marker bg-secondary"></div>
+                        <div class="timeline-content">
+                            <h6>Created</h6>
+                            <p class="text-muted small mb-0">Added to gift history</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .white-space-pre-line {
+        white-space: pre-line;
+    }
+
+    .timeline {
+        position: relative;
+        padding-left: 2rem;
+    }
+
+    .timeline-item {
+        position: relative;
+        padding-bottom: 1rem;
+    }
+
+    .timeline-item:before {
+        content: '';
+        position: absolute;
+        left: -1.5rem;
+        top: 0.5rem;
+        bottom: -0.5rem;
+        width: 2px;
+        background: var(--bs-border-color);
+    }
+
+    .timeline-item:last-child:before {
+        display: none;
+    }
+
+    .timeline-marker {
+        position: absolute;
+        left: -1.8125rem;
+        top: 0.25rem;
+        width: 0.625rem;
+        height: 0.625rem;
+        border-radius: 50%;
+    }
+
+    .timeline-content h6 {
+        font-size: 0.875rem;
+        margin-bottom: 0.25rem;
+    }
+</style>

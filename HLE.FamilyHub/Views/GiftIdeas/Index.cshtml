@@ -1,0 +1,141 @@
+@model List<HLE.FamilyHub.Services.Interfaces.GiftIdeaSummaryDto>
+@{
+    ViewData["Title"] = "Gift Ideas";
+}
+
+@{
+    ViewData["BreadcrumbItems"] = new List<(string Text, string? Url, bool IsActive)>
+    {
+        ("Home", Url.Action("Index", "Home"), false),
+        ("Gift Ideas", null, true)
+    };
+}
+<partial name="_Breadcrumb" />
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>
+        <i class="bi bi-lightbulb"></i> Gift Ideas
+    </h2>
+    @{
+        ViewData["Text"] = "Add Gift Idea";
+        ViewData["Variant"] = "success";
+        ViewData["Icon"] = "bi-lightbulb";
+        ViewData["Href"] = Url.Action("Create");
+    }
+    <partial name="_Button" />
+</div>
+
+<div class="alert alert-info">
+    <i class="bi bi-info-circle"></i>
+    <strong>Capture Ideas Anytime:</strong> When you see something perfect throughout the year, add it here so you never forget!
+</div>
+
+@if (Model.Any())
+{
+    <div class="row g-3">
+        @foreach (var idea in Model.OrderByDescending(i => i.Priority).ThenBy(i => i.DateCaptured))
+        {
+            <div class="col-md-6 col-lg-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h5 class="card-title mb-0">@idea.Idea</h5>
+                            @{
+                                var priorityVariant = idea.Priority switch
+                                {
+                                    HLE.FamilyHub.Models.Enums.GiftIdeaPriority.High => "danger",
+                                    HLE.FamilyHub.Models.Enums.GiftIdeaPriority.Medium => "warning",
+                                    _ => "secondary"
+                                };
+                                ViewData["Text"] = idea.Priority.ToString();
+                                ViewData["Variant"] = priorityVariant;
+                            }
+                            <partial name="_Badge" />
+                        </div>
+
+                        <div class="mb-3">
+                            @if (!string.IsNullOrEmpty(idea.FamilyMemberName))
+                            {
+                                <p class="text-muted mb-1">
+                                    <i class="bi bi-person"></i> For: <strong>@idea.FamilyMemberName</strong>
+                                </p>
+                            }
+                            else
+                            {
+                                <p class="text-muted mb-1">
+                                    <i class="bi bi-people"></i> General Idea
+                                </p>
+                            }
+
+                            @if (idea.EstimatedCost.HasValue)
+                            {
+                                <p class="text-muted mb-1">
+                                    <i class="bi bi-cash"></i> Estimated: <strong>@idea.EstimatedCost.Value.ToString("C")</strong>
+                                </p>
+                            }
+
+                            @if (!string.IsNullOrEmpty(idea.Url))
+                            {
+                                <p class="mb-1">
+                                    <a href="@idea.Url" target="_blank" rel="noopener noreferrer">
+                                        <i class="bi bi-link-45deg"></i> View Product
+                                    </a>
+                                </p>
+                            }
+                        </div>
+                    </div>
+                    <div class="card-footer">
+                        <div class="d-flex gap-2 flex-wrap">
+                            <form asp-action="ConvertToGift" asp-route-id="@idea.Id" method="post" style="display:inline;">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-sm btn-success">
+                                    <i class="bi bi-gift"></i> Convert to Gift
+                                </button>
+                            </form>
+
+                            <form asp-action="MarkPurchased" asp-route-id="@idea.Id" method="post" style="display:inline;">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-sm btn-primary">
+                                    <i class="bi bi-cart-check"></i> Mark Purchased
+                                </button>
+                            </form>
+
+                            @{
+                                ViewData["Text"] = "Edit";
+                                ViewData["Variant"] = "outline-secondary";
+                                ViewData["Size"] = "sm";
+                                ViewData["Href"] = Url.Action("Edit", new { id = idea.Id });
+                            }
+                            <partial name="_Button" />
+
+                            <form asp-action="Delete" asp-route-id="@idea.Id" method="post" style="display:inline;"
+                                  onsubmit="return confirm('Are you sure you want to delete this gift idea?');">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+else
+{
+    <div class="card">
+        <div class="card-body text-center py-5">
+            <i class="bi bi-lightbulb display-1 text-muted d-block mb-3"></i>
+            <h4>No Gift Ideas Yet</h4>
+            <p class="text-muted">Start capturing gift ideas as you think of them throughout the year. When the occasion comes, you'll have perfect options ready!</p>
+            @{
+                ViewData["Text"] = "Add Your First Gift Idea";
+                ViewData["Variant"] = "success";
+                ViewData["Icon"] = "bi-lightbulb";
+                ViewData["Href"] = Url.Action("Create");
+            }
+            <partial name="_Button" />
+        </div>
+    </div>
+}

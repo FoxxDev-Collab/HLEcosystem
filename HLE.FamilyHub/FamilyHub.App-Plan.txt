@@ -1,0 +1,248 @@
+================================================================================
+FAMILYHUB.APP - PLANNING DOCUMENT
+================================================================================
+
+PROJECT OVERVIEW
+--------------------------------------------------------------------------------
+A centralized family relationship management system tracking contacts, important
+dates, gift giving, milestones, and communication. The "never forget a birthday
+or what you gave someone last year" solution.
+
+Replaces scattered info across phones, calendars, and memory with a single
+source of truth for family relationship management.
+
+
+CORE FEATURES
+--------------------------------------------------------------------------------
+
+Phase 1: Contacts & Important Dates (Months 1-2)
+-------------------------------------------------
+- Family member profiles (name, relationship, contact info)
+- Birthday and anniversary tracking
+- Addresses (for holiday cards)
+- Phone numbers and email addresses
+- Simple family tree visualization (who's who)
+- Upcoming events dashboard (next 30/60/90 days)
+- Full calendar view of all important dates
+- Reminders for upcoming events
+
+Phase 2: Gift Management (Months 3-4)
+--------------------------------------
+- Gift idea capture throughout the year
+- Gift history (what you've given, when, occasion)
+- Wishlists (per family member)
+- Gift budget tracking per person/event
+- "Gift given" marking with notes
+- Gift suggestions based on interests
+
+Phase 3: Communication & Milestones (Months 5-6)
+-------------------------------------------------
+- Last contact tracking (when did we last call/visit?)
+- Communication reminders (stay in touch nudges)
+- Major milestones (graduations, job changes, new babies)
+- Shared family calendar (events everyone should know)
+- Important notes per person (allergies, preferences, etc.)
+
+Phase 4: Holiday & Event Planning (Months 7-8)
+-----------------------------------------------
+- Holiday card list management
+- Event planning (who's coming to Thanksgiving?)
+- Travel coordination (who's visiting when?)
+- Meal planning for family gatherings
+- Task assignments for events
+
+
+DATA MODELS (High Level)
+--------------------------------------------------------------------------------
+
+FamilyMembers
+-------------
+- Id, FirstName, LastName, Relationship (to you)
+- Birthday, Anniversary
+- Address (Street, City, State, Zip)
+- Phone, Email, PreferredContact
+- ProfilePhotoUrl (optional)
+- Notes (allergies, preferences, etc.)
+
+ImportantDates
+--------------
+- Id, FamilyMemberId, Date, Type (Birthday, Anniversary, Graduation, etc.)
+- RecurrenceType (Annual, Once)
+- ReminderDays (how many days before to remind)
+- Notes
+
+Gifts
+-----
+- Id, FamilyMemberId, GiftDate, Occasion
+- Description, EstimatedCost, ActualCost
+- Status (Idea, Purchased, Wrapped, Given)
+- Rating (did they like it?)
+- Notes
+
+GiftIdeas
+---------
+- Id, FamilyMemberId, Idea, DateCaptured
+- Source (where you heard it), Priority
+- EstimatedCost, URL (if shopping link)
+- Status (Active, Purchased, NotInterested)
+
+Wishlists
+---------
+- Id, FamilyMemberId, ItemName, Priority
+- URL, EstimatedCost, AddedDate
+- ClaimedBy (who's buying it), Status
+
+CommunicationLog
+----------------
+- Id, FamilyMemberId, ContactDate, Type (Call, Visit, Text, Email)
+- Notes, Duration (for calls/visits)
+- NextContactReminder
+
+Milestones
+----------
+- Id, FamilyMemberId, MilestoneDate, Type
+- Description, Photos (optional)
+- Significance (major life events)
+
+Events
+------
+- Id, EventName, EventDate, Type (Holiday, Birthday Party, Gathering)
+- Location, HostFamilyMemberId
+- GuestList (many-to-many with FamilyMembers)
+- Notes, Tasks
+
+
+USER STORIES
+--------------------------------------------------------------------------------
+
+As a family member, I want to:
+- See upcoming birthdays so I can plan ahead
+- Add gift ideas when I think of them (not just before occasions)
+- Remember what I gave someone last year to avoid repeats
+- Know who I haven't talked to in a while
+- Have addresses handy for holiday cards without searching
+
+As the family organizer, I want to:
+- Get reminders 2 weeks before birthdays
+- Track gift budgets across multiple family members
+- Plan holiday gatherings with guest lists
+- Remember important details (allergies, preferences)
+- See gift history to understand what people actually liked
+
+As extended family, I want to:
+- Share wishlists so people know what I want
+- See family event calendar
+- Update my own contact information
+
+
+TECHNICAL CONSIDERATIONS
+--------------------------------------------------------------------------------
+
+Database Schema: PostgreSQL 'family_hub' schema
+Authentication: Shared ASP.NET Identity (FoxxLab.Shared.Auth)
+UI Framework: Bootstrap with modern overrides (consistent with Dashboard.App)
+
+Key Features:
+- Calendar views (monthly, list, upcoming)
+- Search/filter by person, date range, event type
+- Email/SMS reminders (optional future feature)
+- Photo uploads for profiles and milestones
+
+Privacy Considerations:
+- Family member visibility controls (some info may be private)
+- Read-only access for extended family
+- Admin controls for primary organizer
+
+Mobile Responsiveness:
+- Quick gift idea capture on mobile
+- Birthday list must be mobile-friendly
+- Contact lookup should work well on phones
+
+
+PHASE 1 DEVELOPMENT PRIORITIES
+--------------------------------------------------------------------------------
+
+Week 1-2: Foundation
+- Project scaffolding
+- Database schema creation
+- Authentication integration
+- Family member management CRUD
+
+Week 3-4: Important Dates
+- Birthday/anniversary entry
+- Date reminder system
+- Upcoming events dashboard
+- Simple calendar view
+
+Week 5-6: Contact Management
+- Address book functionality
+- Phone/email management
+- Family tree basic visualization
+- Contact search and filtering
+
+Week 7-8: Polish & Testing
+- UI refinement for ease of use
+- Mobile testing
+- Family user acceptance testing
+- Data import (if migrating from existing lists)
+
+
+SUCCESS METRICS
+--------------------------------------------------------------------------------
+
+Phase 1 Success:
+- Zero missed birthdays in first 3 months
+- Family members can find contact info without asking
+- Upcoming events dashboard is checked weekly
+- Address list ready for holiday cards
+
+Long-term Success:
+- Gift ideas captured year-round (not last-minute panic)
+- No duplicate gifts given to same person
+- Regular communication maintained with extended family
+- Event planning becomes centralized and organized
+
+
+FUTURE ENHANCEMENTS (Post-Phase 4)
+--------------------------------------------------------------------------------
+
+- Integration with phone contacts (import/export)
+- Shared wishlist with external sites (Amazon, etc.)
+- Automated birthday email/text sending
+- Gift idea suggestions based on past preferences
+- Photo galleries per family member
+- Recipe favorites (tie into Mealie?)
+- Travel tracking (who visited when)
+- Family newsletter generation
+
+
+INTEGRATION OPPORTUNITIES
+--------------------------------------------------------------------------------
+
+With Finance.App:
+- Gift budget tracking ties into expense categories
+- Holiday spending analysis
+
+With HealthTracker.App:
+- Medical emergency contacts
+- Allergy information cross-reference
+
+With Dashboard.App:
+- Widget showing next 3 birthdays
+- Recent family milestones
+
+
+NOTES
+--------------------------------------------------------------------------------
+
+This app solves the "I forgot what I gave Mom last Christmas" problem.
+
+Focus on capturing information WHEN YOU THINK OF IT, not just before events.
+
+The best gift tracker is one you actually use throughout the year.
+
+Spouse acceptance factor: Must be easier than keeping notes in phone.
+
+Privacy matters - not all family info should be visible to everyone.
+
+Keep gift history forever - patterns emerge over years.

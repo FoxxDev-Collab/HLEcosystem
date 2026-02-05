@@ -1,0 +1,159 @@
+@model HLE.FamilyHealth.Models.Entities.EmergencyContact
+@{
+    ViewData["Title"] = "Emergency Contact Details";
+}
+
+<div class="container-fluid py-4">
+    <div class="d-flex align-items-center mb-4">
+        <a href="@Url.Action("Index")" class="btn btn-outline-secondary me-3">
+            <i class="bi bi-arrow-left"></i>
+        </a>
+        <div class="flex-grow-1">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <h2 class="mb-1">@Model.Name</h2>
+                    <p class="text-muted mb-0">
+                        Emergency contact for @Model.FamilyMember.FirstName @Model.FamilyMember.LastName
+                        @{
+                            ViewData["BadgeText"] = $"Priority {Model.Priority}";
+                            ViewData["BadgeVariant"] = Model.Priority == 1 ? "danger" : Model.Priority == 2 ? "warning" : "secondary";
+                            ViewData["BadgePill"] = "True";
+                        }
+                        <partial name="_Badge" />
+                    </p>
+                </div>
+                <div>
+                    @{
+                        ViewData["Text"] = "Edit";
+                        ViewData["Variant"] = "primary";
+                        ViewData["Href"] = Url.Action("Edit", new { id = Model.Id });
+                        ViewData["Icon"] = "bi bi-pencil";
+                    }
+                    <partial name="_Button" />
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        ViewData["AlertType"] = "success";
+        ViewData["AlertMessage"] = TempData["SuccessMessage"]?.ToString();
+        ViewData["AlertDismissible"] = true;
+        <partial name="_Alert" />
+    }
+
+    <div class="row g-4">
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">Contact Information</h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-5">Name:</dt>
+                        <dd class="col-sm-7">@Model.Name</dd>
+
+                        <dt class="col-sm-5">Relationship:</dt>
+                        <dd class="col-sm-7">@Model.Relationship</dd>
+
+                        <dt class="col-sm-5">Priority:</dt>
+                        <dd class="col-sm-7">
+                            @{
+                                ViewData["BadgeText"] = $"Priority {Model.Priority}";
+                                ViewData["BadgeVariant"] = Model.Priority == 1 ? "danger" : Model.Priority == 2 ? "warning" : "secondary";
+                            }
+                            <partial name="_Badge" />
+                        </dd>
+
+                        <dt class="col-sm-5">Family Member:</dt>
+                        <dd class="col-sm-7">
+                            <a href="@Url.Action("Details", "FamilyMembers", new { id = Model.FamilyMemberId })">
+                                @Model.FamilyMember.FirstName @Model.FamilyMember.LastName
+                            </a>
+                        </dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">Phone & Email</h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-5">Phone Number:</dt>
+                        <dd class="col-sm-7">
+                            <a href="tel:@Model.PhoneNumber" class="text-decoration-none">
+                                <i class="bi bi-telephone"></i> @Model.PhoneNumber
+                            </a>
+                        </dd>
+
+                        <dt class="col-sm-5">Alternate Phone:</dt>
+                        <dd class="col-sm-7">
+                            @if (!string.IsNullOrEmpty(Model.AlternatePhone))
+                            {
+                                <a href="tel:@Model.AlternatePhone" class="text-decoration-none">
+                                    <i class="bi bi-telephone"></i> @Model.AlternatePhone
+                                </a>
+                            }
+                            else
+                            {
+                                <span class="text-muted">Not provided</span>
+                            }
+                        </dd>
+
+                        <dt class="col-sm-5">Email:</dt>
+                        <dd class="col-sm-7">
+                            @if (!string.IsNullOrEmpty(Model.Email))
+                            {
+                                <a href="mailto:@Model.Email" class="text-decoration-none">
+                                    <i class="bi bi-envelope"></i> @Model.Email
+                                </a>
+                            }
+                            else
+                            {
+                                <span class="text-muted">Not provided</span>
+                            }
+                        </dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+
+        @if (!string.IsNullOrEmpty(Model.Address))
+        {
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="bi bi-geo-alt me-2"></i>
+                            Address
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="mb-0">@Model.Address</p>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    <div class="card mt-4">
+        <div class="card-footer text-muted small">
+            <div class="row">
+                <div class="col-md-6">
+                    Created: @Model.CreatedAt.ToString("MMM dd, yyyy 'at' h:mm tt")
+                </div>
+                @if (Model.UpdatedAt.HasValue)
+                {
+                    <div class="col-md-6 text-md-end">
+                        Last Updated: @Model.UpdatedAt.Value.ToString("MMM dd, yyyy 'at' h:mm tt")
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>

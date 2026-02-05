@@ -1,0 +1,124 @@
+@using HLE.FamilyFinance.Services.Interfaces
+@using HLE.FamilyFinance.Models.Enums
+@model BillDetailDto
+@{
+    ViewData["Title"] = $"Edit {Model.Name}";
+}
+
+<div class="py-4">
+    <h2><i class="bi-pencil me-2"></i>Edit Bill</h2>
+    <p class="text-muted">Update details for @Model.Name</p>
+
+    <form asp-action="Edit" method="post">
+        <input type="hidden" name="id" value="@Model.Id" />
+        <div class="row">
+            <div class="col-lg-8">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Bill Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Bill Name</label>
+                                <input name="Name" class="form-control" required value="@Model.Name" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Category</label>
+                                <select name="Category" asp-items="@(ViewData["Categories"] as SelectList)" class="form-select"></select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Payee</label>
+                                <input name="Payee" class="form-control" value="@Model.Payee" />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Due Day of Month</label>
+                                <input name="DueDayOfMonth" class="form-control" type="number" min="1" max="31" value="@Model.DueDayOfMonth" required />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Expected Amount</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input name="ExpectedAmount" class="form-control money-input" type="text" value="@Model.ExpectedAmount" required />
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="form-check">
+                                    <input name="IsVariableAmount" class="form-check-input" type="checkbox" @(Model.IsVariableAmount ? "checked" : "") />
+                                    <label class="form-check-label">Amount varies each month</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Auto-Pay Settings</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-check mb-3">
+                            <input name="AutoPay" class="form-check-input" type="checkbox" id="autoPay" @(Model.AutoPay ? "checked" : "") />
+                            <label class="form-check-label" for="autoPay">This bill is on auto-pay</label>
+                        </div>
+                        <div class="row g-3" id="autoPayDetails" style="display: @(Model.AutoPay ? "flex" : "none");">
+                            <div class="col-md-6">
+                                <label class="form-label">Auto-Pay Account</label>
+                                <select name="AutoPayAccountId" asp-items="@(ViewData["Accounts"] as SelectList)" class="form-select">
+                                    <option value="">Select account...</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Link to Existing Debt</h5>
+                    </div>
+                    <div class="card-body">
+                        <select name="LinkedDebtId" asp-items="@(ViewData["Debts"] as SelectList)" class="form-select">
+                            <option value="">No linked debt</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">Notes</label>
+                            <textarea name="Notes" class="form-control" rows="3">@Model.Notes</textarea>
+                        </div>
+                        <div class="form-check">
+                            <input name="IsActive" class="form-check-input" type="checkbox" @(Model.IsActive ? "checked" : "") />
+                            <label class="form-check-label">Bill is active</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary"><i class="bi-check-lg me-1"></i>Save Changes</button>
+                    <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-outline-secondary">Cancel</a>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+<script>
+    document.getElementById('autoPay').addEventListener('change', function() {
+        document.getElementById('autoPayDetails').style.display = this.checked ? 'flex' : 'none';
+    });
+    // Set initial values
+    document.querySelector('select[name="Category"]').value = '@Model.Category';
+    @if (Model.AutoPayAccountId.HasValue)
+    {
+        <text>document.querySelector('select[name="AutoPayAccountId"]').value = '@Model.AutoPayAccountId';</text>
+    }
+    @if (Model.LinkedDebtId.HasValue)
+    {
+        <text>document.querySelector('select[name="LinkedDebtId"]').value = '@Model.LinkedDebtId';</text>
+    }
+</script>
+}

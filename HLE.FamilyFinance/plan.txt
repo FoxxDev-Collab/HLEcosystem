@@ -1,0 +1,4 @@
+- I would also like a way to create a "Budget Planner" that allows me and my wife to create a budget for a project. 
+-- We would be able to build a list of parts, or equipment for a project and compile a cost.
+-- For example, we want to install sprinklers and grass in our backyard, so we would like to put it all together in a spreadsheet and see the total cost of the project.
+-- We would also like to be able to save the project and see it again later. The cost can then be added against the current standing balance. This is way to see what we can afford to do.

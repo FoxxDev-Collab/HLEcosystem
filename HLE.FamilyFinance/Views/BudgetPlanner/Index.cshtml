@@ -1,0 +1,145 @@
+@using HLE.FamilyFinance.Models.ViewModels
+@using HLE.FamilyFinance.Models.Enums
+@model BudgetPlannerIndexViewModel
+@{
+    ViewData["Title"] = "Budget Planner";
+}
+
+<div class="py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi-list-check me-2"></i>Budget Planner</h2>
+        <a asp-action="Create" class="btn btn-primary"><i class="bi-plus-lg me-1"></i>New Project</a>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <h6 class="text-white-50">Total Planned</h6>
+                    <h3 class="mb-0">$@Model.TotalPlannedCost.ToString("N2")</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <h6 class="text-white-50">Available Balance</h6>
+                    <h3 class="mb-0">$@Model.TotalAvailableBalance.ToString("N2")</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card @(Model.AffordabilityDifference >= 0 ? "bg-success" : "bg-danger") text-white">
+                <div class="card-body">
+                    <h6 class="text-white-50">@(Model.AffordabilityDifference >= 0 ? "Remaining After Projects" : "Shortfall")</h6>
+                    <h3 class="mb-0">$@Math.Abs(Model.AffordabilityDifference).ToString("N2")</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter -->
+    <div class="card mb-4">
+        <div class="card-body py-2">
+            <form method="get" class="d-flex align-items-center gap-3">
+                <label class="form-label mb-0">Filter by Status:</label>
+                <select name="status" class="form-select form-select-sm" style="width: auto;" onchange="this.form.submit()">
+                    <option value="">All Projects</option>
+                    @foreach (BudgetPlannerProjectStatus status in Enum.GetValues<BudgetPlannerProjectStatus>())
+                    {
+                        <option value="@status" selected="@(Model.FilterStatus == status)">@status</option>
+                    }
+                </select>
+                @if (Model.FilterStatus.HasValue)
+                {
+                    <a asp-action="Index" class="btn btn-sm btn-outline-secondary">Clear Filter</a>
+                }
+            </form>
+        </div>
+    </div>
+
+    @if (Model.Projects.Count == 0)
+    {
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <i class="bi-list-check fs-1 text-muted"></i>
+                <p class="text-muted mb-3 mt-2">No projects yet. Create your first budget planner project!</p>
+                <a asp-action="Create" class="btn btn-primary">Create Project</a>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="row g-3">
+            @foreach (var project in Model.Projects)
+            {
+                var icon = project.Icon ?? "bi-folder";
+                var statusBadge = project.Status switch
+                {
+                    BudgetPlannerProjectStatus.Planning => "bg-secondary",
+                    BudgetPlannerProjectStatus.Active => "bg-primary",
+                    BudgetPlannerProjectStatus.Completed => "bg-success",
+                    BudgetPlannerProjectStatus.Cancelled => "bg-danger",
+                    _ => "bg-secondary"
+                };
+                var progressPercent = project.ItemCount > 0 ? (decimal)project.PurchasedItemCount / project.ItemCount * 100 : 0;
+
+                <div class="col-md-6 col-lg-4">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div>
+                                    @if (icon.StartsWith("bi-"))
+                                    {
+                                        <i class="@icon fs-3 me-2" style="@(project.Color != null ? $"color: {project.Color}" : "")"></i>
+                                    }
+                                    else
+                                    {
+                                        <span class="fs-3 me-2">@icon</span>
+                                    }
+                                    <h5 class="d-inline">@project.Name</h5>
+                                </div>
+                                <span class="badge @statusBadge">@project.Status</span>
+                            </div>
+                            @if (!string.IsNullOrEmpty(project.Description))
+                            {
+                                <p class="text-muted small mb-2">@project.Description</p>
+                            }
+                            <h3 class="text-primary mb-2">$@project.TotalCost.ToString("N2")</h3>
+                            <div class="d-flex justify-content-between text-muted small mb-2">
+                                <span>@project.ItemCount item(s)</span>
+                                @if (project.TargetDate.HasValue)
+                                {
+                                    <span><i class="bi-calendar me-1"></i>@project.TargetDate.Value.ToString("MMM d, yyyy")</span>
+                                }
+                            </div>
+                            @if (project.ItemCount > 0)
+                            {
+                                <div class="mb-2">
+                                    <div class="d-flex justify-content-between small mb-1">
+                                        <span>Purchased</span>
+                                        <span>@project.PurchasedItemCount / @project.ItemCount</span>
+                                    </div>
+                                    <div class="progress" style="height: 6px;">
+                                        <div class="progress-bar bg-success" style="width: @progressPercent%"></div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                        <div class="card-footer bg-transparent">
+                            <a asp-action="Details" asp-route-id="@project.Id" class="btn btn-sm btn-outline-primary">View</a>
+                            <a asp-action="Edit" asp-route-id="@project.Id" class="btn btn-sm btn-outline-secondary">Edit</a>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+
+    <div class="mt-4">
+        <a asp-action="Affordability" class="btn btn-outline-info">
+            <i class="bi-cash-coin me-1"></i>View Affordability Summary
+        </a>
+    </div>
+</div>

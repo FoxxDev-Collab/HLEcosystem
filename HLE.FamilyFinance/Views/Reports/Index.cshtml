@@ -1,0 +1,119 @@
+@using HLE.FamilyFinance.Services.Interfaces
+@{
+    ViewData["Title"] = "Reports";
+    var stats = ViewData["Stats"] as DashboardStatsDto;
+    var cashFlow = ViewData["CashFlow"] as List<CashFlowDto> ?? new List<CashFlowDto>();
+}
+
+<div class="py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Financial Reports</h2>
+        <a asp-action="ExportTransactions" class="btn btn-outline-primary">Export Transactions</a>
+    </div>
+
+    @if (stats != null)
+    {
+        <div class="row g-3 mb-4">
+            <div class="col-md-3">
+                <div class="card bg-primary text-white">
+                    <div class="card-body">
+                        <h6 class="text-white-50">Net Worth</h6>
+                        <h3 class="mb-0">$@stats.NetWorth.ToString("N2")</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-success text-white">
+                    <div class="card-body">
+                        <h6 class="text-white-50">Monthly Income</h6>
+                        <h3 class="mb-0">$@stats.MonthlyIncome.ToString("N2")</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-danger text-white">
+                    <div class="card-body">
+                        <h6 class="text-white-50">Monthly Expenses</h6>
+                        <h3 class="mb-0">$@stats.MonthlyExpenses.ToString("N2")</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card @(stats.MonthlySavings >= 0 ? "bg-info" : "bg-warning") text-white">
+                    <div class="card-body">
+                        <h6 class="text-white-50">Monthly Savings</h6>
+                        <h3 class="mb-0">$@stats.MonthlySavings.ToString("N2")</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <div class="row g-4">
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <h1 class="display-4 text-primary mb-3">📊</h1>
+                    <h5>Cash Flow</h5>
+                    <p class="text-muted">Track your monthly income and expenses over time.</p>
+                    <a asp-action="CashFlow" class="btn btn-primary">View Report</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <h1 class="display-4 text-danger mb-3">📈</h1>
+                    <h5>Spending by Category</h5>
+                    <p class="text-muted">See where your money goes with category breakdown.</p>
+                    <a asp-action="SpendingByCategory" class="btn btn-primary">View Report</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <h1 class="display-4 text-success mb-3">📉</h1>
+                    <h5>Income vs Expenses</h5>
+                    <p class="text-muted">Compare your earnings against your spending.</p>
+                    <a asp-action="IncomeVsExpenses" class="btn btn-primary">View Report</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (cashFlow.Any())
+    {
+        <div class="card mt-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Recent Cash Flow</h5>
+                <a asp-action="CashFlow" class="btn btn-sm btn-outline-primary">View Full Report</a>
+            </div>
+            <div class="table-responsive">
+                <table class="table mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Month</th>
+                            <th class="text-end">Income</th>
+                            <th class="text-end">Expenses</th>
+                            <th class="text-end">Net</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var month in cashFlow.Take(6))
+                        {
+                            <tr>
+                                <td>@month.MonthName @month.Year</td>
+                                <td class="text-end text-success">+$@month.Income.ToString("N2")</td>
+                                <td class="text-end text-danger">-$@month.Expenses.ToString("N2")</td>
+                                <td class="text-end @(month.NetCashFlow >= 0 ? "text-success" : "text-danger")">
+                                    @(month.NetCashFlow >= 0 ? "+" : "")$@month.NetCashFlow.ToString("N2")
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+</div>

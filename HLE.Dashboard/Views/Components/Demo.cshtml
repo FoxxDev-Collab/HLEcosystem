@@ -1,0 +1,829 @@
+@{
+    ViewData["Title"] = "UI Components Demo";
+}
+
+<div class="container-fluid py-4">
+    <h1 class="mb-4">Reusable UI Components Demo</h1>
+    
+    <!-- Buttons Section -->
+    <section class="mb-5">
+        <h2 class="mb-3">Buttons</h2>
+        <div class="row">
+            <div class="col-12">
+                @{ 
+                    ViewData["Text"] = "Primary Button";
+                    ViewData["Variant"] = "primary";
+                }
+                <partial name="_Button" />
+                
+                @{ 
+                    ViewData["Text"] = "Success";
+                    ViewData["Variant"] = "success";
+                    ViewData["Size"] = "lg";
+                }
+                <partial name="_Button" />
+                
+                @{ 
+                    ViewData["Text"] = "Warning";
+                    ViewData["Variant"] = "warning";
+                    ViewData["Size"] = "sm";
+                }
+                <partial name="_Button" />
+                
+                @{ 
+                    ViewData["Text"] = "Danger";
+                    ViewData["Variant"] = "danger";
+                }
+                <partial name="_Button" />
+                
+                @{ 
+                    ViewData["Text"] = "Outline";
+                    ViewData["Variant"] = "outline-primary";
+                }
+                <partial name="_Button" />
+                
+                @{ 
+                    ViewData["Text"] = "Disabled";
+                    ViewData["Variant"] = "secondary";
+                    ViewData["Disabled"] = "True";
+                }
+                <partial name="_Button" />
+            </div>
+        </div>
+    </section>
+
+    <!-- Cards Section -->
+    <section class="mb-5">
+        <h2 class="mb-3">Cards</h2>
+        <div class="row g-3">
+            <div class="col-md-4">
+                @{
+                    ViewData["Title"] = "Default Card";
+                    ViewData["Body"] = "<p>This is a default card with some content.</p>";
+                    ViewData["Footer"] = "Card footer";
+                    ViewData["Variant"] = "default";
+                }
+                <partial name="_Card" />
+            </div>
+            <div class="col-md-4">
+                @{
+                    ViewData["Title"] = "Primary Card";
+                    ViewData["Body"] = "<p>This is a primary card variant.</p>";
+                    ViewData["Variant"] = "primary";
+                }
+                <partial name="_Card" />
+            </div>
+            <div class="col-md-4">
+                @{
+                    ViewData["Title"] = "Success Card";
+                    ViewData["Body"] = "<p>This is a success card variant.</p>";
+                    ViewData["Variant"] = "success";
+                }
+                <partial name="_Card" />
+            </div>
+        </div>
+    </section>
+
+    <!-- Alerts Section -->
+    <section class="mb-5">
+        <h2 class="mb-3">Alerts</h2>
+        <div class="row">
+            <div class="col-12">
+                @{
+                    ViewData["Message"] = "This is a success alert with dismissible functionality!";
+                    ViewData["Variant"] = "success";
+                    ViewData["Dismissible"] = "True";
+                }
+                <partial name="_Alert" />
+                
+                @{
+                    ViewData["Message"] = "This is an informational alert.";
+                    ViewData["Variant"] = "info";
+                    ViewData["Dismissible"] = "False";
+                }
+                <partial name="_Alert" />
+                
+                @{
+                    ViewData["Title"] = "Warning!";
+                    ViewData["Message"] = "This is a warning alert with a title.";
+                    ViewData["Variant"] = "warning";
+                    ViewData["Dismissible"] = "True";
+                }
+                <partial name="_Alert" />
+                
+                @{
+                    ViewData["Message"] = "This is a danger alert!";
+                    ViewData["Variant"] = "danger";
+                    ViewData["Dismissible"] = "True";
+                }
+                <partial name="_Alert" />
+            </div>
+        </div>
+    </section>
+
+    <!-- Badges Section -->
+    <section class="mb-5">
+        <h2 class="mb-3">Badges</h2>
+        <div class="row">
+            <div class="col-12">
+                <h4>
+                    Example heading 
+                    @{
+                        ViewData["Text"] = "New";
+                        ViewData["Variant"] = "primary";
+                    }
+                    <partial name="_Badge" />
+                </h4>
+                <p>
+                    @{
+                        ViewData["Text"] = "Success";
+                        ViewData["Variant"] = "success";
+                        ViewData["Pill"] = "True";
+                    }
+                    <partial name="_Badge" />
+                    
+                    @{
+                        ViewData["Text"] = "Warning";
+                        ViewData["Variant"] = "warning";
+                        ViewData["Pill"] = "True";
+                    }
+                    <partial name="_Badge" />
+                    
+                    @{
+                        ViewData["Text"] = "Danger";
+                        ViewData["Variant"] = "danger";
+                        ViewData["Pill"] = "True";
+                    }
+                    <partial name="_Badge" />
+                    
+                    @{
+                        ViewData["Text"] = "Info";
+                        ViewData["Variant"] = "info";
+                    }
+                    <partial name="_Badge" />
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Spinners Section -->
+    <section class="mb-5">
+        <h2 class="mb-3">Spinners</h2>
+        <div class="row">
+            <div class="col-12">
+                @{
+                    ViewData["Variant"] = "primary";
+                    ViewData["Type"] = "border";
+                }
+                <partial name="_Spinner" />
+                
+                @{
+                    ViewData["Variant"] = "success";
+                    ViewData["Type"] = "grow";
+                }
+                <partial name="_Spinner" />
+                
+                @{
+                    ViewData["Variant"] = "danger";
+                    ViewData["Type"] = "border";
+                    ViewData["Size"] = "sm";
+                }
+                <partial name="_Spinner" />
+            </div>
+        </div>
+    </section>
+
+    <!-- Progress Bars Section -->
+    <section class="mb-5">
+        <h2 class="mb-3">Progress Bars</h2>
+        <div class="row">
+            <div class="col-12">
+                <div class="mb-3">
+                    @{
+                        ViewData["Value"] = "25";
+                        ViewData["Variant"] = "primary";
+                    }
+                    <partial name="_ProgressBar" />
+                </div>
+                <div class="mb-3">
+                    @{
+                        ViewData["Value"] = "50";
+                        ViewData["Variant"] = "success";
+                        ViewData["ShowPercentage"] = "True";
+                    }
+                    <partial name="_ProgressBar" />
+                </div>
+                <div class="mb-3">
+                    @{
+                        ViewData["Value"] = "75";
+                        ViewData["Variant"] = "warning";
+                        ViewData["Striped"] = "True";
+                        ViewData["ShowPercentage"] = "True";
+                    }
+                    <partial name="_ProgressBar" />
+                </div>
+                <div class="mb-3">
+                    @{
+                        ViewData["Value"] = "100";
+                        ViewData["Variant"] = "danger";
+                        ViewData["Striped"] = "True";
+                        ViewData["Animated"] = "True";
+                        ViewData["Label"] = "Complete!";
+                    }
+                    <partial name="_ProgressBar" />
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Breadcrumb Section -->
+    <section class="mb-5">
+        <h2 class="mb-3">Breadcrumb</h2>
+        <div class="row">
+            <div class="col-12">
+                @{
+                    ViewData["Items"] = new List<dynamic> {
+                        new { Text = "Home", Url = "/" },
+                        new { Text = "Components", Url = "/components" },
+                        new { Text = "Demo", Url = "" }
+                    };
+                }
+                <partial name="_Breadcrumb" />
+            </div>
+        </div>
+    </section>
+
+    <!-- Dropdown Section -->
+    <section class="mb-5">
+        <h2 class="mb-3">Dropdown</h2>
+        <div class="row">
+            <div class="col-12">
+                @{
+                    ViewData["ButtonText"] = "Dropdown Menu";
+                    ViewData["Variant"] = "primary";
+                    ViewData["Items"] = new List<dynamic> {
+                        new { Text = "Action", Url = "#", Divider = false },
+                        new { Text = "Another action", Url = "#", Divider = false },
+                        new { Divider = true },
+                        new { Text = "Something else", Url = "#", Divider = false }
+                    };
+                }
+                <partial name="_Dropdown" />
+                
+                @{
+                    ViewData["ButtonText"] = "Split Dropdown";
+                    ViewData["Variant"] = "success";
+                    ViewData["Split"] = "True";
+                    ViewData["Items"] = new List<dynamic> {
+                        new { Text = "Option 1", Url = "#", Divider = false },
+                        new { Text = "Option 2", Url = "#", Divider = false }
+                    };
+                }
+                <partial name="_Dropdown" />
+            </div>
+        </div>
+    </section>
+
+    <!-- Pagination Section -->
+    <section class="mb-5">
+        <h2 class="mb-3">Pagination</h2>
+        <div class="row">
+            <div class="col-12">
+                @{
+                    ViewData["CurrentPage"] = "3";
+                    ViewData["TotalPages"] = "10";
+                    ViewData["BaseUrl"] = "/components/demo";
+                }
+                <partial name="_Pagination" />
+            </div>
+        </div>
+    </section>
+
+    <!-- Modal/Dialog Section -->
+    <section class="mb-5">
+        <h2 class="mb-3">Modal/Dialog</h2>
+        <div class="row">
+            <div class="col-12">
+                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#exampleModal">
+                    Launch Demo Modal
+                </button>
+                
+                @{
+                    ViewData["Id"] = "exampleModal";
+                    ViewData["Title"] = "Example Modal";
+                    ViewData["Body"] = "<p>This is an example modal dialog. You can put any content here.</p><p>It's fully responsive and accessible.</p>";
+                    ViewData["Size"] = "lg";
+                    ViewData["Centered"] = "True";
+                }
+                <partial name="_Dialog" />
+            </div>
+        </div>
+    </section>
+
+    <!-- Toast Section -->
+    <section class="mb-5">
+        <h2 class="mb-3">Toast Notifications</h2>
+        <div class="row">
+            <div class="col-12">
+                <button type="button" class="btn btn-success" onclick="Toast.success('Operation completed successfully!')">
+                    Show Success Toast
+                </button>
+                <button type="button" class="btn btn-danger" onclick="Toast.error('An error occurred!')">
+                    Show Error Toast
+                </button>
+                <button type="button" class="btn btn-warning" onclick="Toast.warning('Please be careful!')">
+                    Show Warning Toast
+                </button>
+                <button type="button" class="btn btn-info" onclick="Toast.info('Here is some information')">
+                    Show Info Toast
+                </button>
+                <button type="button" class="btn btn-primary" onclick="Toast.show({ message: 'Custom toast with long duration', variant: 'primary', duration: 10000 })">
+                    Show Custom Toast
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Divider -->
+    @{
+        ViewData["Text"] = "New Components";
+    }
+    <partial name="_Divider" />
+
+    <!-- Avatars Section -->
+    <section class="mb-5">
+        <h2 class="mb-3">Avatars</h2>
+        <div class="row">
+            <div class="col-12 mb-4">
+                <h4>Sizes</h4>
+                <div class="d-flex align-items-center gap-3">
+                    @{
+                        ViewData["Initials"] = "XS";
+                        ViewData["Size"] = "xs";
+                    }
+                    <partial name="_Avatar" />
+
+                    @{
+                        ViewData["Initials"] = "SM";
+                        ViewData["Size"] = "sm";
+                    }
+                    <partial name="_Avatar" />
+
+                    @{
+                        ViewData["Initials"] = "MD";
+                        ViewData["Size"] = "md";
+                    }
+                    <partial name="_Avatar" />
+
+                    @{
+                        ViewData["Initials"] = "LG";
+                        ViewData["Size"] = "lg";
+                    }
+                    <partial name="_Avatar" />
+
+                    @{
+                        ViewData["Initials"] = "XL";
+                        ViewData["Size"] = "xl";
+                    }
+                    <partial name="_Avatar" />
+                </div>
+            </div>
+
+            <div class="col-12 mb-4">
+                <h4>Shapes</h4>
+                <div class="d-flex align-items-center gap-3">
+                    @{
+                        ViewData["Initials"] = "RD";
+                        ViewData["Size"] = "lg";
+                        ViewData["Shape"] = "circle";
+                    }
+                    <partial name="_Avatar" />
+
+                    @{
+                        ViewData["Initials"] = "RD";
+                        ViewData["Size"] = "lg";
+                        ViewData["Shape"] = "rounded";
+                    }
+                    <partial name="_Avatar" />
+
+                    @{
+                        ViewData["Initials"] = "SQ";
+                        ViewData["Size"] = "lg";
+                        ViewData["Shape"] = "square";
+                    }
+                    <partial name="_Avatar" />
+                </div>
+            </div>
+
+            <div class="col-12 mb-4">
+                <h4>Status Indicators</h4>
+                <div class="d-flex align-items-center gap-3">
+                    @{
+                        ViewData["Initials"] = "ON";
+                        ViewData["Size"] = "lg";
+                        ViewData["Status"] = "online";
+                    }
+                    <partial name="_Avatar" />
+
+                    @{
+                        ViewData["Initials"] = "AW";
+                        ViewData["Size"] = "lg";
+                        ViewData["Status"] = "away";
+                    }
+                    <partial name="_Avatar" />
+
+                    @{
+                        ViewData["Initials"] = "BY";
+                        ViewData["Size"] = "lg";
+                        ViewData["Status"] = "busy";
+                    }
+                    <partial name="_Avatar" />
+
+                    @{
+                        ViewData["Initials"] = "OF";
+                        ViewData["Size"] = "lg";
+                        ViewData["Status"] = "offline";
+                    }
+                    <partial name="_Avatar" />
+                </div>
+            </div>
+
+            <div class="col-12">
+                <h4>Avatar Group</h4>
+                <div class="avatar-group">
+                    @{
+                        ViewData["Initials"] = "JP";
+                        ViewData["Size"] = "md";
+                    }
+                    <partial name="_Avatar" />
+
+                    @{
+                        ViewData["Initials"] = "AK";
+                        ViewData["Size"] = "md";
+                    }
+                    <partial name="_Avatar" />
+
+                    @{
+                        ViewData["Initials"] = "MS";
+                        ViewData["Size"] = "md";
+                    }
+                    <partial name="_Avatar" />
+
+                    @{
+                        ViewData["Initials"] = "LT";
+                        ViewData["Size"] = "md";
+                    }
+                    <partial name="_Avatar" />
+
+                    @{
+                        ViewData["Initials"] = "+5";
+                        ViewData["Size"] = "md";
+                    }
+                    <partial name="_Avatar" />
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Radial Progress Section -->
+    <section class="mb-5">
+        <h2 class="mb-3">Radial Progress</h2>
+        <div class="row">
+            <div class="col-12">
+                <div class="d-flex align-items-center gap-4 flex-wrap">
+                    @{
+                        ViewData["Value"] = "25";
+                        ViewData["Size"] = "sm";
+                        ViewData["Variant"] = "primary";
+                        ViewData["ShowLabel"] = "True";
+                    }
+                    <partial name="_RadialProgress" />
+
+                    @{
+                        ViewData["Value"] = "50";
+                        ViewData["Size"] = "md";
+                        ViewData["Variant"] = "success";
+                        ViewData["ShowLabel"] = "True";
+                    }
+                    <partial name="_RadialProgress" />
+
+                    @{
+                        ViewData["Value"] = "75";
+                        ViewData["Size"] = "lg";
+                        ViewData["Variant"] = "warning";
+                        ViewData["ShowLabel"] = "True";
+                    }
+                    <partial name="_RadialProgress" />
+
+                    @{
+                        ViewData["Value"] = "90";
+                        ViewData["Size"] = "md";
+                        ViewData["Variant"] = "danger";
+                        ViewData["ShowLabel"] = "True";
+                    }
+                    <partial name="_RadialProgress" />
+
+                    @{
+                        ViewData["Value"] = "100";
+                        ViewData["Size"] = "md";
+                        ViewData["Variant"] = "success";
+                        ViewData["ShowLabel"] = "True";
+                        ViewData["Label"] = "Done!";
+                    }
+                    <partial name="_RadialProgress" />
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Sliders Section -->
+    <section class="mb-5">
+        <h2 class="mb-3">Sliders</h2>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Primary Slider</label>
+                @{
+                    ViewData["Id"] = "slider1";
+                    ViewData["Value"] = "50";
+                    ViewData["Variant"] = "primary";
+                }
+                <partial name="_Slider" />
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Success Slider</label>
+                @{
+                    ViewData["Id"] = "slider2";
+                    ViewData["Value"] = "75";
+                    ViewData["Variant"] = "success";
+                }
+                <partial name="_Slider" />
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Warning Slider</label>
+                @{
+                    ViewData["Id"] = "slider3";
+                    ViewData["Value"] = "30";
+                    ViewData["Variant"] = "warning";
+                }
+                <partial name="_Slider" />
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Slider with Marks</label>
+                @{
+                    ViewData["Id"] = "slider4";
+                    ViewData["Value"] = "50";
+                    ViewData["ShowMarks"] = "True";
+                    ViewData["Marks"] = new List<int> { 0, 25, 50, 75, 100 };
+                }
+                <partial name="_Slider" />
+            </div>
+        </div>
+    </section>
+
+    <!-- Skeleton Loaders Section -->
+    <section class="mb-5">
+        <h2 class="mb-3">Skeleton Loaders</h2>
+        <div class="row">
+            <div class="col-md-6 mb-4">
+                <h4>Text Skeletons</h4>
+                <div class="mb-2">
+                    @{
+                        ViewData["Type"] = "heading";
+                        ViewData["Width"] = "60%";
+                    }
+                    <partial name="_Skeleton" />
+                </div>
+                <div class="mb-2">
+                    @{
+                        ViewData["Type"] = "text";
+                        ViewData["Width"] = "100%";
+                    }
+                    <partial name="_Skeleton" />
+                </div>
+                <div class="mb-2">
+                    @{
+                        ViewData["Type"] = "text";
+                        ViewData["Width"] = "90%";
+                    }
+                    <partial name="_Skeleton" />
+                </div>
+                <div class="mb-2">
+                    @{
+                        ViewData["Type"] = "text";
+                        ViewData["Width"] = "75%";
+                    }
+                    <partial name="_Skeleton" />
+                </div>
+            </div>
+
+            <div class="col-md-6 mb-4">
+                <h4>Component Skeletons</h4>
+                <div class="d-flex align-items-center gap-3 mb-3">
+                    @{
+                        ViewData["Type"] = "avatar";
+                    }
+                    <partial name="_Skeleton" />
+                    <div style="flex: 1;">
+                        @{
+                            ViewData["Type"] = "text";
+                            ViewData["Width"] = "80%";
+                        }
+                        <partial name="_Skeleton" />
+                        @{
+                            ViewData["Type"] = "text-sm";
+                            ViewData["Width"] = "60%";
+                            ViewData["CssClass"] = "mt-2";
+                        }
+                        <partial name="_Skeleton" />
+                    </div>
+                </div>
+                <div class="mb-3">
+                    @{
+                        ViewData["Type"] = "button";
+                    }
+                    <partial name="_Skeleton" />
+                </div>
+                <div class="mb-3">
+                    @{
+                        ViewData["Type"] = "input";
+                    }
+                    <partial name="_Skeleton" />
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <h4>Shimmer Effect</h4>
+                <div class="skeleton-card-pattern">
+                    @{
+                        ViewData["Type"] = "heading";
+                        ViewData["Shimmer"] = "True";
+                    }
+                    <partial name="_Skeleton" />
+                    @{
+                        ViewData["Type"] = "text";
+                        ViewData["Shimmer"] = "True";
+                        ViewData["CssClass"] = "mb-2";
+                    }
+                    <partial name="_Skeleton" />
+                    @{
+                        ViewData["Type"] = "text";
+                        ViewData["Shimmer"] = "True";
+                        ViewData["Width"] = "80%";
+                    }
+                    <partial name="_Skeleton" />
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <h4>Card Skeleton</h4>
+                @{
+                    ViewData["Type"] = "card";
+                    ViewData["Shimmer"] = "True";
+                }
+                <partial name="_Skeleton" />
+            </div>
+        </div>
+    </section>
+
+    <!-- Chips Section -->
+    <section class="mb-5">
+        <h2 class="mb-3">Chips</h2>
+        <div class="row">
+            <div class="col-12 mb-3">
+                <h4>Variants</h4>
+                <div class="d-flex flex-wrap gap-2">
+                    @{
+                        ViewData["Text"] = "Default Chip";
+                    }
+                    <partial name="_Chip" />
+
+                    @{
+                        ViewData["Text"] = "Primary";
+                        ViewData["Variant"] = "primary";
+                    }
+                    <partial name="_Chip" />
+
+                    @{
+                        ViewData["Text"] = "Success";
+                        ViewData["Variant"] = "success";
+                    }
+                    <partial name="_Chip" />
+
+                    @{
+                        ViewData["Text"] = "Warning";
+                        ViewData["Variant"] = "warning";
+                    }
+                    <partial name="_Chip" />
+
+                    @{
+                        ViewData["Text"] = "Danger";
+                        ViewData["Variant"] = "danger";
+                    }
+                    <partial name="_Chip" />
+
+                    @{
+                        ViewData["Text"] = "Outline";
+                        ViewData["Variant"] = "outline";
+                    }
+                    <partial name="_Chip" />
+                </div>
+            </div>
+
+            <div class="col-12 mb-3">
+                <h4>Sizes</h4>
+                <div class="d-flex align-items-center gap-2">
+                    @{
+                        ViewData["Text"] = "Small Chip";
+                        ViewData["Size"] = "sm";
+                        ViewData["Variant"] = "primary";
+                    }
+                    <partial name="_Chip" />
+
+                    @{
+                        ViewData["Text"] = "Medium Chip";
+                        ViewData["Size"] = "md";
+                        ViewData["Variant"] = "primary";
+                    }
+                    <partial name="_Chip" />
+
+                    @{
+                        ViewData["Text"] = "Large Chip";
+                        ViewData["Size"] = "lg";
+                        ViewData["Variant"] = "primary";
+                    }
+                    <partial name="_Chip" />
+                </div>
+            </div>
+
+            <div class="col-12">
+                <h4>Closeable Chips</h4>
+                <div class="d-flex flex-wrap gap-2">
+                    @{
+                        ViewData["Text"] = "Removable Tag";
+                        ViewData["Variant"] = "primary";
+                        ViewData["Closeable"] = "True";
+                    }
+                    <partial name="_Chip" />
+
+                    @{
+                        ViewData["Text"] = "Feature Request";
+                        ViewData["Variant"] = "success";
+                        ViewData["Closeable"] = "True";
+                    }
+                    <partial name="_Chip" />
+
+                    @{
+                        ViewData["Text"] = "Bug Fix";
+                        ViewData["Variant"] = "danger";
+                        ViewData["Closeable"] = "True";
+                    }
+                    <partial name="_Chip" />
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Dividers Section -->
+    <section class="mb-5">
+        <h2 class="mb-3">Dividers</h2>
+        <div class="row">
+            <div class="col-12">
+                <p>Content above divider</p>
+                @{
+                    ViewData["Text"] = "";
+                }
+                <partial name="_Divider" />
+                <p>Content below divider</p>
+
+                @{
+                    ViewData["Text"] = "Section Break";
+                }
+                <partial name="_Divider" />
+
+                <p>Another section</p>
+
+                @{
+                    ViewData["Text"] = "OR";
+                }
+                <partial name="_Divider" />
+
+                <p>Alternative content</p>
+            </div>
+        </div>
+    </section>
+</div>
+
+<!-- Toast Container -->
+<partial name="_ToastContainer" />
+
+@section Scripts {
+    <script>
+        // Example: Show a welcome toast on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            Toast.info('Welcome to the Components Demo page!', 'Welcome');
+        });
+    </script>
+}

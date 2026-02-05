@@ -1,0 +1,341 @@
+@using HLE.FileServer.Helpers
+@{
+    ViewData["Title"] = "Icon Library";
+
+    // Organize icons by category
+    var fileIcons = new[] { "file", "file-text", "folder", "folder-plus", "folder-open" };
+    var documentIcons = new[] { "file-pdf", "file-word", "file-excel", "file-ppt", "file-code" };
+    var mediaIcons = new[] { "file-image", "file-music", "file-play", "file-zip" };
+    var actionIcons = new[] { "download", "upload", "edit", "trash", "copy", "move", "share", "link", "eye", "eye-slash", "plus", "minus" };
+    var uiIcons = new[] { "x", "check", "check-circle", "menu", "search", "user", "users", "settings", "bell", "star", "star-fill" };
+    var dashboardIcons = new[] { "cloud", "cloud-download", "cloud-upload", "grid", "activity", "chart-bar", "clock", "calendar" };
+    var navIcons = new[] { "arrow-left", "arrow-right", "arrow-up", "arrow-down", "chevron-left", "chevron-right", "chevron-down", "chevron-up", "home" };
+    var statusIcons = new[] { "info", "alert", "error-circle", "success-circle", "lock", "unlock" };
+
+    var allIcons = fileIcons.Concat(documentIcons).Concat(mediaIcons).Concat(actionIcons)
+                             .Concat(uiIcons).Concat(dashboardIcons).Concat(navIcons).Concat(statusIcons).ToArray();
+}
+
+<div class="container py-5">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="display-4">Icon Library</h1>
+            <p class="lead">Custom icon system that automatically adapts to your theme (light/dark)</p>
+        </div>
+    </div>
+
+    <!-- Usage Examples -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="mb-0">How to Use</h3>
+                </div>
+                <div class="card-body">
+                    <h5>Method 1: Using the Icons Helper (Recommended)</h5>
+                    <pre><code>@@using HLE.FileServer.Helpers
+@@Html.Raw(Icons.Get("icon-name", size, "css-class"))</code></pre>
+
+                    <h5 class="mt-4">Method 2: Using the Partial View</h5>
+                    <pre><code>@@{
+    ViewData["Name"] = "icon-name";
+    ViewData["Size"] = 16;
+    ViewData["Class"] = "me-2";
+}
+@@await Html.PartialAsync("_Icon")</code></pre>
+
+                    <h5 class="mt-4">Example in Button:</h5>
+                    <pre><code>&lt;button class="btn btn-primary"&gt;
+    @@Html.Raw(Icons.Get("upload", 16, "me-2"))
+    Upload
+&lt;/button&gt;</code></pre>
+
+                    <div class="mt-3">
+                        <button class="btn btn-primary">
+                            @Html.Raw(Icons.Get("upload", 16, "me-2"))
+                            Upload Example
+                        </button>
+                        <button class="btn btn-success">
+                            @Html.Raw(Icons.Get("folder-plus", 16, "me-2"))
+                            New Folder Example
+                        </button>
+                        <button class="btn btn-danger">
+                            @Html.Raw(Icons.Get("trash", 16, "me-2"))
+                            Delete Example
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Available Icons -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h3 class="mb-0">All Icons (@allIcons.Length total)</h3>
+                </div>
+            </div>
+
+            <!-- File & Folder Icons -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">Files & Folders</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        @foreach (var iconName in fileIcons)
+                        {
+                            <div class="col-md-2 col-sm-3 col-4">
+                                <div class="icon-showcase-item p-3 border rounded text-center">
+                                    <div class="mb-2">@Html.Raw(Icons.Get(iconName, 32))</div>
+                                    <code class="small">@iconName</code>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- Document Type Icons -->
+            <div class="card mb-4">
+                <div class="card-header bg-info text-white">
+                    <h4 class="mb-0">Document Types</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        @foreach (var iconName in documentIcons)
+                        {
+                            <div class="col-md-2 col-sm-3 col-4">
+                                <div class="icon-showcase-item p-3 border rounded text-center">
+                                    <div class="mb-2">@Html.Raw(Icons.Get(iconName, 32))</div>
+                                    <code class="small">@iconName</code>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- Media Icons -->
+            <div class="card mb-4">
+                <div class="card-header bg-success text-white">
+                    <h4 class="mb-0">Media Files</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        @foreach (var iconName in mediaIcons)
+                        {
+                            <div class="col-md-2 col-sm-3 col-4">
+                                <div class="icon-showcase-item p-3 border rounded text-center">
+                                    <div class="mb-2">@Html.Raw(Icons.Get(iconName, 32))</div>
+                                    <code class="small">@iconName</code>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Icons -->
+            <div class="card mb-4">
+                <div class="card-header bg-warning">
+                    <h4 class="mb-0">Actions</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        @foreach (var iconName in actionIcons)
+                        {
+                            <div class="col-md-2 col-sm-3 col-4">
+                                <div class="icon-showcase-item p-3 border rounded text-center">
+                                    <div class="mb-2">@Html.Raw(Icons.Get(iconName, 32))</div>
+                                    <code class="small">@iconName</code>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- UI Elements -->
+            <div class="card mb-4">
+                <div class="card-header bg-secondary text-white">
+                    <h4 class="mb-0">UI Elements</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        @foreach (var iconName in uiIcons)
+                        {
+                            <div class="col-md-2 col-sm-3 col-4">
+                                <div class="icon-showcase-item p-3 border rounded text-center">
+                                    <div class="mb-2">@Html.Raw(Icons.Get(iconName, 32))</div>
+                                    <code class="small">@iconName</code>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dashboard & Stats -->
+            <div class="card mb-4">
+                <div class="card-header" style="background: #6f42c1; color: white;">
+                    <h4 class="mb-0">Dashboard & Stats</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        @foreach (var iconName in dashboardIcons)
+                        {
+                            <div class="col-md-2 col-sm-3 col-4">
+                                <div class="icon-showcase-item p-3 border rounded text-center">
+                                    <div class="mb-2">@Html.Raw(Icons.Get(iconName, 32))</div>
+                                    <code class="small">@iconName</code>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- Navigation Icons -->
+            <div class="card mb-4">
+                <div class="card-header" style="background: #20c997; color: white;">
+                    <h4 class="mb-0">Navigation</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        @foreach (var iconName in navIcons)
+                        {
+                            <div class="col-md-2 col-sm-3 col-4">
+                                <div class="icon-showcase-item p-3 border rounded text-center">
+                                    <div class="mb-2">@Html.Raw(Icons.Get(iconName, 32))</div>
+                                    <code class="small">@iconName</code>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- Status & Alerts -->
+            <div class="card mb-4">
+                <div class="card-header bg-danger text-white">
+                    <h4 class="mb-0">Status & Alerts</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        @foreach (var iconName in statusIcons)
+                        {
+                            <div class="col-md-2 col-sm-3 col-4">
+                                <div class="icon-showcase-item p-3 border rounded text-center">
+                                    <div class="mb-2">@Html.Raw(Icons.Get(iconName, 32))</div>
+                                    <code class="small">@iconName</code>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Size Examples -->
+    <div class="row mt-5">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="mb-0">Size Examples</h3>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex align-items-center gap-4">
+                        <div class="text-center">
+                            @Html.Raw(Icons.Get("file", 14))
+                            <div><small>14px</small></div>
+                        </div>
+                        <div class="text-center">
+                            @Html.Raw(Icons.Get("file", 16))
+                            <div><small>16px (default)</small></div>
+                        </div>
+                        <div class="text-center">
+                            @Html.Raw(Icons.Get("file", 20))
+                            <div><small>20px</small></div>
+                        </div>
+                        <div class="text-center">
+                            @Html.Raw(Icons.Get("file", 24))
+                            <div><small>24px</small></div>
+                        </div>
+                        <div class="text-center">
+                            @Html.Raw(Icons.Get("file", 32))
+                            <div><small>32px</small></div>
+                        </div>
+                        <div class="text-center">
+                            @Html.Raw(Icons.Get("file", 48))
+                            <div><small>48px</small></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Color Examples -->
+    <div class="row mt-5">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="mb-0">Theme Integration</h3>
+                </div>
+                <div class="card-body">
+                    <p>Icons automatically inherit color from their parent element or theme variables:</p>
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="text-primary">
+                            @Html.Raw(Icons.Get("check-circle", 24))
+                            Primary
+                        </div>
+                        <div class="text-success">
+                            @Html.Raw(Icons.Get("check-circle", 24))
+                            Success
+                        </div>
+                        <div class="text-danger">
+                            @Html.Raw(Icons.Get("alert", 24))
+                            Danger
+                        </div>
+                        <div class="text-warning">
+                            @Html.Raw(Icons.Get("info", 24))
+                            Warning
+                        </div>
+                        <div class="text-info">
+                            @Html.Raw(Icons.Get("info", 24))
+                            Info
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .icon-showcase-item {
+        transition: all 0.2s ease;
+        background: var(--card);
+    }
+
+    .icon-showcase-item:hover {
+        background: var(--accent);
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+    }
+
+    pre {
+        background: var(--muted);
+        padding: 1rem;
+        border-radius: 0.375rem;
+        overflow-x: auto;
+    }
+
+    code {
+        color: var(--foreground);
+    }
+</style>

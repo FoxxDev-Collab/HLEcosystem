@@ -1,0 +1,23 @@
+@model dynamic
+
+<li class="nav-item dropdown">
+    <a class="nav-link dropdown-toggle d-flex align-items-center gap-2" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+        @if (!string.IsNullOrEmpty(Model.Initials))
+        {
+            <div class="avatar avatar-sm" style="background-color: @Model.AvatarColor; color: white;">
+                @Model.Initials
+            </div>
+        }
+        <span class="d-none d-md-inline">@Model.Email</span>
+    </a>
+    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+        <li><a class="dropdown-item" href="@Url.Action("Index", "Settings")">Settings</a></li>
+        <li><hr class="dropdown-divider" /></li>
+        <li>
+            <form asp-controller="Account" asp-action="Logout" method="post">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="dropdown-item">Logout</button>
+            </form>
+        </li>
+    </ul>
+</li>

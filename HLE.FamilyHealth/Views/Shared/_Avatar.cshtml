@@ -1,0 +1,55 @@
+@*
+    Avatar Component
+    Usage:
+    <partial name="_Avatar" model='new { Src = "/path/to/image.jpg", Alt = "User Name", Size = "md", Status = "online", Initials = "JD" }' />
+    Sizes: xs, sm, md, lg, xl
+    Status: online, offline, busy, away
+    Shapes: circle (default), square, rounded
+*@
+@{
+    var src = ViewData["Src"]?.ToString() ?? "";
+    var alt = ViewData["Alt"]?.ToString() ?? "Avatar";
+    var size = ViewData["Size"]?.ToString() ?? "md";
+    var status = ViewData["Status"]?.ToString() ?? "";
+    var initials = ViewData["Initials"]?.ToString() ?? "";
+    var shape = ViewData["Shape"]?.ToString() ?? "circle";
+    var bordered = ViewData["Bordered"]?.ToString()?.ToLower() == "true";
+    var cssClass = ViewData["CssClass"]?.ToString() ?? "";
+
+    var avatarClasses = $"avatar avatar-{size}";
+
+    if (shape == "square")
+    {
+        avatarClasses += " avatar-square";
+    }
+    else if (shape == "rounded")
+    {
+        avatarClasses += " avatar-rounded";
+    }
+
+    if (!string.IsNullOrEmpty(status))
+    {
+        avatarClasses += $" avatar-status status-{status}";
+    }
+
+    if (bordered)
+    {
+        avatarClasses += " avatar-bordered";
+    }
+
+    if (!string.IsNullOrEmpty(cssClass))
+    {
+        avatarClasses += $" {cssClass}";
+    }
+}
+
+<div class="@avatarClasses">
+    @if (!string.IsNullOrEmpty(src))
+    {
+        <img src="@src" alt="@alt" />
+    }
+    else if (!string.IsNullOrEmpty(initials))
+    {
+        @initials
+    }
+</div>

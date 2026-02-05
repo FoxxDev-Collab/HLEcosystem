@@ -1,0 +1,128 @@
+@*
+    Table Component
+    Usage:
+    @{
+        ViewData["Headers"] = new[] { "Name", "Email", "Status" };
+        ViewData["Rows"] = Model; // IEnumerable of objects
+        ViewData["Striped"] = "True"; // Optional
+        ViewData["Hover"] = "True"; // Optional
+        ViewData["Bordered"] = "False"; // Optional
+        ViewData["Responsive"] = "True"; // Optional
+        ViewData["CssClass"] = ""; // Optional additional classes
+    }
+    <partial name="_Table" />
+
+    OR use with slot-based content (more flexible):
+    Just wrap your existing <table> in the table-themed class
+*@
+@{
+    var headers = ViewData["Headers"] as string[];
+    var rows = ViewData["Rows"] as IEnumerable<dynamic>;
+    var striped = ViewData["Striped"]?.ToString() == "True";
+    var hover = ViewData["Hover"]?.ToString() == "True";
+    var bordered = ViewData["Bordered"]?.ToString() == "True";
+    var responsive = ViewData["Responsive"]?.ToString() != "False"; // Default true
+    var cssClass = ViewData["CssClass"]?.ToString() ?? "";
+    var emptyMessage = ViewData["EmptyMessage"]?.ToString() ?? "No data available";
+
+    var tableClasses = new List<string> { "table-themed" };
+    if (striped) tableClasses.Add("table-striped");
+    if (hover) tableClasses.Add("table-hover");
+    if (bordered) tableClasses.Add("table-bordered");
+    if (!string.IsNullOrEmpty(cssClass)) tableClasses.Add(cssClass);
+
+    var tableClass = string.Join(" ", tableClasses);
+}
+
+@if (responsive)
+{
+    <div class="table-responsive">
+        @if (headers != null && rows != null)
+        {
+            <table class="@tableClass">
+                <thead>
+                    <tr>
+                        @foreach (var header in headers)
+                        {
+                            <th>@header</th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (rows.Any())
+                    {
+                        @foreach (var row in rows)
+                        {
+                            <tr>
+                                @foreach (var prop in row.GetType().GetProperties())
+                                {
+                                    <td>@prop.GetValue(row)</td>
+                                }
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="@headers.Length" class="text-center text-muted-foreground py-4">
+                                @emptyMessage
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        else
+        {
+            @* Allow custom content *@
+            <table class="@tableClass">
+                @RenderBody()
+            </table>
+        }
+    </div>
+}
+else
+{
+    @if (headers != null && rows != null)
+    {
+        <table class="@tableClass">
+            <thead>
+                <tr>
+                    @foreach (var header in headers)
+                    {
+                        <th>@header</th>
+                    }
+                </tr>
+            </thead>
+            <tbody>
+                @if (rows.Any())
+                {
+                    @foreach (var row in rows)
+                    {
+                        <tr>
+                            @foreach (var prop in row.GetType().GetProperties())
+                            {
+                                <td>@prop.GetValue(row)</td>
+                            }
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="@headers.Length" class="text-center text-muted-foreground py-4">
+                            @emptyMessage
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+    else
+    {
+        @* Allow custom content *@
+        <table class="@tableClass">
+            @RenderBody()
+        </table>
+    }
+}

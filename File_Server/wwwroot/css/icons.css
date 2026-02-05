@@ -1,0 +1,96 @@
+/* Icon System - Theme-aware SVG icons */
+svg {
+    fill: currentColor;
+    vertical-align: middle;
+    flex-shrink: 0;
+}
+
+/* Icon sizes */
+.icon-sm {
+    width: 14px;
+    height: 14px;
+}
+
+.icon-md {
+    width: 20px;
+    height: 20px;
+}
+
+.icon-lg {
+    width: 24px;
+    height: 24px;
+}
+
+.icon-xl {
+    width: 32px;
+    height: 32px;
+}
+
+.icon-2xl {
+    width: 48px;
+    height: 48px;
+}
+
+/* Icon colors inherit from parent or use theme colors */
+.icon-primary {
+    color: var(--bs-primary);
+}
+
+.icon-secondary {
+    color: var(--bs-secondary);
+}
+
+.icon-success {
+    color: var(--bs-success);
+}
+
+.icon-danger {
+    color: var(--bs-danger);
+}
+
+.icon-warning {
+    color: var(--bs-warning);
+}
+
+.icon-info {
+    color: var(--bs-info);
+}
+
+.icon-muted {
+    color: var(--text-muted);
+}
+
+/* Button icons */
+.btn svg {
+    margin-right: 0.5rem;
+    transition: transform 0.2s ease;
+}
+
+.btn svg:only-child {
+    margin-right: 0;
+}
+
+.btn:hover svg {
+    transform: scale(1.05);
+}
+
+/* Make icons responsive to theme */
+@media (prefers-color-scheme: dark) {
+    svg {
+        opacity: 0.95;
+    }
+}
+
+/* Icon animations */
+@keyframes icon-spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.icon-spin {
+    animation: icon-spin 1s linear infinite;
+}

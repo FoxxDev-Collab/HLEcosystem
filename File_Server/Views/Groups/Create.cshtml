@@ -1,0 +1,274 @@
+@model HLE.FileServer.Models.Group
+@using HLE.FileServer.Helpers
+@{
+    ViewData["Title"] = "Create Group";
+}
+
+<div class="container py-4" style="max-width: 800px;">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item">
+                <a href="@Url.Action("Index", "Groups")">
+                    @Html.Raw(Icons.Get("grid", 14, "me-1"))
+                    Groups
+                </a>
+            </li>
+            <li class="breadcrumb-item active" aria-current="page">Create New Group</li>
+        </ol>
+    </nav>
+
+    <div class="card">
+        <div class="card-header">
+            <h3 class="mb-0">
+                @Html.Raw(Icons.Get("grid", 24, "me-2"))
+                Create New Group
+            </h3>
+        </div>
+        <div class="card-body">
+            <form asp-action="Create" asp-controller="Groups" method="post">
+                <div asp-validation-summary="All" class="alert alert-danger mb-3" role="alert"></div>
+
+                <div class="mb-4">
+                    <label asp-for="Name" class="form-label">
+                        Group Name
+                        <span class="text-danger">*</span>
+                    </label>
+                    <input asp-for="Name" class="form-control" placeholder="Enter group name" maxlength="100" required autofocus />
+                    <span asp-validation-for="Name" class="text-danger"></span>
+                    <small class="text-muted-foreground">Choose a clear, descriptive name for your group.</small>
+                </div>
+
+                <div class="mb-4">
+                    <label asp-for="Description" class="form-label">Description</label>
+                    <textarea asp-for="Description" class="form-control" rows="4" placeholder="Enter a description for this group (optional)" maxlength="500"></textarea>
+                    <span asp-validation-for="Description" class="text-danger"></span>
+                    <small class="text-muted-foreground">Briefly describe the purpose of this group.</small>
+                </div>
+
+                <div class="mb-4">
+                    <label asp-for="StorageQuotaBytes" class="form-label">Storage Quota</label>
+                    <div class="input-group">
+                        <input type="number" id="quotaInput" class="form-control" placeholder="Enter storage quota" min="0" step="1" />
+                        <select id="quotaUnit" class="form-select" style="max-width: 120px;">
+                            <option value="0">Unlimited</option>
+                            <option value="1048576">MB</option>
+                            <option value="1073741824" selected>GB</option>
+                            <option value="1099511627776">TB</option>
+                        </select>
+                    </div>
+                    <input type="hidden" asp-for="StorageQuotaBytes" id="hiddenQuotaBytes" />
+                    <span asp-validation-for="StorageQuotaBytes" class="text-danger"></span>
+                    <small class="text-muted-foreground">Set a storage limit for this group. Select "Unlimited" for no limit.</small>
+                </div>
+
+                <div class="card info-card mb-4">
+                    <div class="card-body">
+                        <h6 class="d-flex align-items-center mb-2">
+                            @Html.Raw(Icons.Get("info", 18, "me-2"))
+                            Group Information
+                        </h6>
+                        <ul class="mb-0 text-muted-foreground small">
+                            <li>You will be set as the owner of this group with full permissions.</li>
+                            <li>As the owner, you can add members and manage their permissions.</li>
+                            <li>Members can be assigned roles: Member, Admin, or Owner.</li>
+                            <li>Storage quota helps manage space usage across group members.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                @Html.AntiForgeryToken()
+
+                <div class="d-flex gap-2">
+                    @{
+                        ViewData["Text"] = "Create Group";
+                        ViewData["Type"] = "submit";
+                        ViewData["Variant"] = "primary";
+                        ViewData["CssClass"] = "flex-grow-1";
+                    }
+                    <partial name="_Button" />
+                    @{
+                        ViewData["Text"] = "Cancel";
+                        ViewData["Href"] = Url.Action("Index");
+                        ViewData["Variant"] = "secondary";
+                    }
+                    <partial name="_Button" />
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    .card {
+        background: var(--card);
+        border-color: var(--border);
+        color: var(--foreground);
+    }
+
+    .card-header {
+        background: var(--muted);
+        color: var(--foreground);
+        border-bottom: 1px solid var(--border);
+    }
+
+    .card-body {
+        background: var(--card);
+    }
+
+    .info-card {
+        background: var(--accent);
+        border-color: var(--border);
+    }
+
+    .info-card .card-body {
+        background: var(--accent);
+    }
+
+    .form-label {
+        color: var(--foreground);
+        font-weight: 500;
+    }
+
+    .form-control,
+    .form-select {
+        background: var(--background);
+        border-color: var(--border);
+        color: var(--foreground);
+    }
+
+    .form-control:focus,
+    .form-select:focus {
+        background: var(--background);
+        border-color: var(--primary);
+        color: var(--foreground);
+        box-shadow: 0 0 0 0.2rem rgba(30, 157, 241, 0.25);
+    }
+
+    .form-control::placeholder {
+        color: var(--muted-foreground);
+    }
+
+    .text-danger {
+        color: var(--destructive) !important;
+    }
+
+    .text-muted-foreground {
+        color: var(--muted-foreground) !important;
+    }
+
+    .breadcrumb {
+        background: var(--card);
+        padding: 0.75rem 1rem;
+        border-radius: var(--radius);
+    }
+
+    .breadcrumb-item a {
+        color: var(--primary);
+        text-decoration: none;
+    }
+
+    .breadcrumb-item a:hover {
+        text-decoration: underline;
+    }
+
+    .breadcrumb-item.active {
+        color: var(--foreground);
+    }
+
+    .input-group .form-control,
+    .input-group .form-select {
+        background: var(--background);
+        border-color: var(--border);
+        color: var(--foreground);
+    }
+</style>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const quotaInput = document.getElementById('quotaInput');
+            const quotaUnit = document.getElementById('quotaUnit');
+            const hiddenQuotaBytes = document.getElementById('hiddenQuotaBytes');
+
+            // Set default value immediately if empty - this ensures form can always submit
+            if (!hiddenQuotaBytes.value) {
+                hiddenQuotaBytes.value = '0';
+            }
+
+            function updateHiddenQuota() {
+                const value = parseFloat(quotaInput.value) || 0;
+                const unit = parseInt(quotaUnit.value);
+
+                if (unit === 0) {
+                    // Unlimited
+                    hiddenQuotaBytes.value = '0';
+                } else {
+                    // Calculate bytes
+                    hiddenQuotaBytes.value = Math.floor(value * unit).toString();
+                }
+                console.log('Updated hidden quota:', hiddenQuotaBytes.value);
+            }
+
+            quotaInput.addEventListener('input', updateHiddenQuota);
+            quotaUnit.addEventListener('change', function() {
+                if (this.value === '0') {
+                    // Unlimited selected
+                    quotaInput.value = '';
+                    quotaInput.disabled = true;
+                    hiddenQuotaBytes.value = '0';
+                } else {
+                    quotaInput.disabled = false;
+                    if (!quotaInput.value) {
+                        quotaInput.value = '1';
+                    }
+                }
+                updateHiddenQuota();
+            });
+
+            // Initialize on page load
+            // Default to Unlimited (0 bytes) if no value set
+            if (hiddenQuotaBytes.value === '0' || !hiddenQuotaBytes.value) {
+                quotaUnit.value = '0';
+                quotaInput.value = '';
+                quotaInput.disabled = true;
+                hiddenQuotaBytes.value = '0';
+            } else {
+                // Convert bytes to appropriate unit for editing
+                const currentValue = parseInt(hiddenQuotaBytes.value);
+                if (currentValue >= 1099511627776) {
+                    quotaUnit.value = '1099511627776';
+                    quotaInput.value = (currentValue / 1099511627776).toFixed(2);
+                } else if (currentValue >= 1073741824) {
+                    quotaUnit.value = '1073741824';
+                    quotaInput.value = (currentValue / 1073741824).toFixed(2);
+                } else if (currentValue >= 1048576) {
+                    quotaUnit.value = '1048576';
+                    quotaInput.value = (currentValue / 1048576).toFixed(2);
+                }
+            }
+
+            console.log('Quota initialized - Unit:', quotaUnit.value, 'Input:', quotaInput.value, 'Hidden:', hiddenQuotaBytes.value);
+
+            // Add form submit handler to debug
+            const form = document.querySelector('form');
+            if (form) {
+                form.addEventListener('submit', function(e) {
+                    console.log('Form submitting...');
+                    console.log('Name:', document.querySelector('[name="Name"]').value);
+                    console.log('Description:', document.querySelector('[name="Description"]').value);
+                    console.log('StorageQuotaBytes:', hiddenQuotaBytes.value);
+
+                    // Check if form is valid
+                    if (!form.checkValidity()) {
+                        console.error('Form validation failed!');
+                        e.preventDefault();
+                        form.reportValidity();
+                        return false;
+                    }
+                });
+            }
+        });
+    </script>
+}

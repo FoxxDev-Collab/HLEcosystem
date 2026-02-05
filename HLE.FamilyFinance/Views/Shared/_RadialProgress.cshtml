@@ -1,0 +1,48 @@
+@*
+    Radial Progress Component
+    Usage:
+    <partial name="_RadialProgress" model='new { Value = 75, Size = "md", Variant = "success", ShowLabel = "True" }' />
+    Sizes: sm, md, lg, xl
+    Variants: primary (default), success, warning, danger, info
+*@
+@{
+    var value = int.Parse(ViewData["Value"]?.ToString() ?? "0");
+    var size = ViewData["Size"]?.ToString() ?? "md";
+    var variant = ViewData["Variant"]?.ToString() ?? "primary";
+    var showLabel = ViewData["ShowLabel"]?.ToString()?.ToLower() == "true";
+    var label = ViewData["Label"]?.ToString() ?? $"{value}%";
+    var strokeWidth = int.Parse(ViewData["StrokeWidth"]?.ToString() ?? "8");
+
+    var sizeMap = new Dictionary<string, int> {
+        { "sm", 48 },
+        { "md", 80 },
+        { "lg", 112 },
+        { "xl", 160 }
+    };
+
+    var svgSize = sizeMap.ContainsKey(size) ? sizeMap[size] : sizeMap["md"];
+    var radius = (svgSize - strokeWidth) / 2;
+    var circumference = 2 * Math.PI * radius;
+    var offset = circumference - (value / 100.0 * circumference);
+}
+
+<div class="radial-progress radial-progress-@size">
+    <svg width="@svgSize" height="@svgSize" viewBox="0 0 @svgSize @svgSize">
+        <circle class="radial-progress-circle radial-progress-bg"
+                cx="@(svgSize/2)"
+                cy="@(svgSize/2)"
+                r="@radius"
+                stroke-width="@strokeWidth" />
+        <circle class="radial-progress-circle radial-progress-bar progress-@variant"
+                cx="@(svgSize/2)"
+                cy="@(svgSize/2)"
+                r="@radius"
+                stroke-width="@strokeWidth"
+                stroke-dasharray="@circumference"
+                stroke-dashoffset="@offset" />
+    </svg>
+    @if (showLabel)
+    {
+        <div class="radial-progress-label">@label</div>
+    }
+</div>

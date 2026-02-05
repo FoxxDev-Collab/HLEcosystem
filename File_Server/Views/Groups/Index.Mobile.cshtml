@@ -1,0 +1,150 @@
+@using HLE.FileServer.Models
+@using HLE.FileServer.Helpers
+@{
+    ViewData["Title"] = "Groups";
+    var ownedGroups = ViewBag.OwnedGroups as List<Group> ?? new List<Group>();
+    var memberGroups = ViewBag.MemberGroups as List<Group> ?? new List<Group>();
+}
+
+<div class="mobile-page-header">
+    <h1 class="mobile-page-title">Groups</h1>
+    <p class="mobile-page-subtitle">@(ownedGroups.Count + memberGroups.Count) groups total</p>
+</div>
+
+<a href="@Url.Action("Create")" class="mobile-btn mobile-btn-primary mobile-btn-full" style="margin-bottom: 20px;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="8" x2="12" y2="16"></line>
+        <line x1="8" y1="12" x2="16" y2="12"></line>
+    </svg>
+    Create New Group
+</a>
+
+@if (TempData["Success"] != null)
+{
+    <div class="mobile-alert mobile-alert-success">@TempData["Success"]</div>
+}
+
+@if (TempData["Error"] != null)
+{
+    <div class="mobile-alert mobile-alert-error">@TempData["Error"]</div>
+}
+
+<!-- My Groups -->
+<div class="mobile-section-header">
+    <h2 class="mobile-section-title">My Groups (@ownedGroups.Count)</h2>
+</div>
+
+@if (ownedGroups.Any())
+{
+    @foreach (var group in ownedGroups)
+    {
+        <a href="@Url.Action("Details", new { id = group.Id })" class="mobile-group-card" style="text-decoration: none; display: block;">
+            <div class="mobile-group-header">
+                <div class="mobile-group-avatar">@(group.Name.FirstOrDefault())</div>
+                <div class="mobile-group-info">
+                    <h3 class="mobile-group-name">@group.Name</h3>
+                    <div class="mobile-group-meta">
+                        <span class="badge" style="background: var(--primary); color: white;">Owner</span>
+                        <span>@group.Members.Count members</span>
+                    </div>
+                </div>
+            </div>
+            @if (!string.IsNullOrEmpty(group.Description))
+            {
+                <p class="mobile-group-description">@group.Description</p>
+            }
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); font-size: 0.8125rem; color: var(--muted-foreground);">
+                <span>@FormatFileSize(group.StorageUsedBytes) used</span>
+                <span>@group.CreatedDate.ToLocalTime().ToString("MMM dd, yyyy")</span>
+            </div>
+        </a>
+    }
+}
+else
+{
+    <div class="mobile-empty-state" style="padding: 32px 16px;">
+        <svg class="mobile-empty-icon" xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="7" height="7"></rect>
+            <rect x="14" y="3" width="7" height="7"></rect>
+            <rect x="14" y="14" width="7" height="7"></rect>
+            <rect x="3" y="14" width="7" height="7"></rect>
+        </svg>
+        <h3 class="mobile-empty-title">No Groups Yet</h3>
+        <p class="mobile-empty-description">Create your first group to start collaborating!</p>
+    </div>
+}
+
+<!-- Groups I'm In -->
+<div class="mobile-section-header" style="margin-top: 24px;">
+    <h2 class="mobile-section-title">Groups I'm In (@memberGroups.Count)</h2>
+</div>
+
+@if (memberGroups.Any())
+{
+    @foreach (var group in memberGroups)
+    {
+        var member = group.Members.FirstOrDefault(m => m.UserId == User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value);
+        <a href="@Url.Action("Details", new { id = group.Id })" class="mobile-group-card" style="text-decoration: none; display: block;">
+            <div class="mobile-group-header">
+                <div class="mobile-group-avatar">@(group.Name.FirstOrDefault())</div>
+                <div class="mobile-group-info">
+                    <h3 class="mobile-group-name">@group.Name</h3>
+                    <div class="mobile-group-meta">
+                        @{
+                            var roleText = member?.Role.ToString() ?? "Member";
+                            var roleColor = member?.Role == GroupRole.Admin ? "#f59e0b" : "var(--muted-foreground)";
+                        }
+                        <span class="badge" style="background: @roleColor; color: white;">@roleText</span>
+                        <span>@group.Members.Count members</span>
+                    </div>
+                </div>
+            </div>
+            @if (!string.IsNullOrEmpty(group.Description))
+            {
+                <p class="mobile-group-description">@group.Description</p>
+            }
+            @if (member != null)
+            {
+                <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px;">
+                    @if (member.CanUpload) { <span class="badge" style="background: rgba(34, 197, 94, 0.1); color: #22c55e; font-size: 0.6875rem;">Upload</span> }
+                    @if (member.CanDownload) { <span class="badge" style="background: rgba(30, 157, 241, 0.1); color: var(--primary); font-size: 0.6875rem;">Download</span> }
+                    @if (member.CanDelete) { <span class="badge" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; font-size: 0.6875rem;">Delete</span> }
+                </div>
+            }
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); font-size: 0.8125rem; color: var(--muted-foreground);">
+                <span>Owner: @(group.Owner?.Email ?? "Unknown")</span>
+                <span>Joined @(member?.JoinedDate.ToLocalTime().ToString("MMM dd, yyyy") ?? "Unknown")</span>
+            </div>
+        </a>
+    }
+}
+else
+{
+    <div class="mobile-empty-state" style="padding: 32px 16px;">
+        <svg class="mobile-empty-icon" xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="18" cy="5" r="3"></circle>
+            <circle cx="6" cy="12" r="3"></circle>
+            <circle cx="18" cy="19" r="3"></circle>
+            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+            <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+        </svg>
+        <h3 class="mobile-empty-title">Not in Any Groups</h3>
+        <p class="mobile-empty-description">You'll see groups here when someone adds you as a member.</p>
+    </div>
+}
+
+@functions {
+    string FormatFileSize(long bytes)
+    {
+        string[] sizes = { "B", "KB", "MB", "GB", "TB" };
+        double len = bytes;
+        int order = 0;
+        while (len >= 1024 && order < sizes.Length - 1)
+        {
+            order++;
+            len = len / 1024;
+        }
+        return $"{len:0.##} {sizes[order]}";
+    }
+}

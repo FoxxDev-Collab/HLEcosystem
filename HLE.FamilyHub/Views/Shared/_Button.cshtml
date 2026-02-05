@@ -1,0 +1,80 @@
+@*
+    Button Component
+    Usage:
+    <partial name="_Button" model='new { Text = "Click Me", Variant = "primary", Size = "md", Type = "button" }' />
+    Variants: primary, secondary, success, danger, warning, info, light, dark, link, outline-primary, etc.
+    Sizes: sm, md, lg
+*@
+@{
+    var text = ViewData["Text"]?.ToString() ?? "Button";
+    var variant = ViewData["Variant"]?.ToString() ?? "primary";
+    var size = ViewData["Size"]?.ToString() ?? "md";
+    var type = ViewData["Type"]?.ToString() ?? "button";
+    var cssClass = ViewData["CssClass"]?.ToString() ?? "";
+    var id = ViewData["Id"]?.ToString() ?? "";
+    var disabled = ViewData["Disabled"]?.ToString() == "True";
+    var icon = ViewData["Icon"]?.ToString() ?? "";
+    var iconPosition = ViewData["IconPosition"]?.ToString() ?? "left"; // left, right
+    var onClick = ViewData["OnClick"]?.ToString() ?? "";
+    var href = ViewData["Href"]?.ToString() ?? "";
+    var dataAttributes = ViewData["DataAttributes"] as Dictionary<string, string>;
+    
+    var sizeClass = size switch
+    {
+        "sm" => "btn-sm",
+        "lg" => "btn-lg",
+        _ => ""
+    };
+    
+    var buttonClass = $"btn btn-{variant} {sizeClass} {cssClass}".Trim();
+}
+
+@if (!string.IsNullOrEmpty(href))
+{
+    <a href="@href" 
+       class="@buttonClass" 
+       @(string.IsNullOrEmpty(id) ? "" : $"id=\"{id}\"")
+       @(disabled ? "aria-disabled=\"true\"" : "")
+       @if (dataAttributes != null)
+       {
+           foreach (var attr in dataAttributes)
+           {
+               @($"data-{attr.Key}=\"{attr.Value}\"")
+           }
+       }>
+        @if (!string.IsNullOrEmpty(icon) && iconPosition == "left")
+        {
+            <i class="@icon me-2"></i>
+        }
+        @text
+        @if (!string.IsNullOrEmpty(icon) && iconPosition == "right")
+        {
+            <i class="@icon ms-2"></i>
+        }
+    </a>
+}
+else
+{
+    <button type="@type" 
+            class="@buttonClass" 
+            @(string.IsNullOrEmpty(id) ? "" : $"id=\"{id}\"")
+            @(disabled ? "disabled" : "")
+            @(string.IsNullOrEmpty(onClick) ? "" : $"onclick=\"{onClick}\"")
+            @if (dataAttributes != null)
+            {
+                foreach (var attr in dataAttributes)
+                {
+                    @($"data-{attr.Key}=\"{attr.Value}\"")
+                }
+            }>
+        @if (!string.IsNullOrEmpty(icon) && iconPosition == "left")
+        {
+            <i class="@icon me-2"></i>
+        }
+        @text
+        @if (!string.IsNullOrEmpty(icon) && iconPosition == "right")
+        {
+            <i class="@icon ms-2"></i>
+        }
+    </button>
+}

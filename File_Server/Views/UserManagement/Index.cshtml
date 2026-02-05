@@ -1,0 +1,109 @@
+@model IEnumerable<HLE.FileServer.Models.UserListViewModel>
+@{
+    ViewData["Title"] = "User Management";
+}
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>User Management</h2>
+    </div>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        ViewData["Message"] = TempData["SuccessMessage"]!.ToString();
+        ViewData["Variant"] = "success";
+        ViewData["Dismissible"] = "True";
+        <partial name="_Alert" />
+    }
+
+    <div class="alert alert-info mb-4">
+        <i class="bi bi-info-circle me-2"></i>
+        Users are managed through your organization's identity provider. Users are automatically synced when they first log in.
+        You can activate or deactivate users to control their access to this application.
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">Users (@Model.Count())</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table-themed table-hover">
+                    <thead>
+                        <tr>
+                            <th>Email</th>
+                            <th>Name</th>
+                            <th>Status</th>
+                            <th>Created</th>
+                            <th>Last Login</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var user in Model)
+                        {
+                            <tr id="user-row-@user.Id">
+                                <td><strong>@user.Email</strong></td>
+                                <td>@user.FullName</td>
+                                <td>
+                                    <span id="status-badge-@user.Id">
+                                        @{
+                                            ViewData["Text"] = user.IsActive ? "Active" : "Inactive";
+                                            ViewData["Variant"] = user.IsActive ? "success" : "secondary";
+                                        }
+                                        <partial name="_Badge" />
+                                    </span>
+                                </td>
+                                <td>@user.CreatedDate.ToLocalTime().ToString("MM/dd/yyyy")</td>
+                                <td>@(user.LastLoginDate?.ToLocalTime().ToString("MM/dd/yyyy HH:mm") ?? "Never")</td>
+                                <td>
+                                    <button type="button" class="btn btn-outline-warning btn-sm" onclick="toggleActive('@user.Id')">
+                                        @(user.IsActive ? "Deactivate" : "Activate")
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<form id="toggleForm" method="post" style="display:none;">
+    @Html.AntiForgeryToken()
+</form>
+
+@section Scripts {
+    <script>
+        function toggleActive(userId) {
+            const form = document.getElementById('toggleForm');
+            form.action = '@Url.Action("ToggleActive")';
+
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'id';
+            input.value = userId;
+            form.appendChild(input);
+
+            fetch(form.action + '?id=' + userId, {
+                method: 'POST',
+                headers: {
+                    'RequestVerificationToken': form.querySelector('[name="__RequestVerificationToken"]').value
+                },
+                body: new FormData(form)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert(data.message);
+                }
+            })
+            .catch(error => {
+                alert('An error occurred while updating user status.');
+            });
+        }
+    </script>
+}

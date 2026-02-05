@@ -1,0 +1,191 @@
+@using HLE.FamilyFinance.Services.Interfaces
+@using HLE.FamilyFinance.Helpers
+@model List<BillSummaryDto>
+@{
+    ViewData["Title"] = "Monthly Bills";
+    var upcomingBills = ViewData["UpcomingBills"] as List<UpcomingBillDto> ?? new List<UpcomingBillDto>();
+    var totalMonthly = Model.Where(b => b.IsActive).Sum(b => b.ExpectedAmount);
+}
+
+<div class="py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="@IconHelper.Nav.Bills me-2"></i>Monthly Bills</h2>
+        <div>
+            <a asp-action="Calendar" class="btn btn-outline-primary"><i class="bi-calendar me-1"></i>Calendar</a>
+            <a asp-action="Create" class="btn btn-primary"><i class="bi-plus-lg me-1"></i>Add Bill</a>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <h6 class="text-white-50">Monthly Total</h6>
+                    <h3 class="mb-0">$@totalMonthly.ToString("N2")</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-warning text-dark">
+                <div class="card-body">
+                    <h6 class="text-dark-50">Upcoming (14 days)</h6>
+                    <h3 class="mb-0">@upcomingBills.Count bills</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (upcomingBills.Count > 0)
+    {
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi-clock-history me-2"></i>Upcoming Bills</h5>
+                <a asp-action="Upcoming" class="btn btn-sm btn-outline-primary">View All</a>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Bill</th>
+                            <th>Due Date</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var bill in upcomingBills.Take(5))
+                        {
+                            var badgeClass = bill.DaysUntilDue <= 3 ? "bg-danger" : bill.DaysUntilDue <= 7 ? "bg-warning text-dark" : "bg-secondary";
+                            <tr>
+                                <td>
+                                    @{
+                                        var bIcon = bill.Icon ?? IconHelper.GetBillIcon(bill.Category);
+                                    }
+                                    @if (bIcon.StartsWith("bi-"))
+                                    {
+                                        <i class="@bIcon me-2"></i>
+                                    }
+                                    @bill.Name
+                                </td>
+                                <td>@bill.DueDate.ToString("MMM d")</td>
+                                <td>$@bill.ExpectedAmount.ToString("N2")</td>
+                                <td>
+                                    <span class="badge @badgeClass">@bill.DaysUntilDue days</span>
+                                    @if (bill.AutoPay)
+                                    {
+                                        <span class="badge bg-info" title="Auto-pay enabled"><i class="bi-arrow-repeat"></i></span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (bill.PaymentId.HasValue && bill.Status != HLE.FamilyFinance.Models.Enums.BillPaymentStatus.Paid)
+                                    {
+                                        <form asp-action="MarkPaid" method="post" class="d-inline">
+                                            <input type="hidden" name="paymentId" value="@bill.PaymentId" />
+                                            <button type="submit" class="btn btn-sm btn-success"><i class="bi-check"></i> Pay</button>
+                                        </form>
+                                    }
+                                    else if (bill.Status == HLE.FamilyFinance.Models.Enums.BillPaymentStatus.Paid)
+                                    {
+                                        <span class="badge bg-success"><i class="bi-check-circle me-1"></i>Paid</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+
+    @if (Model.Count == 0)
+    {
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <i class="bi-receipt fs-1 text-muted"></i>
+                <p class="text-muted mb-3 mt-2">No bills set up yet. Add your monthly bills to track payments.</p>
+                <a asp-action="Create" class="btn btn-primary">Add Bill</a>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">All Bills</h5>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Bill</th>
+                            <th>Category</th>
+                            <th>Due Day</th>
+                            <th>Amount</th>
+                            <th>Auto-Pay</th>
+                            <th>Status</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var bill in Model)
+                        {
+                            var bIcon = bill.Icon ?? IconHelper.GetBillIcon(bill.Category);
+                            <tr class="@(bill.IsActive ? "" : "table-secondary")">
+                                <td>
+                                    @if (bIcon.StartsWith("bi-"))
+                                    {
+                                        <i class="@bIcon me-2" style="@(bill.Color != null ? $"color: {bill.Color}" : "")"></i>
+                                    }
+                                    <strong>@bill.Name</strong>
+                                    @if (bill.Payee != null)
+                                    {
+                                        <br /><small class="text-muted">@bill.Payee</small>
+                                    }
+                                </td>
+                                <td>@bill.Category</td>
+                                <td>@bill.DueDayOfMonth@(bill.DueDayOfMonth == 1 ? "st" : bill.DueDayOfMonth == 2 ? "nd" : bill.DueDayOfMonth == 3 ? "rd" : "th")</td>
+                                <td>$@bill.ExpectedAmount.ToString("N2")</td>
+                                <td>
+                                    @if (bill.AutoPay)
+                                    {
+                                        <span class="badge bg-success"><i class="bi-check"></i> Yes</span>
+                                        @if (bill.AutoPayAccountName != null)
+                                        {
+                                            <br /><small class="text-muted">@bill.AutoPayAccountName</small>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">No</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (!bill.IsActive)
+                                    {
+                                        <span class="badge bg-secondary">Inactive</span>
+                                    }
+                                    else if (bill.CurrentMonthStatus.HasValue)
+                                    {
+                                        var statusBadge = bill.CurrentMonthStatus.Value switch
+                                        {
+                                            HLE.FamilyFinance.Models.Enums.BillPaymentStatus.Paid => "bg-success",
+                                            HLE.FamilyFinance.Models.Enums.BillPaymentStatus.Overdue => "bg-danger",
+                                            HLE.FamilyFinance.Models.Enums.BillPaymentStatus.Scheduled => "bg-info",
+                                            _ => "bg-warning text-dark"
+                                        };
+                                        <span class="badge @statusBadge">@bill.CurrentMonthStatus.Value</span>
+                                    }
+                                </td>
+                                <td>
+                                    <a asp-action="Details" asp-route-id="@bill.Id" class="btn btn-sm btn-outline-primary">View</a>
+                                    <a asp-action="Edit" asp-route-id="@bill.Id" class="btn btn-sm btn-outline-secondary">Edit</a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+</div>

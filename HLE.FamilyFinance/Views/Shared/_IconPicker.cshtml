@@ -1,0 +1,458 @@
+@* Icon Picker Partial View *@
+@* Usage: <partial name="_IconPicker" model="new IconPickerModel { FieldName = "Icon", CurrentValue = Model.Icon }" /> *@
+
+@model (string FieldName, string? CurrentValue)
+
+<div class="icon-picker-wrapper">
+    <div class="input-group">
+        <span class="input-group-text icon-preview">
+            <i class="@(Model.CurrentValue ?? "bi-question-circle")" id="@(Model.FieldName)Preview"></i>
+        </span>
+        <input type="text"
+               name="@Model.FieldName"
+               id="@Model.FieldName"
+               value="@Model.CurrentValue"
+               class="form-control icon-picker-input"
+               placeholder="Click to select an icon..."
+               readonly
+               data-bs-toggle="modal"
+               data-bs-target="#iconPickerModal@(Model.FieldName)" />
+        <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#iconPickerModal@(Model.FieldName)">
+            <i class="bi-grid-3x3-gap"></i>
+        </button>
+        @if (!string.IsNullOrEmpty(Model.CurrentValue))
+        {
+            <button type="button" class="btn btn-outline-danger icon-clear-btn" onclick="clearIcon('@Model.FieldName')">
+                <i class="bi-x-lg"></i>
+            </button>
+        }
+    </div>
+</div>
+
+<!-- Icon Picker Modal -->
+<div class="modal fade" id="iconPickerModal@(Model.FieldName)" tabindex="-1" aria-labelledby="iconPickerModalLabel@(Model.FieldName)" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="iconPickerModalLabel@(Model.FieldName)">Select an Icon</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <input type="text" class="form-control icon-search" id="iconSearch@(Model.FieldName)" placeholder="Search icons..." oninput="filterIcons('@Model.FieldName', this.value)">
+                </div>
+                <div class="icon-grid" id="iconGrid@(Model.FieldName)">
+                    @{
+                        var iconCategories = new Dictionary<string, (string Icon, string Label)[]>
+                        {
+                            ["Money & Finance"] = new[]
+                            {
+                                ("bi-cash", "Cash"),
+                                ("bi-cash-coin", "Cash Coin"),
+                                ("bi-cash-stack", "Cash Stack"),
+                                ("bi-coin", "Coin"),
+                                ("bi-currency-dollar", "Dollar"),
+                                ("bi-currency-euro", "Euro"),
+                                ("bi-currency-pound", "Pound"),
+                                ("bi-currency-yen", "Yen"),
+                                ("bi-wallet", "Wallet"),
+                                ("bi-wallet2", "Wallet 2"),
+                                ("bi-credit-card", "Credit Card"),
+                                ("bi-credit-card-2-front", "Credit Card Front"),
+                                ("bi-bank", "Bank"),
+                                ("bi-bank2", "Bank 2"),
+                                ("bi-piggy-bank", "Piggy Bank"),
+                                ("bi-safe", "Safe"),
+                                ("bi-safe2", "Safe 2"),
+                                ("bi-percent", "Percent"),
+                                ("bi-receipt", "Receipt"),
+                                ("bi-receipt-cutoff", "Receipt Cutoff"),
+                                ("bi-graph-up", "Graph Up"),
+                                ("bi-graph-up-arrow", "Graph Up Arrow"),
+                                ("bi-graph-down", "Graph Down"),
+                                ("bi-bar-chart", "Bar Chart"),
+                                ("bi-pie-chart", "Pie Chart"),
+                            },
+                            ["Home & Living"] = new[]
+                            {
+                                ("bi-house", "House"),
+                                ("bi-house-door", "House Door"),
+                                ("bi-house-fill", "House Fill"),
+                                ("bi-building", "Building"),
+                                ("bi-buildings", "Buildings"),
+                                ("bi-key", "Key"),
+                                ("bi-door-open", "Door Open"),
+                                ("bi-lamp", "Lamp"),
+                                ("bi-lightbulb", "Lightbulb"),
+                                ("bi-plug", "Plug"),
+                                ("bi-thermometer", "Thermometer"),
+                                ("bi-droplet", "Droplet"),
+                                ("bi-fire", "Fire"),
+                                ("bi-snow", "Snow"),
+                                ("bi-tools", "Tools"),
+                                ("bi-wrench", "Wrench"),
+                                ("bi-hammer", "Hammer"),
+                            },
+                            ["Transportation"] = new[]
+                            {
+                                ("bi-car-front", "Car"),
+                                ("bi-car-front-fill", "Car Fill"),
+                                ("bi-truck", "Truck"),
+                                ("bi-bicycle", "Bicycle"),
+                                ("bi-scooter", "Scooter"),
+                                ("bi-bus-front", "Bus"),
+                                ("bi-train-front", "Train"),
+                                ("bi-airplane", "Airplane"),
+                                ("bi-fuel-pump", "Fuel Pump"),
+                                ("bi-ev-station", "EV Station"),
+                                ("bi-speedometer", "Speedometer"),
+                                ("bi-geo-alt", "Location"),
+                                ("bi-map", "Map"),
+                                ("bi-compass", "Compass"),
+                            },
+                            ["Food & Dining"] = new[]
+                            {
+                                ("bi-basket", "Basket"),
+                                ("bi-basket2", "Basket 2"),
+                                ("bi-basket3", "Basket 3"),
+                                ("bi-cart", "Cart"),
+                                ("bi-cart2", "Cart 2"),
+                                ("bi-cart3", "Cart 3"),
+                                ("bi-cart4", "Cart 4"),
+                                ("bi-cup", "Cup"),
+                                ("bi-cup-hot", "Cup Hot"),
+                                ("bi-cup-straw", "Cup Straw"),
+                                ("bi-egg-fried", "Egg Fried"),
+                                ("bi-apple", "Apple"),
+                            },
+                            ["Shopping"] = new[]
+                            {
+                                ("bi-bag", "Bag"),
+                                ("bi-bag-check", "Bag Check"),
+                                ("bi-bag-fill", "Bag Fill"),
+                                ("bi-handbag", "Handbag"),
+                                ("bi-gift", "Gift"),
+                                ("bi-gift-fill", "Gift Fill"),
+                                ("bi-box", "Box"),
+                                ("bi-box2", "Box 2"),
+                                ("bi-boxes", "Boxes"),
+                                ("bi-tags", "Tags"),
+                                ("bi-tag", "Tag"),
+                            },
+                            ["Health & Wellness"] = new[]
+                            {
+                                ("bi-heart", "Heart"),
+                                ("bi-heart-fill", "Heart Fill"),
+                                ("bi-heart-pulse", "Heart Pulse"),
+                                ("bi-hospital", "Hospital"),
+                                ("bi-capsule", "Capsule"),
+                                ("bi-bandaid", "Bandaid"),
+                                ("bi-activity", "Activity"),
+                                ("bi-clipboard2-pulse", "Clipboard Pulse"),
+                            },
+                            ["Entertainment"] = new[]
+                            {
+                                ("bi-tv", "TV"),
+                                ("bi-film", "Film"),
+                                ("bi-music-note", "Music Note"),
+                                ("bi-music-note-beamed", "Music Beamed"),
+                                ("bi-controller", "Controller"),
+                                ("bi-joystick", "Joystick"),
+                                ("bi-dice-5", "Dice"),
+                                ("bi-puzzle", "Puzzle"),
+                                ("bi-book", "Book"),
+                                ("bi-book-half", "Book Half"),
+                                ("bi-ticket", "Ticket"),
+                                ("bi-ticket-perforated", "Ticket Perf"),
+                            },
+                            ["Education"] = new[]
+                            {
+                                ("bi-mortarboard", "Mortarboard"),
+                                ("bi-journal", "Journal"),
+                                ("bi-journal-text", "Journal Text"),
+                                ("bi-pencil", "Pencil"),
+                                ("bi-pen", "Pen"),
+                                ("bi-rulers", "Rulers"),
+                                ("bi-backpack", "Backpack"),
+                            },
+                            ["Work & Business"] = new[]
+                            {
+                                ("bi-briefcase", "Briefcase"),
+                                ("bi-briefcase-fill", "Briefcase Fill"),
+                                ("bi-laptop", "Laptop"),
+                                ("bi-pc-display", "PC Display"),
+                                ("bi-phone", "Phone"),
+                                ("bi-telephone", "Telephone"),
+                                ("bi-printer", "Printer"),
+                                ("bi-paperclip", "Paperclip"),
+                                ("bi-folder", "Folder"),
+                                ("bi-folder2", "Folder 2"),
+                                ("bi-file-earmark", "File"),
+                                ("bi-file-earmark-text", "File Text"),
+                                ("bi-calendar", "Calendar"),
+                                ("bi-calendar-event", "Calendar Event"),
+                                ("bi-clock", "Clock"),
+                                ("bi-alarm", "Alarm"),
+                            },
+                            ["Personal"] = new[]
+                            {
+                                ("bi-person", "Person"),
+                                ("bi-person-fill", "Person Fill"),
+                                ("bi-people", "People"),
+                                ("bi-people-fill", "People Fill"),
+                                ("bi-scissors", "Scissors"),
+                                ("bi-brush", "Brush"),
+                            },
+                            ["Travel"] = new[]
+                            {
+                                ("bi-globe", "Globe"),
+                                ("bi-globe2", "Globe 2"),
+                                ("bi-luggage", "Luggage"),
+                                ("bi-suitcase", "Suitcase"),
+                                ("bi-signpost", "Signpost"),
+                                ("bi-binoculars", "Binoculars"),
+                                ("bi-camera", "Camera"),
+                                ("bi-sun", "Sun"),
+                                ("bi-umbrella", "Umbrella"),
+                            },
+                            ["Pets"] = new[]
+                            {
+                                ("bi-bug", "Bug"),
+                            },
+                            ["Transfers & Adjustments"] = new[]
+                            {
+                                ("bi-arrow-left-right", "Arrow Left Right"),
+                                ("bi-arrow-repeat", "Arrow Repeat"),
+                                ("bi-arrows-angle-contract", "Arrows Contract"),
+                                ("bi-arrows-angle-expand", "Arrows Expand"),
+                                ("bi-shuffle", "Shuffle"),
+                                ("bi-plus-slash-minus", "Plus Slash Minus"),
+                                ("bi-sliders", "Sliders"),
+                                ("bi-gear", "Gear"),
+                                ("bi-gear-fill", "Gear Fill"),
+                            },
+                            ["Status & Indicators"] = new[]
+                            {
+                                ("bi-check-circle", "Check Circle"),
+                                ("bi-check-circle-fill", "Check Circle Fill"),
+                                ("bi-x-circle", "X Circle"),
+                                ("bi-exclamation-circle", "Exclamation"),
+                                ("bi-exclamation-triangle", "Warning"),
+                                ("bi-info-circle", "Info"),
+                                ("bi-question-circle", "Question"),
+                                ("bi-star", "Star"),
+                                ("bi-star-fill", "Star Fill"),
+                                ("bi-flag", "Flag"),
+                                ("bi-flag-fill", "Flag Fill"),
+                                ("bi-bookmark", "Bookmark"),
+                                ("bi-bookmark-fill", "Bookmark Fill"),
+                                ("bi-pin", "Pin"),
+                                ("bi-pin-fill", "Pin Fill"),
+                            },
+                            ["Utilities"] = new[]
+                            {
+                                ("bi-lightning", "Lightning"),
+                                ("bi-lightning-charge", "Lightning Charge"),
+                                ("bi-wifi", "WiFi"),
+                                ("bi-router", "Router"),
+                                ("bi-sim", "SIM"),
+                                ("bi-battery-full", "Battery Full"),
+                                ("bi-battery-charging", "Battery Charging"),
+                            },
+                        };
+
+                        foreach (var category in iconCategories)
+                        {
+                            <div class="icon-category" data-category="@category.Key.ToLower()">
+                                <h6 class="icon-category-title">@category.Key</h6>
+                                <div class="icon-category-grid">
+                                    @foreach (var icon in category.Value)
+                                    {
+                                        <button type="button"
+                                                class="btn btn-outline-secondary icon-option"
+                                                data-icon="@icon.Icon"
+                                                data-label="@icon.Label.ToLower()"
+                                                onclick="selectIcon('@Model.FieldName', '@icon.Icon')"
+                                                title="@icon.Label">
+                                            <i class="@icon.Icon"></i>
+                                        </button>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .icon-picker-wrapper .icon-preview {
+        min-width: 42px;
+        justify-content: center;
+    }
+    .icon-picker-wrapper .icon-preview i {
+        font-size: 1.2rem;
+    }
+    .icon-picker-input {
+        cursor: pointer;
+    }
+    .icon-grid {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+    .icon-category {
+        margin-bottom: 1rem;
+    }
+    .icon-category-title {
+        font-weight: 600;
+        color: var(--bs-secondary);
+        border-bottom: 1px solid var(--bs-border-color);
+        padding-bottom: 0.25rem;
+        margin-bottom: 0.5rem;
+    }
+    .icon-category-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.25rem;
+    }
+    .icon-option {
+        width: 42px;
+        height: 42px;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+    }
+    .icon-option:hover {
+        background-color: var(--bs-primary);
+        color: white;
+        border-color: var(--bs-primary);
+    }
+    .icon-option.selected {
+        background-color: var(--bs-primary);
+        color: white;
+        border-color: var(--bs-primary);
+    }
+    .icon-category.hidden {
+        display: none;
+    }
+    .icon-option.hidden {
+        display: none;
+    }
+</style>
+
+<script>
+    function selectIcon(fieldName, iconClass) {
+        document.getElementById(fieldName).value = iconClass;
+        var preview = document.getElementById(fieldName + 'Preview');
+        preview.className = iconClass;
+
+        // Apply color from color picker if exists
+        applyIconColor(fieldName);
+
+        // Close the modal
+        var modal = bootstrap.Modal.getInstance(document.getElementById('iconPickerModal' + fieldName));
+        if (modal) {
+            modal.hide();
+        }
+
+        // Show clear button if needed
+        var wrapper = document.getElementById(fieldName).closest('.icon-picker-wrapper');
+        var clearBtn = wrapper.querySelector('.icon-clear-btn');
+        if (!clearBtn) {
+            var inputGroup = wrapper.querySelector('.input-group');
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'btn btn-outline-danger icon-clear-btn';
+            btn.onclick = function() { clearIcon(fieldName); };
+            btn.innerHTML = '<i class="bi-x-lg"></i>';
+            inputGroup.appendChild(btn);
+        }
+    }
+
+    function clearIcon(fieldName) {
+        document.getElementById(fieldName).value = '';
+        var preview = document.getElementById(fieldName + 'Preview');
+        preview.className = 'bi-question-circle';
+        preview.style.color = '';
+
+        // Remove clear button
+        var wrapper = document.getElementById(fieldName).closest('.icon-picker-wrapper');
+        var clearBtn = wrapper.querySelector('.icon-clear-btn');
+        if (clearBtn) {
+            clearBtn.remove();
+        }
+    }
+
+    function applyIconColor(fieldName) {
+        var preview = document.getElementById(fieldName + 'Preview');
+        // Find color input in the same form
+        var form = document.getElementById(fieldName).closest('form');
+        if (form) {
+            var colorInput = form.querySelector('input[type="color"]');
+            if (colorInput && colorInput.value) {
+                preview.style.color = colorInput.value;
+            }
+        }
+    }
+
+    function filterIcons(fieldName, searchTerm) {
+        var grid = document.getElementById('iconGrid' + fieldName);
+        var categories = grid.querySelectorAll('.icon-category');
+        var term = searchTerm.toLowerCase();
+
+        categories.forEach(function(category) {
+            var buttons = category.querySelectorAll('.icon-option');
+            var visibleCount = 0;
+
+            buttons.forEach(function(btn) {
+                var icon = btn.dataset.icon.toLowerCase();
+                var label = btn.dataset.label.toLowerCase();
+                var categoryName = category.dataset.category;
+
+                if (icon.includes(term) || label.includes(term) || categoryName.includes(term)) {
+                    btn.classList.remove('hidden');
+                    visibleCount++;
+                } else {
+                    btn.classList.add('hidden');
+                }
+            });
+
+            if (visibleCount === 0) {
+                category.classList.add('hidden');
+            } else {
+                category.classList.remove('hidden');
+            }
+        });
+    }
+
+    // Initialize color on page load and listen for color changes
+    document.addEventListener('DOMContentLoaded', function() {
+        // Find all icon picker wrappers
+        document.querySelectorAll('.icon-picker-wrapper').forEach(function(wrapper) {
+            var input = wrapper.querySelector('input[name]');
+            if (input) {
+                var fieldName = input.name;
+                // Apply initial color
+                applyIconColor(fieldName);
+
+                // Listen for color input changes
+                var form = wrapper.closest('form');
+                if (form) {
+                    var colorInput = form.querySelector('input[type="color"]');
+                    if (colorInput) {
+                        colorInput.addEventListener('input', function() {
+                            applyIconColor(fieldName);
+                        });
+                    }
+                }
+            }
+        });
+    });
+</script>

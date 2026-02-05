@@ -1,0 +1,20 @@
+@*
+    Divider Component
+    Usage:
+    <partial name="_Divider" model='new { Text = "OR", Orientation = "horizontal" }' />
+    Orientation: horizontal (default), vertical
+*@
+@{
+    var text = ViewData["Text"]?.ToString() ?? "";
+    var orientation = ViewData["Orientation"]?.ToString() ?? "horizontal";
+    var cssClass = ViewData["CssClass"]?.ToString() ?? "";
+}
+
+@if (orientation == "vertical")
+{
+    <div class="divider-vertical @cssClass"></div>
+}
+else
+{
+    <div class="divider @cssClass">@text</div>
+}

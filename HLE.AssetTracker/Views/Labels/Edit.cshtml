@@ -1,0 +1,100 @@
+@model EditLabelViewModel
+@{
+    ViewData["Title"] = "Edit Label";
+}
+
+<div class="container py-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-action="Index">Labels</a></li>
+            <li class="breadcrumb-item active">Edit</li>
+        </ol>
+    </nav>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">Edit Label</h4>
+                </div>
+                <div class="card-body">
+                    <form asp-action="Edit" method="post">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" asp-for="Id" />
+
+                        <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+                        <div class="mb-3">
+                            <label asp-for="Name" class="form-label">Label Name</label>
+                            <input asp-for="Name" class="form-control" />
+                            <span asp-validation-for="Name" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-4">
+                            <label asp-for="Color" class="form-label">Color (Optional)</label>
+                            <div class="input-group">
+                                <input asp-for="Color" class="form-control" type="color" style="max-width: 80px;" />
+                                <input asp-for="Color" class="form-control" type="text" placeholder="#6c757d" maxlength="7" />
+                            </div>
+                            <span asp-validation-for="Color" class="text-danger"></span>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">Save Changes</button>
+                            <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
+                            <form asp-action="Delete" asp-route-id="@Model.Id" method="post" class="ms-auto">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-outline-danger"
+                                        onclick="return confirm('@(Model.AssetCount > 0 ? $"This label is used by {Model.AssetCount} asset(s). Deleting it will remove the label from those assets. Continue?" : "Delete this label?")')">
+                                    Delete
+                                </button>
+                            </form>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">Label Info</h6>
+                </div>
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item">
+                        <small class="text-muted">Label ID</small>
+                        <div>#@Model.Id</div>
+                    </li>
+                    <li class="list-group-item">
+                        <small class="text-muted">Assets Using This Label</small>
+                        <div>@Model.AssetCount</div>
+                    </li>
+                    <li class="list-group-item">
+                        <small class="text-muted">Preview</small>
+                        <div>
+                            <span class="badge" style="background-color: @(Model.Color ?? "#6c757d"); font-size: 0.9rem;">
+                                @Model.Name
+                            </span>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const colorInputs = document.querySelectorAll('input[name="Color"]');
+        if (colorInputs.length === 2) {
+            colorInputs[0].addEventListener('input', function() {
+                colorInputs[1].value = this.value;
+            });
+            colorInputs[1].addEventListener('input', function() {
+                if (/^#[0-9A-Fa-f]{6}$/.test(this.value)) {
+                    colorInputs[0].value = this.value;
+                }
+            });
+        }
+    </script>
+}

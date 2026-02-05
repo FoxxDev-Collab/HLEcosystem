@@ -1,0 +1,1299 @@
+Top 10 .NET 10 Best Practices
+Embrace Asynchronous Programming: Utilize async/await for all I/O-bound operations (data access, network calls, long-running operations) to free up the processing thread and maximize application throughput.
+
+Optimize Data Access: Employ no-tracking queries in Entity Framework Core for read-only scenarios, retrieve only necessary data using filtering and aggregation, minimize network round trips to the database, and consider caching frequently accessed data.
+
+Implement Aggressive Caching: Cache data that is relatively stable to significantly improve performance and reduce load times. Use MemoryCache for in-memory caching or a DistributedCache for multi-server environments.
+
+Minimize Large Object Allocations: Be mindful of memory usage, especially in hot code paths, to reduce pressure on the garbage collector (GC). .NET 10's improved escape analysis helps with stack allocation, but conscious coding is still key.
+
+Use Dependency Injection (DI) Correctly: Leverage the built-in DI container for loose coupling, better testability, and maintainability. Avoid storing HttpContext in fields or accessing it from multiple threads or background tasks.
+
+Establish a Comprehensive Testing Strategy: Implement a testing matrix that includes unit, integration, performance, security, and load tests. Automated testing is crucial for catching regressions and ensuring application stability.
+
+Handle Exceptions Judiciously: Only catch exceptions that you can manage or act upon. Avoid catching generic System.Exception unless absolutely necessary, and allow others to progress up the call stack. Use a global unhandled exception handler for logging purposes.
+
+Ensure Efficient Error Logging and Monitoring: Utilize application-wide handlers for unhandled exceptions to ensure robust logging. This helps in identifying and diagnosing issues quickly, as detailed error messages and stack traces are critical.
+
+Manage Dependencies Proactively: Keep all NuGet packages and third-party libraries updated to versions that support .NET 10 to avoid compatibility issues and upgrade blockers.
+
+Optimize Front-End Performance: Improve UI responsiveness by loading JavaScript at the bottom of the page, compressing responses, and minifying client assets.
+
+What's new in .NET 10
+Learn about the new features in .NET 10 and find links to further documentation.
+
+.NET 10, the successor to .NET 9, is supported for three years as a long-term support (LTS) release. You can download .NET 10 here.
+
+Your feedback is important and appreciated. If you have questions or comments, use the discussion on GitHub.
+
+.NET runtime
+The .NET 10 runtime introduces improvements in JIT inlining, method devirtualization, and stack allocations. It also includes AVX10.2 support, NativeAOT enhancements, improved code generation for struct arguments, and enhanced loop inversion for better optimization.
+
+For more information, see What's new in the .NET 10 runtime.
+
+.NET libraries
+The .NET 10 libraries introduce new APIs in cryptography, globalization, numerics, serialization, collections, and diagnostics, and when working with ZIP files. New JSON serialization options include disallowing duplicate properties, strict serialization settings, and PipeReader support for improved efficiency. Post-quantum cryptography support has been expanded with Windows Cryptography API: Next Generation (CNG) support, enhanced ML-DSA with simplified APIs and HashML-DSA support, plus Composite ML-DSA. Additional cryptography enhancements include AES KeyWrap with Padding support. New networking capabilities include WebSocketStream for simplified WebSocket usage and TLS 1.3 support for macOS clients. Process management gains Windows process group support for better signal isolation.
+
+For more information, see What's new in the .NET 10 libraries.
+
+.NET SDK
+The .NET 10 SDK includes support for Microsoft.Testing.Platform in dotnet test, standardizes CLI command order, and updates the CLI to generate native tab-completion scripts for popular shells. For containers, console apps can natively create container images, and a new property lets you explicitly set the format of container images. The SDK also supports platform-specific .NET tools with enhanced compatibility via the any RuntimeIdentifier, one-shot tool execution with dotnet tool exec, the new dnx tool execution script, CLI introspection with --cli-schema, and enhanced file-based apps with publish support and native AOT.
+
+For more information, see What's new in the SDK for .NET 10.
+
+Aspire
+For information about what's new in Aspire, see Aspire — what's new?.
+
+ASP.NET Core
+The ASP.NET Core 10.0 release introduces several new features and enhancements, including Blazor improvements, OpenAPI enhancements, and minimal API updates. Features include Blazor WebAssembly preloading, automatic memory pool eviction, enhanced form validation, improved diagnostics, and passkey support for Identity.
+
+For details, see What's new in ASP.NET Core for .NET 10.
+
+C# 14
+C# 14 introduces several new features and enhancements to improve developer productivity and code quality. Key updates include:
+
+Field-backed properties provide a smoother path from auto-implemented properties to writing custom get and set accessors. You can access the compiler-generated backing field using the field contextual keyword.
+The nameof expression now supports unbound generic types, such as List<>, where it returns the name of the type without requiring a type argument.
+First-class support for implicit conversions of Span<T> and ReadOnlySpan<T>.
+Parameter modifiers like ref, in, or out are allowed in lambda expressions without specifying parameter types.
+Support for partial instance constructors and partial events, complementing partial methods and properties introduced in C# 13.
+New extension blocks add support for static extension methods, and static and instance extension properties.
+Null-conditional assignment using the ?. operator.
+User-defined compound assignment operators like += and -=.
+User-defined increment (++) and decrement (--) operators.
+
+What's new in the .NET 10 runtime
+This article describes new features and performance improvements in the .NET runtime for .NET 10.
+
+JIT compiler improvements
+The JIT compiler in .NET 10 includes significant enhancements that improve performance through better code generation and optimization strategies.
+
+Improved code generation for struct arguments
+.NET's JIT compiler is capable of an optimization called physical promotion, where the members of a struct are placed in registers rather than on the stack, eliminating memory accesses. This optimization is particularly useful when passing a struct to a method, and the calling convention requires the struct members to be passed in registers.
+
+.NET 10 improves the JIT compiler's internal representation to handle values that share a register. Previously, when struct members needed to be packed into a single register, the JIT would store values to memory first and then load them into a register. Now, the JIT compiler can place the promoted members of struct arguments into shared registers directly, eliminating unnecessary memory operations.
+
+Consider the following example:
+
+C#
+struct Point
+{
+    public long X;
+    public long Y;
+
+    public Point(long x, long y)
+    {
+        X = x;
+        Y = y;
+    }
+}
+
+[MethodImpl(MethodImplOptions.NoInlining)]
+private static void Consume(Point p)
+{
+    Console.WriteLine(p.X + p.Y);
+}
+
+private static void Main()
+{
+    Point p = new Point(10, 20);
+    Consume(p);
+}
+On x64, the members of Point are passed to Consume in separate registers, and since physical promotion kicked in for the local p, nothing is allocated on the stack first:
+
+asm
+Program:Main() (FullOpts):
+       mov      edi, 10
+       mov      esi, 20
+       tail.jmp [Program:Consume(Program+Point)]
+Now, suppose the type of the members of Point was changed to int instead of long. Because an int is four bytes wide, and registers are eight bytes wide on x64, the calling convention requires the members of Point to be passed in one register. Previously, the JIT compiler would first store the values to memory, and then load the eight-byte chunk into a register. With the .NET 10 improvements, the JIT compiler can now place the promoted members of struct arguments into shared registers directly:
+
+asm
+Program:Main() (FullOpts):
+       mov      rdi, 0x140000000A
+       tail.jmp [Program:Consume(Program+Point)]
+This eliminates the need for intermediate memory storage, resulting in more efficient assembly code.
+
+Improved loop inversion
+The JIT compiler can hoist the condition of a while loop and transform the loop body into a do-while loop, producing the final shape:
+
+C#
+if (loopCondition)
+{
+    do
+    {
+        // loop body
+    } while (loopCondition);
+}
+This transformation is called loop inversion. By moving the condition to the bottom of the loop, the JIT removes the need to branch to the top of the loop to test the condition, improving code layout. Numerous optimizations (like loop cloning, loop unrolling, and induction variable optimizations) also depend on loop inversion to produce this shape to aid analysis.
+
+.NET 10 enhances loop inversion by switching from a lexical analysis implementation to a graph-based loop recognition implementation. This change brings improved precision by considering all natural loops (loops with a single entry point) and ignoring false positives that were previously considered. This translates into higher optimization potential for .NET programs with for and while statements.
+
+Array interface method devirtualization
+One of the focus areas for .NET 10 is to reduce the abstraction overhead of popular language features. In pursuit of this goal, the JIT's ability to devirtualize method calls has expanded to cover array interface methods.
+
+Consider the typical approach of looping over an array:
+
+C#
+static int Sum(int[] array)
+{
+    int sum = 0;
+    for (int i = 0; i < array.Length; i++)
+    {
+        sum += array[i];
+    }
+    return sum;
+}
+This code shape is easy for the JIT to optimize, mainly because there aren't any virtual calls to reason about. Instead, the JIT can focus on removing bounds checks on the array access and applying the loop optimizations that were added in .NET 9. The following example adds some virtual calls:
+
+C#
+static int Sum(int[] array)
+{
+    int sum = 0;
+    IEnumerable<int> temp = array;
+
+    foreach (var num in temp)
+    {
+        sum += num;
+    }
+    return sum;
+}
+The type of the underlying collection is clear, and the JIT should be able to transform this snippet into the first one. However, array interfaces are implemented differently from "normal" interfaces, such that the JIT doesn't know how to devirtualize them. This means the enumerator calls in the foreach loop remain virtual, blocking multiple optimizations such as inlining and stack allocation.
+
+Starting in .NET 10, the JIT can devirtualize and inline array interface methods. This is the first of many steps to achieve performance parity between the implementations, as detailed in the .NET 10 de-abstraction plans.
+
+Array enumeration de-abstraction
+Efforts to reduce the abstraction overhead of array iteration via enumerators have improved the JIT's inlining, stack allocation, and loop cloning abilities. For example, the overhead of enumerating arrays via IEnumerable is reduced, and conditional escape analysis now enables stack allocation of enumerators in certain scenarios.
+
+Improved code layout
+The JIT compiler in .NET 10 introduces a new approach to organizing method code into basic blocks for better runtime performance. Previously, the JIT used a reverse postorder (RPO) traversal of the program's flowgraph as an initial layout, followed by iterative transformations. While effective, this approach had limitations in modeling the trade-offs between reducing branching and increasing hot code density.
+
+In .NET 10, the JIT models the block reordering problem as a reduction of the asymmetric Travelling Salesman Problem and implements the 3-opt heuristic to find a near-optimal traversal. This optimization improves hot path density and reduces branch distances, resulting in better runtime performance.
+
+Inlining improvements
+Various inlining improvements have been made in .NET 10.
+
+The JIT can now inline methods that become eligible for devirtualization due to previous inlining. This improvement allows the JIT to uncover more optimization opportunities, such as further inlining and devirtualization.
+
+Some methods that have exception-handling semantics, in particular those with try-finally blocks, can also be inlined.
+
+To better take advantage of the JIT's ability to stack-allocate some arrays, the inliner's heuristics have been adjusted to increase the profitability of candidates that might be returning small, fixed-sized arrays.
+
+Return types
+During inlining, the JIT now updates the type of temporary variables that hold return values. If all return sites in a callee yield the same type, this precise type information is used to devirtualize subsequent calls. This enhancement complements the improvements in late devirtualization and array enumeration de-abstraction.
+
+Profile data
+.NET 10 enhances the JIT's inlining policy to take better advantage of profile data. Among numerous heuristics, the JIT's inliner doesn't consider methods over a certain size to avoid bloating the caller method. When the caller has profile data that suggests an inlining candidate is frequently executed, the inliner increases its size tolerance for the candidate.
+
+Suppose the JIT inlines some callee Callee without profile data into some caller Caller with profile data. This discrepancy can occur if the callee is too small to be worth instrumenting, or if it's inlined too often to have a sufficient call count. If Callee has its own inlining candidates, the JIT previously didn't consider them with its default size limit due to Callee lacking profile data. Now, the JIT will realize Caller has profile data and loosen its size restriction (but, to account for loss of precision, not to the same degree as if Callee had profile data).
+
+Similarly, when the JIT decides a call site isn't profitable for inlining, it marks the method with NoInlining to save future inlining attempts from considering it. However, many inlining heuristics are sensitive to profile data. For example, the JIT might decide a method is too large to be worth inlining in the absence of profile data. But when the caller is sufficiently hot, the JIT might be willing to relax its size restriction and inline the call. In .NET 10, the JIT no longer flags unprofitable inlinees with NoInlining to avoid pessimizing call sites with profile data.
+
+AVX10.2 support
+.NET 10 introduces support for the Advanced Vector Extensions (AVX) 10.2 for x64-based processors. The new intrinsics available in the System.Runtime.Intrinsics.X86.Avx10v2 class can be tested once capable hardware is available.
+
+Because AVX10.2-enabled hardware isn't yet available, the JIT's support for AVX10.2 is currently disabled by default.
+
+Stack allocation
+Stack allocation reduces the number of objects the GC has to track, and it also unlocks other optimizations. For example, after an object is stack-allocated, the JIT can consider replacing it entirely with its scalar values. Because of this, stack allocation is key to reducing the abstraction penalty of reference types. .NET 10 adds stack allocation for small arrays of value types and small arrays of reference types. It also includes escape analysis for local struct fields and delegates. (Objects that can't escape can be allocated on the stack.)
+
+Small arrays of value types
+The JIT now stack-allocates small, fixed-sized arrays of value types that don't contain GC pointers when they can be guaranteed not to outlive their parent method. In the following example, the JIT knows at compile time that numbers is an array of only three integers that doesn't outlive a call to Sum, and therefore allocates it on the stack.
+
+C#
+static void Sum()
+{
+    int[] numbers = {1, 2, 3};
+    int sum = 0;
+
+    for (int i = 0; i < numbers.Length; i++)
+    {
+        sum += numbers[i];
+    }
+
+    Console.WriteLine(sum);
+}
+Small arrays of reference types
+.NET 10 extends the .NET 9 stack allocation improvements to small arrays of reference types. Previously, arrays of reference types were always allocated on the heap, even when their lifetime was scoped to a single method. Now, the JIT can stack-allocate such arrays when it determines that they don't outlive their creation context. In the following example, the array words is now allocated on the stack.
+
+C#
+static void Print()
+{
+    string[] words = {"Hello", "World!"};
+    foreach (var str in words)
+    {
+        Console.WriteLine(str);
+    }
+}
+Escape analysis
+Escape analysis determines if an object can outlive its parent method. Objects "escape" when assigned to non-local variables or passed to functions not inlined by the JIT. If an object can't escape, it can be allocated on the stack. .NET 10 includes escape analysis for:
+
+Local struct fields
+Delegates
+Local struct fields
+Starting in .NET 10, the JIT considers objects referenced by struct fields, which enables more stack allocations and reduces heap overhead. Consider the following example:
+
+C#
+public class Program
+{
+    struct GCStruct
+    {
+        public int[] arr;
+    }
+
+    public static int Main()
+    {
+        int[] x = new int[10];
+        GCStruct y = new GCStruct() { arr = x };
+        return y.arr[0];
+    }
+}
+Normally, the JIT stack-allocates small, fixed-sized arrays that don't escape, such as x. Its assignment to y.arr doesn't cause x to escape, because y doesn't escape either. However, the JIT's previous escape analysis implementation didn't model struct field references. In .NET 9, the x64 assembly generated for Main includes a call to CORINFO_HELP_NEWARR_1_VC to allocate x on the heap, indicating it was marked as escaping:
+
+asm
+Program:Main():int (FullOpts):
+       push     rax
+       mov      rdi, 0x719E28028A98      ; int[]
+       mov      esi, 10
+       call     CORINFO_HELP_NEWARR_1_VC
+       mov      eax, dword ptr [rax+0x10]
+       add      rsp, 8
+       ret
+In .NET 10, the JIT no longer marks objects referenced by local struct fields as escaping, as long as the struct in question does not escape. The assembly now looks like this (notice that the heap allocation helper call is gone):
+
+asm
+Program:Main():int (FullOpts):
+       sub      rsp, 56
+       vxorps   xmm8, xmm8, xmm8
+       vmovdqu  ymmword ptr [rsp], ymm8
+       vmovdqa  xmmword ptr [rsp+0x20], xmm8
+       xor      eax, eax
+       mov      qword ptr [rsp+0x30], rax
+       mov      rax, 0x7F9FC16F8CC8      ; int[]
+       mov      qword ptr [rsp], rax
+       lea      rax, [rsp]
+       mov      dword ptr [rax+0x08], 10
+       lea      rax, [rsp]
+       mov      eax, dword ptr [rax+0x10]
+       add      rsp, 56
+       ret
+For more information about de-abstraction improvements in .NET 10, see dotnet/runtime#108913.
+
+Delegates
+When source code is compiled to IL, each delegate is transformed into a closure class with a method corresponding to the delegate's definition and fields matching any captured variables. At runtime, a closure object is created to instantiate the captured variables, along with a Func object to invoke the delegate. If escape analysis determines the Func object won't outlive its current scope, the JIT allocates it on the stack.
+
+Consider the following Main method:
+
+C#
+ public static int Main()
+{
+    int local = 1;
+    int[] arr = new int[100];
+    var func = (int x) => x + local;
+    int sum = 0;
+
+    foreach (int num in arr)
+    {
+        sum += func(num);
+    }
+
+    return sum;
+}
+Previously, the JIT produces the following abbreviated x64 assembly for Main. Before entering the loop, arr, func, and the closure class for func called Program+<>c__DisplayClass0_0 are all allocated on the heap, as indicated by the CORINFO_HELP_NEW* calls.
+
+asm
+       ; prolog omitted for brevity
+       mov      rdi, 0x7DD0AE362E28      ; Program+<>c__DisplayClass0_0
+       call     CORINFO_HELP_NEWSFAST
+       mov      rbx, rax
+       mov      dword ptr [rbx+0x08], 1
+       mov      rdi, 0x7DD0AE268A98      ; int[]
+       mov      esi, 100
+       call     CORINFO_HELP_NEWARR_1_VC
+       mov      r15, rax
+       mov      rdi, 0x7DD0AE4A9C58      ; System.Func`2[int,int]
+       call     CORINFO_HELP_NEWSFAST
+       mov      r14, rax
+       lea      rdi, bword ptr [r14+0x08]
+       mov      rsi, rbx
+       call     CORINFO_HELP_ASSIGN_REF
+       mov      rsi, 0x7DD0AE461140      ; code for Program+<>c__DisplayClass0_0:<Main>b__0(int):int:this
+       mov      qword ptr [r14+0x18], rsi
+       xor      ebx, ebx
+       add      r15, 16
+       mov      r13d, 100
+G_M24375_IG03:  ;; offset=0x0075
+       mov      esi, dword ptr [r15]
+       mov      rdi, gword ptr [r14+0x08]
+       call     [r14+0x18]System.Func`2[int,int]:Invoke(int):int:this
+       add      ebx, eax
+       add      r15, 4
+       dec      r13d
+       jne      SHORT G_M24375_IG03
+       ; epilog omitted for brevity
+Now, because func is never referenced outside the scope of Main, it's also allocated on the stack:
+
+asm
+       ; prolog omitted for brevity
+       mov      rdi, 0x7B52F7837958      ; Program+<>c__DisplayClass0_0
+       call     CORINFO_HELP_NEWSFAST
+       mov      rbx, rax
+       mov      dword ptr [rbx+0x08], 1
+       mov      rsi, 0x7B52F7718CC8      ; int[]
+       mov      qword ptr [rbp-0x1C0], rsi
+       lea      rsi, [rbp-0x1C0]
+       mov      dword ptr [rsi+0x08], 100
+       lea      r15, [rbp-0x1C0]
+       xor      r14d, r14d
+       add      r15, 16
+       mov      r13d, 100
+G_M24375_IG03:  ;; offset=0x0099
+       mov      esi, dword ptr [r15]
+       mov      rdi, rbx
+       mov      rax, 0x7B52F7901638      ; address of definition for "func"
+       call     rax
+       add      r14d, eax
+       add      r15, 4
+       dec      r13d
+       jne      SHORT G_M24375_IG03
+       ; epilog omitted for brevity
+Notice there is one remaining CORINFO_HELP_NEW* call, which is the heap allocation for the closure. The runtime team plans to expand escape analysis to support stack allocation of closures in a future release.
+
+NativeAOT type preinitializer improvements
+NativeAOT's type preinitializer now supports all variants of the conv.* and neg opcodes. This enhancement allows preinitialization of methods that include casting or negation operations, further optimizing runtime performance.
+
+Arm64 write-barrier improvements
+.NET's garbage collector (GC) is generational, meaning it separates live objects by age to improve collection performance. The GC collects younger generations more often under the assumption that long-lived objects are less likely to be unreferenced (or "dead") at any given time. However, suppose an old object starts referencing a young object; the GC needs to know it can't collect the young object. However, needing to scan older objects to collect a young object defeats the performance gains of a generational GC.
+
+To solve this problem, the JIT inserts write barriers before object reference updates to keep the GC informed. On x64, the runtime can dynamically switch between write-barrier implementations to balance write speeds and collection efficiency, depending on the GC's configuration. In .NET 10, this functionality is also available on Arm64. In particular, the new default write-barrier implementation on Arm64 handles GC regions more precisely, which improves collection performance at a slight cost to write-barrier throughput. Benchmarks show GC pause improvements from 8% to over 20% with the new GC defaults.
+
+What's new in .NET libraries for .NET 10
+This article describes new features in the .NET libraries for .NET 10.
+
+Cryptography
+Find certificates by thumbprints other than SHA-1
+Find PEM-encoded data in ASCII/UTF-8
+Encryption algorithm for PKCS#12/PFX export
+Post-quantum cryptography (PQC)
+Find certificates by thumbprints other than SHA-1
+Finding certificates uniquely by thumbprint is a fairly common operation, but the X509Certificate2Collection.Find(X509FindType, Object, Boolean) method (for the FindByThumbprint mode) only searches for the SHA-1 thumbprint value.
+
+There's some risk to using the Find method for finding SHA-2-256 ("SHA256") and SHA-3-256 thumbprints since these hash algorithms have the same lengths.
+
+Instead, .NET 10 introduces a new method that accepts the name of the hash algorithm to use for matching.
+
+C#
+
+Copy
+X509Certificate2Collection coll = store.Certificates.FindByThumbprint(HashAlgorithmName.SHA256, thumbprint);
+Debug.Assert(coll.Count < 2, "Collection has too many matches, has SHA-2 been broken?");
+return coll.SingleOrDefault();
+Find PEM-encoded data in ASCII/UTF-8
+The PEM encoding (originally Privacy Enhanced Mail, but now used widely outside of email) is defined for "text", which means that the PemEncoding class was designed to run on String and ReadOnlySpan<char>. However, it's common (especially on Linux) to have something like a certificate written in a file that uses the ASCII (string) encoding. Historically, that meant you needed to open the file and convert the bytes to chars (or a string) before you could use PemEncoding.
+
+The new PemEncoding.FindUtf8(ReadOnlySpan<Byte>) method takes advantage of the fact that PEM is only defined for 7-bit ASCII characters, and that 7-bit ASCII has a perfect overlap with single-byte UTF-8 values. By calling this new method, you can skip the UTF-8/ASCII-to-char conversion and read the file directly.
+
+diff
+
+Copy
+byte[] fileContents = File.ReadAllBytes(path);
+-char[] text = Encoding.ASCII.GetString(fileContents);
+-PemFields pemFields = PemEncoding.Find(text);
++PemFields pemFields = PemEncoding.FindUtf8(fileContents);
+
+-byte[] contents = Base64.DecodeFromChars(text.AsSpan()[pemFields.Base64Data]);
++byte[] contents = Base64.DecodeFromUtf8(fileContents.AsSpan()[pemFields.Base64Data]);
+Encryption algorithm for PKCS#12/PFX export
+The new ExportPkcs12 methods on X509Certificate allow callers to choose what encryption and digest algorithms are used to produce the output:
+
+Pkcs12ExportPbeParameters.Pkcs12TripleDesSha1 indicates the Windows XP-era de facto standard. It produces an output supported by almost every library and platform that supports reading PKCS#12/PFX by choosing an older encryption algorithm.
+Pkcs12ExportPbeParameters.Pbes2Aes256Sha256 indicates that AES should be used instead of 3DES (and SHA-2-256 instead of SHA-1), but the output might not be understood by all readers (such as Windows XP).
+If you want even more control, you can use the overload that accepts a PbeParameters.
+
+Post-quantum cryptography (PQC)
+.NET 10 includes support for three new asymmetric algorithms: ML-KEM (FIPS 203), ML-DSA (FIPS 204), and SLH-DSA (FIPS 205). The new types are:
+
+System.Security.Cryptography.MLKem
+System.Security.Cryptography.MLDsa
+System.Security.Cryptography.SlhDsa
+Because it adds little benefit, these new types don't derive from AsymmetricAlgorithm. Rather than the AsymmetricAlgorithm approach of creating an object and then importing a key into it, or generating a fresh key, the new types all use static methods to generate or import a key:
+
+C#
+
+Copy
+using System;
+using System.IO;
+using System.Security.Cryptography;
+
+private static bool ValidateMLDsaSignature(ReadOnlySpan<byte> data, ReadOnlySpan<byte> signature, string publicKeyPath)
+{
+    string publicKeyPem = File.ReadAllText(publicKeyPath);
+
+    using (MLDsa key = MLDsa.ImportFromPem(publicKeyPem))
+    {
+        return key.VerifyData(data, signature);
+    }
+}
+And rather than setting object properties and having a key materialize, key generation on these new types takes in all of the options it needs.
+
+C#
+
+Copy
+using (MLKem key = MLKem.GenerateKey(MLKemAlgorithm.MLKem768))
+{
+    string publicKeyPem = key.ExportSubjectPublicKeyInfoPem();
+    ...
+}
+These algorithms all continue with the pattern of having a static IsSupported property to indicate if the algorithm is supported on the current system.
+
+.NET 10 includes Windows Cryptography API: Next Generation (CNG) support for Post-Quantum Cryptography (PQC), which makes these algorithms available on Windows systems with PQC support. For example:
+
+C#
+
+Copy
+using System;
+using System.IO;
+using System.Security.Cryptography;
+
+private static bool ValidateMLDsaSignature(ReadOnlySpan<byte> data, ReadOnlySpan<byte> signature, string publicKeyPath)
+{
+    string publicKeyPem = File.ReadAllText(publicKeyPath);
+
+    using MLDsa key = MLDsa.ImportFromPem(publicKeyPem);
+    return key.VerifyData(data, signature);
+}
+The PQC algorithms are available on systems where the system cryptographic libraries are OpenSSL 3.5 (or newer) or Windows CNG with PQC support. The MLKem type isn't marked as [Experimental], but some of its methods are (and will be until the underlying standards are finalized). The MLDsa, SlhDsa, and CompositeMLDsa classes are marked as [Experimental] under diagnostic SYSLIB5006 until development is complete.
+
+ML-DSA
+The MLDsa class includes ease-of-use features that simplify common code patterns:
+
+diff
+
+Copy
+private static byte[] SignData(string privateKeyPath, ReadOnlySpan<byte> data)
+{
+    using (MLDsa signingKey = MLDsa.ImportFromPem(File.ReadAllBytes(privateKeyPath)))
+    {
+-       byte[] signature = new byte[signingKey.Algorithm.SignatureSizeInBytes];
+-       signingKey.SignData(data, signature);
++       return signingKey.SignData(data);
+-       return signature;
+    }
+}
+Additionally, .NET 10 adds support for HashML-DSA, which is called "PreHash" to help distinguish it from "pure" ML-DSA. As the underlying specification interacts with the Object Identifier (OID) value, the SignPreHash and VerifyPreHash methods on this [Experimental] type take the dotted-decimal OID as a string. This might evolve as more scenarios using HashML-DSA become well-defined.
+
+C#
+
+Copy
+private static byte[] SignPreHashSha3_256(MLDsa signingKey, ReadOnlySpan<byte> data)
+{
+    const string Sha3_256Oid = "2.16.840.1.101.3.4.2.8";
+    return signingKey.SignPreHash(SHA3_256.HashData(data), Sha3_256Oid);
+}
+Starting in RC 1, ML-DSA also supports signatures created and verified from an "external" mu value, which provides additional flexibility for advanced cryptographic scenarios:
+
+C#
+
+Copy
+private static byte[] SignWithExternalMu(MLDsa signingKey, ReadOnlySpan<byte> externalMu)
+{
+    return signingKey.SignMu(externalMu);
+}
+
+private static bool VerifyWithExternalMu(MLDsa verifyingKey, ReadOnlySpan<byte> externalMu, ReadOnlySpan<byte> signature)
+{
+    return verifyingKey.VerifyMu(externalMu, signature);
+}
+Composite ML-DSA
+.NET 10 introduces new types to support ietf-lamps-pq-composite-sigs (at draft 8 as of .NET 10 GA), including the CompositeMLDsa and CompositeMLDsaAlgorithm types, with implementation of the primitive methods for RSA variants.
+
+C#
+
+Copy
+var algorithm = CompositeMLDsaAlgorithm.MLDsa65WithRSA4096Pss;
+using var privateKey = CompositeMLDsa.GenerateKey(algorithm);
+
+byte[] data = [42];
+byte[] signature = privateKey.SignData(data);
+
+using var publicKey = CompositeMLDsa.ImportCompositeMLDsaPublicKey(algorithm, privateKey.ExportCompositeMLDsaPublicKey());
+Console.WriteLine(publicKey.VerifyData(data, signature)); // True
+
+signature[0] ^= 1; // Tamper with signature
+Console.WriteLine(publicKey.VerifyData(data, signature)); // False
+AES KeyWrap with Padding (IETF RFC 5649)
+AES-KWP is an algorithm that's occasionally used in constructions like Cryptographic Message Syntax (CMS) EnvelopedData, where content is encrypted once, but the decryption key needs to be distributed to multiple parties, each one in a distinct secret form.
+
+.NET now supports the AES-KWP algorithm via instance methods on the Aes class:
+
+C#
+
+Copy
+private static byte[] DecryptContent(ReadOnlySpan<byte> kek, ReadOnlySpan<byte> encryptedKey, ReadOnlySpan<byte> ciphertext)
+{
+    using (Aes aes = Aes.Create())
+    {
+        aes.SetKey(kek);
+
+        Span<byte> dek = stackalloc byte[256 / 8];
+        int length = aes.DecryptKeyWrapPadded(encryptedKey, dek);
+
+        aes.SetKey(dek.Slice(0, length));
+        return aes.DecryptCbc(ciphertext);
+    }
+}
+Globalization and date/time
+New method overloads in ISOWeek for DateOnly type
+Numeric ordering for string comparison
+New TimeSpan.FromMilliseconds overload with single parameter
+New method overloads in ISOWeek for DateOnly type
+The ISOWeek class was originally designed to work exclusively with DateTime, as it was introduced before the DateOnly type existed. Now that DateOnly is available, it makes sense for ISOWeek to support it as well. The following overloads are new:
+
+GetWeekOfYear(DateOnly)
+GetYear(DateOnly)
+ToDateOnly(Int32, Int32, DayOfWeek)
+Numeric ordering for string comparison
+Numerical string comparison is a highly requested feature for comparing strings numerically instead of lexicographically. For example, 2 is less than 10, so "2" should appear before "10" when ordered numerically. Similarly, "2" and "02" are equal numerically. With the new NumericOrdering option, it's now possible to do these types of comparisons:
+
+C#
+
+Copy
+StringComparer numericStringComparer = StringComparer.Create(CultureInfo.CurrentCulture, CompareOptions.NumericOrdering);
+
+Console.WriteLine(numericStringComparer.Equals("02", "2"));
+// Output: True
+
+foreach (string os in new[] { "Windows 8", "Windows 10", "Windows 11" }.Order(numericStringComparer))
+{
+    Console.WriteLine(os);
+}
+
+// Output:
+// Windows 8
+// Windows 10
+// Windows 11
+
+HashSet<string> set = new HashSet<string>(numericStringComparer) { "007" };
+Console.WriteLine(set.Contains("7"));
+// Output: True
+This option isn't valid for the following index-based string operations: IndexOf, LastIndexOf, StartsWith, EndsWith, IsPrefix, and IsSuffix.
+
+New TimeSpan.FromMilliseconds overload with single parameter
+The TimeSpan.FromMilliseconds(Int64, Int64) method was introduced previously without adding an overload that takes a single parameter.
+
+Although this works since the second parameter is optional, it causes a compilation error when used in a LINQ expression like:
+
+C#
+
+Copy
+Expression<Action> a = () => TimeSpan.FromMilliseconds(1000);
+The issue arises because LINQ expressions can't handle optional parameters. To address this, .NET 10 introduces a new overload takes a single parameter. It also modifies the existing method to make the second parameter mandatory.
+
+Strings
+String normalization APIs to work with span of characters
+UTF-8 support for hex-string conversion
+String normalization APIs to work with span of characters
+Unicode string normalization has been supported for a long time, but existing APIs only worked with the string type. This means that callers with data stored in different forms, such as character arrays or spans, must allocate a new string to use these APIs. Additionally, APIs that return a normalized string always allocate a new string to represent the normalized output.
+
+.NET 10 introduces new APIs that work with spans of characters, which expand normalization beyond string types and help to avoid unnecessary allocations:
+
+StringNormalizationExtensions.GetNormalizedLength(ReadOnlySpan<Char>, NormalizationForm)
+StringNormalizationExtensions.IsNormalized(ReadOnlySpan<Char>, NormalizationForm)
+StringNormalizationExtensions.TryNormalize(ReadOnlySpan<Char>, Span<Char>, Int32, NormalizationForm)
+UTF-8 support for hex-string conversion
+.NET 10 adds UTF-8 support for hex-string conversion operations in the Convert class. These new methods provide efficient ways to convert between UTF-8 byte sequences and hexadecimal representations without requiring intermediate string allocations:
+
+Convert.FromHexString(ReadOnlySpan<Byte>)
+Convert.FromHexString(ReadOnlySpan<Byte>, Span<Byte>, Int32, Int32)
+Convert.TryToHexString(ReadOnlySpan<Byte>, Span<Byte>, Int32)
+Convert.TryToHexStringLower(ReadOnlySpan<Byte>, Span<Byte>, Int32)
+These methods mirror the existing overloads that work with string and ReadOnlySpan<char>, but operate directly on UTF-8 encoded bytes for improved performance in scenarios where you're already working with UTF-8 data.
+
+Collections
+Additional TryAdd and TryGetValue overloads for OrderedDictionary<TKey, TValue>
+Additional TryAdd and TryGetValue overloads for OrderedDictionary<TKey, TValue>
+OrderedDictionary<TKey,TValue> provides TryAdd and TryGetValue for addition and retrieval like any other IDictionary<TKey, TValue> implementation. However, there are scenarios where you might want to perform more operations, so new overloads are added that return an index to the entry:
+
+TryAdd(TKey, TValue, Int32)
+TryGetValue(TKey, TValue, Int32)
+This index can then be used with GetAt and SetAt for fast access to the entry. An example usage of the new TryAdd overload is to add or update a key-value pair in the ordered dictionary:
+
+C#
+
+Copy
+// Try to add a new key with value 1.
+if (!orderedDictionary.TryAdd(key, 1, out int index))
+{
+    // Key was present, so increment the existing value instead.
+    int value = orderedDictionary.GetAt(index).Value;
+    orderedDictionary.SetAt(index, value + 1);
+}
+This new API is already used in JsonObject and improves the performance of updating properties by 10-20%.
+
+Serialization
+Allow specifying ReferenceHandler in JsonSourceGenerationOptions
+Option to disallow duplicate JSON properties
+Strict JSON serialization options
+PipeReader support for JSON serializer
+Allow specifying ReferenceHandler in JsonSourceGenerationOptions
+When you use source generators for JSON serialization, the generated context throws when cycles are serialized or deserialized. Now you can customize this behavior by specifying the ReferenceHandler in the JsonSourceGenerationOptionsAttribute. Here's an example using JsonKnownReferenceHandler.Preserve:
+
+C#
+
+Copy
+public static void MakeSelfRef()
+{
+    SelfReference selfRef = new SelfReference();
+    selfRef.Me = selfRef;
+
+    Console.WriteLine(JsonSerializer.Serialize(selfRef, ContextWithPreserveReference.Default.SelfReference));
+    // Output: {"$id":"1","Me":{"$ref":"1"}}
+}
+
+[JsonSourceGenerationOptions(ReferenceHandler = JsonKnownReferenceHandler.Preserve)]
+[JsonSerializable(typeof(SelfReference))]
+internal partial class ContextWithPreserveReference : JsonSerializerContext
+{
+}
+
+internal class SelfReference
+{
+    public SelfReference Me { get; set; } = null!;
+}
+Option to disallow duplicate JSON properties
+The JSON specification doesn't specify how to handle duplicate properties when deserializing a JSON payload. This can lead to unexpected results and security vulnerabilities. .NET 10 introduces the JsonSerializerOptions.AllowDuplicateProperties option to disallow duplicate JSON properties:
+
+C#
+
+Copy
+string json = """{ "Value": 1, "Value": -1 }""";
+Console.WriteLine(JsonSerializer.Deserialize<MyRecord>(json).Value); // -1
+
+JsonSerializerOptions options = new() { AllowDuplicateProperties = false };
+JsonSerializer.Deserialize<MyRecord>(json, options);                // throws JsonException
+JsonSerializer.Deserialize<JsonObject>(json, options);              // throws JsonException
+JsonSerializer.Deserialize<Dictionary<string, int>>(json, options); // throws JsonException
+
+JsonDocumentOptions docOptions = new() { AllowDuplicateProperties = false };
+JsonDocument.Parse(json, docOptions);   // throws JsonException
+
+record MyRecord(int Value);
+Duplicates are detected by checking if a value is assigned multiple times during deserialization, so it works as expected with other options like case-sensitivity and naming policy.
+
+Strict JSON serialization options
+The JSON serializer accepts many options to customize serialization and deserialization, but the defaults might be too relaxed for some applications. .NET 10 adds a new JsonSerializerOptions.Strict preset that follows best practices by including the following options:
+
+Applies the JsonUnmappedMemberHandling.Disallow policy.
+Disables JsonSerializerOptions.AllowDuplicateProperties.
+Preserves case sensitive property binding.
+Enables both JsonSerializerOptions.RespectNullableAnnotations and JsonSerializerOptions.RespectRequiredConstructorParameters settings.
+These options are read-compatible with JsonSerializerOptions.Default - an object serialized with JsonSerializerOptions.Default can be deserialized with JsonSerializerOptions.Strict.
+
+For more information about JSON serialization, see System.Text.Json overview.
+
+PipeReader support for JSON serializer
+JsonSerializer.Deserialize now supports PipeReader, complementing the existing PipeWriter support. Previously, deserializing from a PipeReader required converting it to a Stream, but the new overloads eliminate that step by integrating PipeReader directly into the serializer. As a bonus, not having to convert from what you're already holding can yield some efficiency benefits.
+
+This shows the basic usage:
+
+C#
+
+Copy
+using System;
+using System.IO.Pipelines;
+using System.Text.Json;
+using System.Threading.Tasks;
+
+var pipe = new Pipe();
+
+// Serialize to writer
+await JsonSerializer.SerializeAsync(pipe.Writer, new Person("Alice"));
+await pipe.Writer.CompleteAsync();
+
+// Deserialize from reader
+var result = await JsonSerializer.DeserializeAsync<Person>(pipe.Reader);
+await pipe.Reader.CompleteAsync();
+
+Console.WriteLine($"Your name is {result.Name}.");
+// Output: Your name is Alice.
+
+record Person(string Name);
+Here is an example of a producer that produces tokens in chunks and a consumer that receives and displays them:
+
+C#
+
+Copy
+using System;
+using System.Collections.Generic;
+using System.IO.Pipelines;
+using System.Text.Json;
+using System.Threading.Tasks;
+
+var pipe = new Pipe();
+
+// Producer writes to the pipe in chunks.
+var producerTask = Task.Run(async () =>
+{
+    async static IAsyncEnumerable<Chunk> GenerateResponse()
+    {
+        yield return new Chunk("The quick brown fox", DateTime.Now);
+        await Task.Delay(500);
+        yield return new Chunk(" jumps over", DateTime.Now);
+        await Task.Delay(500);
+        yield return new Chunk(" the lazy dog.", DateTime.Now);
+    }
+
+    await JsonSerializer.SerializeAsync<IAsyncEnumerable<Chunk>>(pipe.Writer, GenerateResponse());
+    await pipe.Writer.CompleteAsync();
+});
+
+// Consumer reads from the pipe and outputs to console.
+var consumerTask = Task.Run(async () =>
+{
+    var thinkingString = "...";
+    var clearThinkingString = new string("\b\b\b");
+    var lastTimestamp = DateTime.MinValue;
+
+    // Read response to end.
+    Console.Write(thinkingString);
+    await foreach (var chunk in JsonSerializer.DeserializeAsyncEnumerable<Chunk>(pipe.Reader))
+    {
+        Console.Write(clearThinkingString);
+        Console.Write(chunk.Message);
+        Console.Write(thinkingString);
+        lastTimestamp = DateTime.Now;
+    }
+
+    Console.Write(clearThinkingString);
+    Console.WriteLine($" Last message sent at {lastTimestamp}.");
+
+    await pipe.Reader.CompleteAsync();
+});
+
+await producerTask;
+await consumerTask;
+
+record Chunk(string Message, DateTime Timestamp);
+All of this is serialized as JSON in the Pipe (formatted here for readability):
+
+JSON
+
+Copy
+[
+    {
+        "Message": "The quick brown fox",
+        "Timestamp": "2025-08-01T18:37:27.2930151-07:00"
+    },
+    {
+        "Message": " jumps over",
+        "Timestamp": "2025-08-01T18:37:27.8594502-07:00"
+    },
+    {
+        "Message": " the lazy dog.",
+        "Timestamp": "2025-08-01T18:37:28.3753669-07:00"
+    }
+]
+System.Numerics
+More left-handed matrix transformation methods
+Tensor enhancements
+More left-handed matrix transformation methods
+.NET 10 adds the remaining APIs for creating left-handed transformation matrices for billboard and constrained-billboard matrices. You can use these methods like their existing right-handed counterparts, for example, CreateBillboard(Vector3, Vector3, Vector3, Vector3), when using a left-handed coordinate system instead:
+
+Matrix4x4.CreateBillboardLeftHanded(Vector3, Vector3, Vector3, Vector3)
+Matrix4x4.CreateConstrainedBillboardLeftHanded(Vector3, Vector3, Vector3, Vector3, Vector3)
+Tensor enhancements
+The System.Numerics.Tensors namespace now includes a nongeneric interface, IReadOnlyTensor, for operations like accessing Lengths and Strides. Slice operations no longer copy data, which improves performance. Additionally, you can access data nongenerically by boxing to object when performance isn't critical.
+
+The tensor APIs are now stable and no longer marked as experimental. While the APIs still require referencing the System.Numerics.Tensors NuGet package, they have been thoroughly reviewed and finalized for the .NET 10 release. The types take advantage of C# 14 extension operators to provide arithmetic operations when the underlying type T supports the operation. If T implements the relevant generic math interfaces, for example, IAdditionOperators<TSelf, TOther, TResult> or INumber<TSelf>, the operation is supported. For example, tensor + tensor is available for a Tensor<int>, but isn't available for a Tensor<bool>.
+
+Options validation
+New AOT-safe constructor for ValidationContext
+New AOT-safe constructor for ValidationContext
+The ValidationContext class, used during options validation, includes a new constructor overload that explicitly accepts the displayName parameter:
+
+ValidationContext(Object, String, IServiceProvider, IDictionary<Object,Object>)
+
+The display name ensures AOT safety and enables its use in native builds without warnings.
+
+Diagnostics
+Support for telemetry schema URLs in ActivitySource and Meter
+Out-of-proc trace support for Activity events and links
+Rate-limit trace-sampling support
+Support for telemetry schema URLs in ActivitySource and Meter
+ActivitySource and Meter now support specifying a telemetry schema URL during construction, which aligns with OpenTelemetry specifications. The telemetry schema ensures consistency and compatibility for tracing and metrics data. Additionally, .NET 10 introduces ActivitySourceOptions, which simplifies the creation of ActivitySource instances with multiple configuration options (including the telemetry schema URL).
+
+The new APIs are:
+
+ActivitySource(ActivitySourceOptions)
+ActivitySource.TelemetrySchemaUrl
+Meter.TelemetrySchemaUrl
+ActivitySourceOptions
+Out-of-proc trace support for Activity events and links
+The Activity class enables distributed tracing by tracking the flow of operations across services or components. .NET supports serializing this tracing data out-of-process via the Microsoft-Diagnostics-DiagnosticSource event source provider. An Activity can include additional metadata such as ActivityLink and ActivityEvent. .NET 10 adds support for serializing these links and events, so out-of-proc trace data now includes that information. For example:
+
+txt
+
+Copy
+Events->"[(TestEvent1,2025-03-27T23:34:10.6225721+00:00,[E11:EV1,E12:EV2]),(TestEvent2,2025-03-27T23:34:11.6276895+00:00,[E21:EV21,E22:EV22])]"
+Links->"[(19b6e8ea216cb2ba36dd5d957e126d9f,98f7abcb3418f217,Recorded,null,false,[alk1:alv1,alk2:alv2]),(2d409549aadfdbdf5d1892584a5f2ab2,4f3526086a350f50,None,null,false)]"
+Rate-limit trace-sampling support
+When distributed tracing data is serialized out-of-process via the Microsoft-Diagnostics-DiagnosticSource event source provider, all recorded activities can be emitted, or sampling can be applied based on a trace ratio.
+
+A new sampling option called Rate Limiting Sampling restricts the number of root activities serialized per second. This helps control data volume more precisely.
+
+Out-of-proc trace data aggregators can enable and configure this sampling by specifying the option in FilterAndPayloadSpecs. For example, the following setting limits serialization to 100 root activities per second across all ActivitySource instances:
+
+txt
+
+Copy
+[AS]*/-ParentRateLimitingSampler(100)
+ZIP files
+ZipArchive performance and memory improvements
+New async ZIP APIs
+Performance improvement in GZipStream for concatenated streams
+ZipArchive performance and memory improvements
+.NET 10 improves the performance and memory usage of ZipArchive.
+
+First, the way entries are written to a ZipArchive when in Update mode has been optimized. Previously, all ZipArchiveEntry instances were loaded into memory and rewritten, which could lead to high memory usage and performance bottlenecks. The optimization reduces memory usage and improves performance by avoiding the need to load all entries into memory.
+
+Second, the extraction of ZipArchive entries is now parallelized, and internal data structures are optimized for better memory usage. These improvements address issues related to performance bottlenecks and high memory usage, making ZipArchive more efficient and faster, especially when dealing with large archives.
+
+New async ZIP APIs
+.NET 10 introduces new asynchronous APIs that make it easier to perform non-blocking operations when reading from or writing to ZIP files. This feature was highly requested by the community.
+
+New async methods are available for extracting, creating, and updating ZIP archives. These methods enable developers to efficiently handle large files and improve application responsiveness, especially in scenarios involving I/O-bound operations. These methods include:
+
+ZipArchive.CreateAsync(Stream, ZipArchiveMode, Boolean, Encoding, CancellationToken)
+ZipArchiveEntry.OpenAsync(CancellationToken)
+ZipFile.CreateFromDirectoryAsync
+ZipFile.ExtractToDirectoryAsync
+ZipFile.OpenAsync
+ZipFile.OpenReadAsync(String, CancellationToken)
+ZipFileExtensions.CreateEntryFromFileAsync
+ZipFileExtensions.ExtractToDirectoryAsync
+ZipFileExtensions.ExtractToFileAsync
+For examples of using these APIs, see the Preview 4 blog post.
+
+Performance improvement in GZipStream for concatenated streams
+A community contribution improved the performance of GZipStream when processing concatenated GZip data streams. Previously, each new stream segment disposed and reallocated the internal ZLibStreamHandle, which resulted in additional memory allocations and initialization overhead. With this change, the handle is now reset and reused to reduce both managed and unmanaged memory allocations and improve execution time. The largest impact (~35% faster) is seen when processing a large number of small data streams. This change:
+
+Eliminates repeated allocation of ~64-80 bytes of memory per concatenated stream, with additional unmanaged memory savings.
+Reduces execution time by approximately 400 ns per concatenated stream.
+Windows process management
+Launch Windows processes in new process group
+For Windows, you can now use ProcessStartInfo.CreateNewProcessGroup to launch a process in a separate process group. This allows you to send isolated signals to child processes that could otherwise take down the parent without proper handling. Sending signals is convenient to avoid forceful termination.
+
+C#
+
+Copy
+using System;
+using System.Diagnostics;
+using System.IO;
+using System.Runtime.InteropServices;
+using System.Threading;
+
+class Program
+{
+    static void Main(string[] args)
+    {
+        bool isChildProcess = args.Length > 0 && args[0] == "child";
+        if (!isChildProcess)
+        {
+            var psi = new ProcessStartInfo
+            {
+                FileName = Environment.ProcessPath,
+                Arguments = "child",
+                CreateNewProcessGroup = true,
+            };
+
+            using Process process = Process.Start(psi)!;
+            Thread.Sleep(5_000);
+
+            GenerateConsoleCtrlEvent(CTRL_C_EVENT, (uint)process.Id);
+            process.WaitForExit();
+
+            Console.WriteLine("Child process terminated gracefully, continue with the parent process logic if needed.");
+        }
+        else
+        {
+            // If you need to send a CTRL+C, the child process needs to re-enable CTRL+C handling, if you own the code, you can call SetConsoleCtrlHandler(NULL, FALSE).
+            // see https://learn.microsoft.com/windows/win32/api/processthreadsapi/nf-processthreadsapi-createprocessw#remarks
+            SetConsoleCtrlHandler((IntPtr)null, false);
+
+            Console.WriteLine("Greetings from the child process!  I need to be gracefully terminated, send me a signal!");
+
+            bool stop = false;
+
+            var registration = PosixSignalRegistration.Create(PosixSignal.SIGINT, ctx =>
+            {
+                stop = true;
+                ctx.Cancel = true;
+                Console.WriteLine("Received CTRL+C, stopping...");
+            });
+
+            StreamWriter sw = File.AppendText("log.txt");
+            int i = 0;
+            while (!stop)
+            {
+                Thread.Sleep(1000);
+                sw.WriteLine($"{++i}");
+                Console.WriteLine($"Logging {i}...");
+            }
+
+            // Clean up
+            sw.Dispose();
+            registration.Dispose();
+
+            Console.WriteLine("Thanks for not killing me!");
+        }
+    }
+
+    private const int CTRL_C_EVENT = 0;
+    private const int CTRL_BREAK_EVENT = 1;
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool SetConsoleCtrlHandler(IntPtr handler, [MarshalAs(UnmanagedType.Bool)] bool Add);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GenerateConsoleCtrlEvent(uint dwCtrlEvent, uint dwProcessGroupId);
+}
+WebSocket enhancements
+WebSocketStream
+.NET 10 introduces WebSocketStream, a new API designed to simplify some of the most common—and previously cumbersome—WebSocket scenarios in .NET.
+
+Traditional WebSocket APIs are low-level and require significant boilerplate: handling buffering and framing, reconstructing messages, managing encoding/decoding, and writing custom wrappers to integrate with streams, channels, or other transport abstractions. These complexities make it difficult to use WebSockets as a transport, especially for apps with streaming or text-based protocols, or event-driven handlers.
+
+WebSocketStream addresses these pain points by providing a Stream-based abstraction over a WebSocket. This enables seamless integration with existing APIs for reading, writing, and parsing data, whether binary or text, and reduces the need for manual plumbing.
+
+WebSocketStream enables high-level, familiar APIs for common WebSocket consumption and production patterns. These APIs reduce friction and make advanced scenarios easier to implement.
+
+Common usage patterns
+Here are a few examples of how WebSocketStream simplifies typical WebSocket workflows:
+
+Streaming text protocol (for example, STOMP)
+C#
+
+Copy
+using System.IO;
+using System.Net.WebSockets;
+using System.Threading;
+using System.Threading.Tasks;
+
+// Streaming text protocol (for example, STOMP).
+using Stream transportStream = WebSocketStream.Create(
+    connectedWebSocket, 
+    WebSocketMessageType.Text,
+    ownsWebSocket: true);
+// Integration with Stream-based APIs.
+// Don't close the stream, as it's also used for writing.
+using var transportReader = new StreamReader(transportStream, leaveOpen: true); 
+var line = await transportReader.ReadLineAsync(cancellationToken); // Automatic UTF-8 and new line handling.
+transportStream.Dispose(); // Automatic closing handshake handling on `Dispose`.
+Streaming binary protocol (for example, AMQP)
+C#
+
+Copy
+using System;
+using System.IO;
+using System.Net.WebSockets;
+using System.Threading;
+using System.Threading.Tasks;
+
+// Streaming binary protocol (for example, AMQP).
+Stream transportStream = WebSocketStream.Create(
+    connectedWebSocket,
+    WebSocketMessageType.Binary,
+    closeTimeout: TimeSpan.FromSeconds(10));
+await message.SerializeToStreamAsync(transportStream, cancellationToken);
+var receivePayload = new byte[payloadLength];
+await transportStream.ReadExactlyAsync(receivePayload, cancellationToken);
+transportStream.Dispose();
+// `Dispose` automatically handles closing handshake.
+Read a single message as a stream (for example, JSON deserialization)
+C#
+
+Copy
+using System.IO;
+using System.Net.WebSockets;
+using System.Text.Json;
+
+// Reading a single message as a stream (for example, JSON deserialization).
+using Stream messageStream = WebSocketStream.CreateReadableMessageStream(connectedWebSocket, WebSocketMessageType.Text);
+// JsonSerializer.DeserializeAsync reads until the end of stream.
+var appMessage = await JsonSerializer.DeserializeAsync<AppMessage>(messageStream);
+Write a single message as a stream (for example, binary serialization)
+C#
+
+Copy
+using System;
+using System.IO;
+using System.Net.WebSockets;
+using System.Threading;
+using System.Threading.Tasks;
+
+// Writing a single message as a stream (for example, binary serialization).
+public async Task SendMessageAsync(AppMessage message, CancellationToken cancellationToken)
+{
+    using Stream messageStream = WebSocketStream.CreateWritableMessageStream(_connectedWebSocket, WebSocketMessageType.Binary);
+    foreach (ReadOnlyMemory<byte> chunk in message.SplitToChunks())
+    {
+        await messageStream.WriteAsync(chunk, cancellationToken);
+    }
+} // EOM sent on messageStream.Dispose().
+TLS enhancements
+TLS 1.3 for macOS (client)
+.NET 10 adds client-side TLS 1.3 support on macOS by integrating Apple's Network.framework into SslStream and HttpClient. Historically, macOS used Secure Transport which doesn't support TLS 1.3; opting into Network.framework enables TLS 1.3.
+
+Scope and behavior
+macOS only, client-side in this release.
+Opt-in. Existing apps continue to use the current stack unless enabled.
+When enabled, older TLS versions (TLS 1.0 and 1.1) might no longer be available via Network.framework.
+How to enable
+Use an AppContext switch in code:
+
+C#
+
+Copy
+// Opt in to Network.framework-backed TLS on Apple platforms.
+AppContext.SetSwitch("System.Net.Security.UseNetworkFramework", true);
+
+using var client = new HttpClient();
+var html = await client.GetStringAsync("https://example.com");
+Or use an environment variable:
+
+Bash
+
+Copy
+# Opt-in via environment variable (set for the process or machine as appropriate)
+DOTNET_SYSTEM_NET_SECURITY_USENETWORKFRAMEWORK=1
+# or
+DOTNET_SYSTEM_NET_SECURITY_USENETWORKFRAMEWORK=true
+Notes
+TLS 1.3 applies to SslStream and APIs built on it (for example, HttpClient/HttpMessageHandler).
+Cipher suites are controlled by macOS via Network.framework.
+Underlying stream behavior might differ when Network.framework is enabled (for example, buffering, read/write completion, cancellation semantics).
+Semantics might differ for zero-byte reads. Avoid relying on zero-length reads for detecting data availability.
+Certain internationalized domain names (IDN) hostnames might be rejected by Network.framework. Prefer ASCII/Punycode (A-label) hostnames or validate names against macOS/Network.framework constraints.
+If your app relies on specific SslStream edge-case behavior, validate it under Network.framework.
+
+
+What's new in the SDK and tooling for .NET 10
+This article describes new features and enhancements in the .NET SDK for .NET 10.
+
+.NET tools enhancements
+Platform-specific .NET tools
+.NET tools can now be published with support for multiple RuntimeIdentifiers (RIDs) in a single package. Tool authors can bundle binaries for all supported platforms, and the .NET CLI will select the correct one at install or runtime. This makes cross-platform tool authoring and distribution much easier.
+
+These enhanced tools support various packaging variations:
+
+Framework-dependent, platform-agnostic (classic mode, runs anywhere with .NET 10 installed)
+Framework-dependent, platform-specific (smaller, optimized for each platform)
+Self-contained, platform-specific (includes the runtime, no .NET installation required)
+Trimmed, platform-specific (smaller, trims unused code)
+AOT-compiled, platform-specific (maximum performance and smallest deployment)
+These new tools work much like normal published applications, so any publishing options you can use with applications (for example, self-contained, trimmed, or AOT) can apply to tools as well.
+
+One-shot tool execution
+You can now use the dotnet tool exec command to execute a .NET tool without installing it globally or locally. This is especially valuable for CI/CD or ephemeral usage.
+
+Bash
+dotnet tool exec --source ./artifacts/package/ dotnetsay  "Hello, World!"
+Tool package dotnetsay@1.0.0 will be downloaded from source <source>.
+Proceed? [y/n] (y): y
+  _   _          _   _                __        __                 _       _   _
+ | | | |   ___  | | | |   ___         \ \      / /   ___    _ __  | |   __| | | |
+ | |_| |  / _ \ | | | |  / _ \         \ \ /\ / /   / _ \  | '__| | |  / _` | | |
+ |  _  | |  __/ | | | | | (_) |  _      \ V  V /   | (_) | | |    | | | (_| | |_|
+ |_| |_|  \___| |_| |_|  \___/  ( )      \_/\_/     \___/  |_|    |_|  \__,_| (_)
+                                |/
+This downloads and runs the specified tool package in one command. By default, users are prompted to confirm the download if the tool doesn't already exist locally. The latest version of the chosen tool package is used unless an explicit version is specified (for example, dotnetsay@0.1.0).
+
+One-shot tool execution works seamlessly with local tool manifests. If you run a tool from a location containing a .config/dotnet-tools.json nearby, the version of the tool in that configuration will be used instead of the latest version available.
+
+The new dnx tool execution script
+The dnx script provides a streamlined way to execute tools. It forwards all arguments to the dotnet CLI for processing, making tool usage as simple as possible:
+
+Bash
+dnx dotnetsay "Hello, World!"
+The actual implementation of the dnx command is in the dotnet CLI itself, allowing its behavior to evolve over time.
+
+For more information about managing .NET tools, see Manage .NET tools.
+
+Use the any RuntimeIdentifier with platform-specific .NET tools
+The platform-specific .NET tools feature is great for making sure tools are optimized for specific platforms that you target ahead-of-time. However, there are times where you won't know all of the platforms that you'd like to target, or sometimes .NET itself will learn how to support a new platform, and you'd like your tool to be runnable there too.
+
+To make your tool work this way, add the any runtime identifier to your project file:
+
+XML
+<PropertyGroup>
+  <RuntimeIdentifiers>
+       linux-x64;
+       linux-arm64;
+       macos-arm64;
+       win-x64;
+       win-arm64;
+       any
+  </RuntimeIdentifiers>
+</PropertyGroup>
+This RuntimeIdentifier is at the 'root' of the platform-compatibility checking, and since it declares support for any platform, the tool that gets packaged will be the most compatible kind of tool - a framework-dependent, platform-agnostic .NET DLL, which requires a compatible .NET Runtime to execute. When you perform a dotnet pack to create your tool, you'll see a new package for the any RuntimeIdentifier appear alongside the other platform-specific packages and the top-level manifest package.
+
+CLI introspection with --cli-schema
+A new --cli-schema option is available on all CLI commands. When used, it outputs a JSON representation of the CLI command tree for the invoked command or subcommand. This is useful for tool authors, shell integration, and advanced scripting.
+
+Bash
+dotnet clean --cli-schema
+The output provides a structured, machine-readable description of the command's arguments, options, and subcommands:
+
+JSON
+{
+  "name": "clean",
+  "version": "10.0.100-dev",
+  "description": ".NET Clean Command",
+  "arguments": {
+    "PROJECT | SOLUTION": {
+      "description": "The project or solution file to operate on. If a file is not specified, the command will search the current directory for one.",
+      "arity": { "minimum": 0, "maximum": null }
+    }
+  },
+  "options": {
+    "--artifacts-path": {
+      "description": "The artifacts path. All output from the project, including build, publish, and pack output, will go in subfolders under the specified path.",
+      "helpName": "ARTIFACTS_DIR"
+    }
+  },
+  "subcommands": {}
+}
+Use .NET MSBuild tasks with .NET Framework MSBuild
+MSBuild is the underlying build system for .NET, driving both build of projects (as seen in commands like dotnet build and dotnet pack), and acting as a general provider of information about projects (as seen in commands like dotnet list package, and implicitly used by commands like dotnet run to discover how a project wants to be executed).
+
+When running dotnet CLI commands, the version of MSBuild that is used is the one that is shipped with the .NET SDK. However, when using Visual Studio or invoking MSBuild directly, the version of MSBuild that is used is the one that is installed with Visual Studio. This environment difference has a few important consequences. The most important is that MSBuild running in Visual Studio (or through msbuild.exe) is a .NET Framework application, while MSBuild running in the dotnet CLI is a .NET application. This means that any MSBuild tasks that are written to run on .NET can't be used when building in Visual Studio or when using msbuild.exe.
+
+Starting with .NET 10, msbuild.exe and Visual Studio 2026 can run MSBuild tasks that are built for .NET. This means that you can now use the same MSBuild tasks when building in Visual Studio or using msbuild.exe as you do when building with the dotnet CLI. For most .NET users, this won't change anything. But for authors of custom MSBuild tasks, this means that you can now write your tasks to target .NET and have them work everywhere. The goal with this change is to make it easier to write and share MSBuild tasks, and to allow task authors to take advantage of the latest features in .NET. In addition, this change reduces the difficulties around multi-targeting tasks to support both .NET Framework and .NET, and dealing with versions of .NET Framework dependencies that are implicitly available in the MSBuild .NET Framework execution space.
+
+Configure .NET tasks
+For task authors, it's easy to opt into this new behavior. Just change your UsingTask declaration to tell MSBuild about your task.
+
+XML
+<UsingTask TaskName="MyTask"
+    AssemblyFile="path\to\MyTask.dll"
+    Runtime="NET"
+    TaskFactory="TaskHostFactory"
+/>
+The Runtime="NET" and TaskFactory="TaskHostFactory" attributes tell the MSBuild engine how to run the Task:
+
+Runtime="NET" tells MSBuild that the Task is built for .NET (as opposed to .NET Framework).
+TaskFactory="TaskHostFactory" tells MSBuild to use the TaskHostFactory to run the Task, which is an existing capability of MSBuild that allows tasks to be run out-of-process.
+Caveats and performance tuning
+The preceding example is the simplest way to get started using .NET tasks in MSBuild, but it has some limitations. Because the TaskHostFactory always runs tasks out-of-process, the new .NET task always runs in a separate process from MSBuild. This means that there is some minor overhead to running the task because the MSBuild engine and the task communicate over inter-process communication (IPC) instead of in-process communication. For most tasks, this overhead is negligible, but for tasks that are run many times in a build, or that do a lot of logging, this overhead might be more significant.
+
+With just a bit more work, you can configure the task to still run in-process when running via dotnet:
+
+XML
+<UsingTask TaskName="MyTask"
+    AssemblyFile="path\to\MyTask.dll"
+    Runtime="NET"
+    TaskFactory="TaskHostFactory"
+    Condition="$(MSBuildRuntimeType) == 'Full'"
+/>
+<UsingTask TaskName="MyTask"
+    AssemblyFile="path\to\MyTask.dll"
+    Runtime="NET"
+    Condition="$(MSBuildRuntimeType) == 'Core'"
+/>
+Thanks to the Condition feature of MSBuild, you can load a Task differently depending on whether MSBuild is running in .NET Framework (Visual Studio or msbuild.exe) or .NET (the dotnet CLI). In this example, the Task runs out-of-process when running in Visual Studio or msbuild.exe, but runs in-process when running in the dotnet CLI. This gives the best performance when running in the dotnet CLI, while still allowing the Task to be used in Visual Studio and msbuild.exe.
+
+There are also small technical limitations to be aware of when using .NET Tasks in MSBuild—the most notable of which is that the Host Object feature of MSBuild Tasks isn't yet supported for .NET Tasks running out-of-process. This means that if your Task relies on a Host Object, it won't work when running in Visual Studio or msbuild.exe. Additional support for Host Objects is planned in future releases.
+
+File-based apps enhancements
+.NET 10 brings significant updates to the file-based apps experience, including publish support and native AOT capabilities. For an introduction to file-based apps, see File-based apps and Building and running C# programs.
+
+Enhanced file-based apps with publish support and native AOT
+File-based apps now support being published to native executables via the dotnet publish app.cs command, making it easier to create simple apps that you can redistribute as native executables. All file-based apps now target native AOT by default. If you need to use packages or features that are incompatible with native AOT, you can disable this using the #:property PublishAot=false directive in your .cs file.
+
+File-based apps also include enhanced features:
+
+Project referencing: Support for referencing projects via the #:project directive.
+Runtime path access: App file and directory paths are available at runtime via System.AppContext.GetData.
+Enhanced shebang support: Direct shell execution with improved shebang handling, including support for extensionless files.
+Project referencing example
+C#
+#:project ../ClassLib/ClassLib.csproj
+
+var greeter = new ClassLib.Greeter();
+var greeting = greeter.Greet(args.Length > 0 ? args[0] : "World");
+Console.WriteLine(greeting);
+Enhanced shebang support example
+You can now create executable C# files that run directly from the shell:
+
+C#
+#!/usr/bin/env dotnet
+
+Console.WriteLine("Hello shebang!");
+For extensionless files:
+
+Bash
+# 1. Create a single-file C# app with a shebang
+cat << 'EOF' > hello.cs
+#!/usr/bin/env dotnet
+Console.WriteLine("Hello!");
+EOF
+
+# 2. Copy it (extensionless) into ~/utils/hello (~/utils is on my PATH)
+mkdir -p ~/utils
+cp hello.cs ~/utils/hello
+
+# 3. Mark it executable
+chmod +x ~/utils/hello
+
+# 4. Run it directly from anywhere
+cd ~
+hello
+These enhancements make file-based apps more powerful while maintaining their simplicity for quick scripting and prototyping scenarios.
+
+For more information about native AOT, see .NET native AOT.
+
+Pruning of framework-provided package references
+Starting in .NET 10, the NuGet Audit feature can prune framework-provided package references that aren't used by the project. This feature is enabled by default for all frameworks of a project that targets >= .NET 10.0 in the latest SDK. This change helps reduce the number of packages that are restored and analyzed during the build process, which can lead to faster build times and reduced disk space usage. It also can lead to a reduction in false positives from NuGet Audit and other dependency-scanning mechanisms.
+
+When this feature is enabled, you might see a reduction in the contents of your applications' generated .deps.json files. Any package references supplied by the .NET runtime are automatically removed from the generated dependency file. When a direct package reference is within the pruning range, PrivateAssets="all" and IncludeAssets="none" are applied.
+
+While this feature is enabled by default for the listed TFMs, you can disable it by setting the RestoreEnablePackagePruning property to false in your project file or Directory.Build.props file.
+
+More consistent command order
+Starting in .NET 10, the dotnet CLI tool includes new aliases for common commands to make them easier to remember and type. The new commands are shown in the following table.
+
+New noun-first form	Alias for
+dotnet package add	dotnet add package
+dotnet package list	dotnet list package
+dotnet package remove	dotnet remove package
+dotnet reference add	dotnet add reference
+dotnet reference list	dotnet list reference
+dotnet reference remove	dotnet remove reference
+The new noun-first forms align with general CLI standards, making the dotnet CLI more consistent with other tools. While the verb-first forms continue to work, it's better to use the noun-first forms for improved readability and consistency in scripts and documentation.
+
+CLI commands default to interactive mode in interactive terminals
+The --interactive flag is now enabled by default for CLI commands in interactive terminals. This change allows commands to dynamically retrieve credentials or perform other interactive behaviors without requiring the flag to be explicitly set. For noninteractive scenarios, you can disable interactivity by specifying --interactive false.
+
+Native shell tab-completion scripts
+The dotnet CLI now supports generating native tab-completion scripts for popular shells using the dotnet completions script [SHELL] command. Supported shells include bash, fish, nushell, powershell, and zsh. These scripts improve usability by providing faster and more integrated tab-completion features. For example, in PowerShell, you can enable completions by adding the following to your $PROFILE:
+
+PowerShell
+dotnet completions script pwsh | Out-String | Invoke-Expression
+Console apps can natively create container images
+Console apps can now create container images via dotnet publish /t:PublishContainer without requiring the <EnableSdkContainerSupport> property in the project file. This aligns console apps with the behavior of ASP.NET Core and Worker SDK apps.
+
+Explicitly control the image format of containers
+A new <ContainerImageFormat> property allows you to explicitly set the format of container images to either Docker or OCI. This property overrides the default behavior, which depends on the base image format and whether the container is multi-architecture.
+
+Support for Microsoft Testing Platform in dotnet test
+Starting in .NET 10, dotnet test natively supports Microsoft.Testing.Platform. To enable this feature, add the following configuration to your global.json file:
+
+JSON
+{
+    "test": {
+        "runner": "Microsoft.Testing.Platform"
+    }
+}
+For more details, see Testing with dotnet test.

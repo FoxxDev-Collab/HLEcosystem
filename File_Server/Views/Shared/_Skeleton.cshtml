@@ -1,0 +1,35 @@
+@*
+    Skeleton Loader Component
+    Usage:
+    <partial name="_Skeleton" model='new { Type = "text", Width = "100%", Height = "1rem", Shimmer = "True" }' />
+    Types: text, text-sm, text-lg, heading, heading-lg, avatar, avatar-sm, avatar-lg, button, card, input, badge
+*@
+@{
+    var type = ViewData["Type"]?.ToString() ?? "text";
+    var width = ViewData["Width"]?.ToString() ?? "";
+    var height = ViewData["Height"]?.ToString() ?? "";
+    var shimmer = ViewData["Shimmer"]?.ToString()?.ToLower() == "true";
+    var cssClass = ViewData["CssClass"]?.ToString() ?? "";
+
+    var skeletonClass = $"skeleton skeleton-{type}";
+    if (shimmer)
+    {
+        skeletonClass += " skeleton-shimmer";
+    }
+    if (!string.IsNullOrEmpty(cssClass))
+    {
+        skeletonClass += $" {cssClass}";
+    }
+
+    var style = "";
+    if (!string.IsNullOrEmpty(width))
+    {
+        style += $"width: {width}; ";
+    }
+    if (!string.IsNullOrEmpty(height))
+    {
+        style += $"height: {height}; ";
+    }
+}
+
+<div class="@skeletonClass" @(string.IsNullOrEmpty(style) ? "" : $"style=\"{style}\"")></div>

@@ -1,0 +1,561 @@
+================================================================================
+HLEcosystem - Homelab Ecosystem Applications
+================================================================================
+Author: FoxxDev
+Created: January 2026
+Updated: February 2026
+Runtime: .NET 10 (LTS)
+Database: PostgreSQL 17.7
+Target: Linux (Rocky Linux / Ubuntu) via Docker Compose
+
+================================================================================
+OVERVIEW
+================================================================================
+
+This repository contains the planning and documentation for the HLEcosystem,
+a collection of ASP.NET Core MVC applications designed for personal/family
+homelab use. Each application is a standalone project with a unified UI/UX
+achieved through a shared template approach (copy-paste of base components).
+
+All applications will be deployed together via Docker Compose on a Linux host,
+sharing a single PostgreSQL instance and Authentik for authentication.
+
+Design Philosophy:
+- Simple, standalone applications
+- Unified look and feel across all apps
+- Deployed together via Docker Compose
+- Authentication via Authentik (OIDC)
+- Self-hosted, privacy-focused
+- Inter-app communication where it makes sense
+
+================================================================================
+DIRECTORY STRUCTURE
+================================================================================
+
+HLEcosystem/
+├── plan.txt                    # This file - project scope and documentation
+├── CLAUDE.md                   # Code patterns and best practices
+├── tracker.md                  # Living progress log
+├── docker-compose.yml          # Orchestrates all apps + PostgreSQL (planned)
+├── MVC_Template_DB_Start/      # Golden copy of the base MVC template
+│
+├── HLE.Dashboard/              # Central landing page / app launcher
+├── HLE.FamilyFinance/          # Family budgeting, expenses, taxes, net worth
+├── HLE.AssetTracker/           # Home asset & vehicle management
+├── HLE.FamilyHealth/           # Health records, medications, fitness tracking
+├── File_Server/                # File management, sharing, versioning
+└── HLE.FamilyHub/              # Family contacts, gifts, events (in planning)
+
+================================================================================
+APPLICATIONS
+================================================================================
+
+1. HLE.Dashboard
+   Purpose: Central hub for all homelab applications
+   Status: NEEDS UPDATE - currently minimal template, needs real dashboard
+   Features (Current):
+   - Authentik OIDC login
+   - Component showcase page
+   - User settings page
+   Features (Planned):
+   - App launcher with live status indicators (health checks)
+   - Quick-glance widgets from each app (upcoming birthdays, budget summary, etc.)
+   - System health overview
+   - User profile / preferences
+   - Navigation hub to all HLE apps
+   Priority: HIGH (next up for development)
+   Database: hle_dashboard
+   Controllers: 4 | Services: 0 | DB Tables: 0
+
+2. HLE.FamilyFinance
+   Purpose: Comprehensive family financial management
+   Status: PRODUCTION-READY
+   Features:
+   - Bank account management (Checking, Savings, Credit, Investment, HSA)
+   - Transaction tracking with categorization
+   - Monthly budget creation and tracking
+   - Recurring transaction automation
+   - Bill tracking and payment logging
+   - Debt management with payment history
+   - Asset valuation and net worth tracking
+   - Tax document management with file storage
+   - CSV import with auto-categorization rules
+   - Budget planner for long-term financial projects
+   - Financial reports and analytics
+   - Multi-user household support
+   Priority: COMPLETE
+   Database: hle_familyfinance
+   Controllers: 16 | Services: 11 | DB Tables: 14+
+
+3. HLE.AssetTracker
+   Purpose: Track household assets, vehicles, maintenance, and warranties
+   Status: PRODUCTION-READY
+   Features:
+   - Asset cataloging with photo gallery
+   - Hierarchical location tracking (rooms, storage areas)
+   - Category system with custom field definitions
+   - Label/tagging system
+   - Vehicle-specific tracking (odometer, fuel logs)
+   - Maintenance scheduling and logging
+   - Warranty expiration tracking
+   - Multi-user household support
+   Priority: COMPLETE
+   Database: hle_assettracker
+   Controllers: 9 | Services: 7 | DB Tables: 10
+
+4. HLE.FamilyHealth
+   Purpose: Family health records, medications, and fitness tracking
+   Status: FUNCTIONAL - mobile-first design implemented
+   Features:
+   - Family member health profiles
+   - Emergency contact management
+   - Insurance policy tracking
+   - Healthcare provider directory
+   - Vaccination records
+   - Medication tracking
+   - Appointment scheduling
+   - Visit summaries / medical notes
+   - Workout and exercise tracking with sets
+   - Fitness data import from mobile apps
+   - Mobile-first responsive design (bottom nav, card-based tables)
+   Priority: COMPLETE (may expand with more fitness features)
+   Database: hle_familyhealth
+   Controllers: 14 | Services: 1 | DB Tables: 9
+
+5. File_Server
+   Purpose: Self-hosted file management and collaboration
+   Status: PRODUCTION-READY
+   Features:
+   - Hierarchical file/folder browser
+   - File upload with TUS protocol (resumable uploads)
+   - File versioning with version history
+   - User-to-user file sharing
+   - Group collaboration with shared folders
+   - Authentik user sync on login
+   - Trash / soft delete support
+   - Content hash tracking
+   - Mobile-responsive detection
+   Priority: COMPLETE
+   Database: hle_fileserver
+   Controllers: 10 | Services: 2 | DB Tables: 7
+
+6. HLE.FamilyHub
+   Purpose: Family relationship management - contacts, gifts, events
+   Status: PLANNING - app plan document complete, no code yet
+   Features (Planned - Phase 1):
+   - Family member profiles (name, relationship, contact info)
+   - Birthday and anniversary tracking
+   - Address book for holiday cards
+   - Upcoming events dashboard (30/60/90 day view)
+   - Full calendar view
+   - Event reminders
+   Features (Planned - Phase 2):
+   - Gift idea capture throughout the year
+   - Gift history tracking (what, when, occasion, reaction)
+   - Wishlists per family member
+   - Gift budget tracking
+   Features (Planned - Phase 3):
+   - Communication log (last contact tracking)
+   - Stay-in-touch reminders
+   - Major milestone tracking
+   - Important notes per person (allergies, preferences)
+   Features (Planned - Phase 4):
+   - Holiday card list management
+   - Event planning with guest lists
+   - Travel coordination
+   - Task assignments for events
+   Priority: HIGH (next up for development alongside Dashboard)
+   Database: hle_familyhub
+   See: HLE.FamilyHub/FamilyHub.App-Plan.txt for detailed planning
+
+================================================================================
+TEMPLATE STRUCTURE
+================================================================================
+
+The MVC_Template_DB_Start/ directory contains the "golden copy" of the base
+application. When creating a new app, copy this template and modify as needed.
+
+Current Template Version: v2.0 (January 2026)
+
+Template includes:
+- .NET 10 project scaffolding with PostgreSQL + Authentik configured
+- 20 reusable UI components (shadcn-inspired, dark/light mode)
+- Complete entity model patterns (Fluent API configurations)
+- Service layer pattern (interface + implementation)
+- Household/multi-user middleware
+- Dockerfile for containerized deployment
+- Full CRUD controller examples with ViewModels
+
+Components Library (20):
+  _Alert, _Avatar, _Badge, _Breadcrumb, _Button, _Card, _Chip,
+  _Dialog, _Divider, _Dropdown, _Layout, _NavBar, _Pagination,
+  _ProgressBar, _RadialProgress, _Skeleton, _Slider, _Spinner,
+  _Table, _ToastContainer
+
+================================================================================
+AUTHENTICATION - AUTHENTIK INTEGRATION
+================================================================================
+
+All applications use Authentik as the identity provider via OIDC.
+
+NuGet Package:
+- Microsoft.AspNetCore.Authentication.OpenIdConnect
+
+Program.cs Configuration:
+```csharp
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = OpenIdConnectDefaults.AuthenticationScheme;
+})
+.AddCookie()
+.AddOpenIdConnect(options =>
+{
+    options.Authority = builder.Configuration["Authentik:Authority"];
+    options.ClientId = builder.Configuration["Authentik:ClientId"];
+    options.ClientSecret = builder.Configuration["Authentik:ClientSecret"];
+    options.ResponseType = "code";
+    options.SaveTokens = true;
+    options.Scope.Add("openid");
+    options.Scope.Add("profile");
+    options.Scope.Add("email");
+});
+```
+
+Authentik Setup (per app):
+1. Create a new OAuth2/OIDC Provider in Authentik
+2. Create an Application linked to the provider
+3. Set redirect URI: https://app.yourdomain.com/signin-oidc
+4. Set post-logout URI: https://app.yourdomain.com/signout-callback-oidc
+
+================================================================================
+DATABASE STRATEGY
+================================================================================
+
+Each application manages its own database on a shared PostgreSQL 17.7 instance.
+
+Stack:
+- Entity Framework Core 10
+- PostgreSQL 17.7 (containerized via Docker Compose)
+- Npgsql.EntityFrameworkCore.PostgreSQL (EF Core provider)
+- Code-first migrations
+
+Database Naming Convention:
+- hle_dashboard      → HLE.Dashboard
+- hle_familyfinance  → HLE.FamilyFinance
+- hle_assettracker   → HLE.AssetTracker
+- hle_familyhealth   → HLE.FamilyHealth
+- hle_fileserver     → File_Server
+- hle_familyhub      → HLE.FamilyHub
+
+Connection String (via Docker Compose internal network):
+```json
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Host=postgres;Port=5432;Database=hle_appname;Username=hle_user;Password=your_password"
+  }
+}
+```
+
+Backup Strategy:
+```bash
+# Dump single database
+docker exec hle-postgres pg_dump -U hle_admin hle_budgeting > backup.sql
+
+# Dump all databases
+docker exec hle-postgres pg_dumpall -U hle_admin > hle_all_backup.sql
+```
+
+================================================================================
+DEPLOYMENT - DOCKER COMPOSE
+================================================================================
+
+All applications are deployed together using Docker Compose on a Linux host.
+Each app has its own Dockerfile and runs as its own container. They share a
+PostgreSQL instance and a Docker network for inter-service communication.
+
+NOTE: Container testing requires a Linux-based system. The current development
+machine (Windows) cannot run Docker containers. The project will be moved to
+a Linux system for container builds, testing, and deployment.
+
+Architecture:
+```
+┌─────────────────────────────────────────────────────────┐
+│                    Docker Compose                        │
+│                                                         │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐    │
+│  │  Dashboard   │  │  Finance    │  │  AssetTrack  │    │
+│  │  :8081       │  │  :8082      │  │  :8083       │    │
+│  └──────┬───────┘  └──────┬──────┘  └──────┬───────┘    │
+│         │                 │                 │            │
+│  ┌──────┴───────┐  ┌──────┴──────┐  ┌──────┴───────┐   │
+│  │  FamilyHealth│  │  FileServer │  │  FamilyHub   │    │
+│  │  :8084       │  │  :8085      │  │  :8086       │    │
+│  └──────┬───────┘  └──────┬──────┘  └──────┬───────┘    │
+│         │                 │                 │            │
+│         └────────────┬────┴─────────────────┘            │
+│                      │                                   │
+│              ┌───────┴────────┐                          │
+│              │  PostgreSQL    │                          │
+│              │  :5432         │                          │
+│              └────────────────┘                          │
+│                                                         │
+│              ┌────────────────┐                          │
+│              │  Authentik     │                          │
+│              │  (external)    │                          │
+│              └────────────────┘                          │
+└─────────────────────────────────────────────────────────┘
+```
+
+Docker Compose Structure (planned):
+```yaml
+services:
+  postgres:
+    image: postgres:17.7
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: hle_admin
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    networks:
+      - hle-network
+
+  dashboard:
+    build: ./HLE.Dashboard
+    ports:
+      - "8081:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ConnectionStrings__DefaultConnection=Host=postgres;...
+    depends_on:
+      - postgres
+    networks:
+      - hle-network
+
+  familyfinance:
+    build: ./HLE.FamilyFinance
+    ports:
+      - "8082:8080"
+    depends_on:
+      - postgres
+    networks:
+      - hle-network
+
+  assettracker:
+    build: ./HLE.AssetTracker
+    ports:
+      - "8083:8080"
+    depends_on:
+      - postgres
+    networks:
+      - hle-network
+
+  familyhealth:
+    build: ./HLE.FamilyHealth
+    ports:
+      - "8084:8080"
+    depends_on:
+      - postgres
+    networks:
+      - hle-network
+
+  fileserver:
+    build: ./File_Server
+    ports:
+      - "8085:8080"
+    volumes:
+      - fileserver-data:/app/storage
+    depends_on:
+      - postgres
+    networks:
+      - hle-network
+
+  familyhub:
+    build: ./HLE.FamilyHub
+    ports:
+      - "8086:8080"
+    depends_on:
+      - postgres
+    networks:
+      - hle-network
+
+volumes:
+  postgres-data:
+  fileserver-data:
+
+networks:
+  hle-network:
+    driver: bridge
+```
+
+Per-App Dockerfile (standard pattern):
+```dockerfile
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS base
+WORKDIR /app
+EXPOSE 8080
+
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+WORKDIR /src
+COPY ["AppName.csproj", "."]
+RUN dotnet restore
+COPY . .
+RUN dotnet build -c Release -o /app/build
+
+FROM build AS publish
+RUN dotnet publish -c Release -o /app/publish /p:UseAppHost=false
+
+FROM base AS final
+WORKDIR /app
+COPY --from=publish /app/publish .
+ENTRYPOINT ["dotnet", "AppName.dll"]
+```
+
+================================================================================
+INTER-APP COMMUNICATION
+================================================================================
+
+Apps on the Docker Compose network can communicate via internal service names.
+This enables features like:
+
+Dashboard → All Apps:
+- Health check polling (GET /health from each service)
+- Widget data endpoints (upcoming birthdays, budget summary, etc.)
+
+FamilyHub → FamilyFinance:
+- Gift budget tracking ties into expense categories
+- Holiday spending analysis
+
+FamilyHub → FamilyHealth:
+- Medical emergency contacts cross-reference
+- Allergy information lookup
+
+Dashboard → FamilyHub:
+- Widget: next 3 upcoming birthdays
+- Widget: recent family milestones
+
+Implementation Approach:
+- Each app exposes a lightweight internal API (e.g., /api/internal/summary)
+- Dashboard aggregates data from all apps for its widgets
+- Internal APIs are only accessible on the Docker network (not exposed externally)
+- Use HttpClientFactory with named clients for inter-service calls
+
+================================================================================
+DEVELOPMENT ENVIRONMENT
+================================================================================
+
+Current State:
+- Development is on Windows (no Docker available)
+- Apps can be run individually via `dotnet watch run`
+- PostgreSQL must be available locally or remotely for DB work
+- Container builds and compose testing require Linux migration
+
+Migration Plan:
+- Move project to Linux-based development/deployment system
+- Set up Docker Compose for full-stack local development
+- Each app testable individually via `dotnet watch run` or via compose
+
+Local Development (per app):
+```bash
+cd HLE.AppName
+dotnet watch run
+```
+
+Using User Secrets for Development:
+```bash
+dotnet user-secrets init
+dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Host=localhost;..."
+dotnet user-secrets set "Authentik:ClientSecret" "your-secret"
+```
+
+Creating a New Application:
+1. Copy MVC_Template_DB_Start/ to new directory (e.g., HLE.NewApp/)
+2. Rename .csproj and .sln files, update namespaces
+3. Update appsettings.json (database name, Authentik config)
+4. Register new app in Authentik (OIDC provider + redirect URIs)
+5. Create database on PostgreSQL instance
+6. Run migrations: dotnet ef migrations add Initial && dotnet ef database update
+7. Add service entry to docker-compose.yml
+8. Develop features
+9. Build container and test via compose
+
+================================================================================
+CLAUDE CODE INTEGRATION
+================================================================================
+
+This project uses CLAUDE.md for AI-assisted development with Claude Code.
+
+Files:
+- plan.txt      → Project scope, architecture, deployment (this file)
+- CLAUDE.md     → Code patterns, best practices, conventions
+- tracker.md    → Living progress log, decisions, task history
+
+The root CLAUDE.md file is automatically loaded by Claude Code for all work in
+this repository. When creating a new app from MVC_Template_DB_Start/, the
+patterns in CLAUDE.md apply to all subdirectories.
+
+tracker.md Usage:
+- Log completed tasks with dates
+- Document architectural decisions and rationale
+- Track blockers and resolutions
+- Note version updates and breaking changes
+- All models should read before starting work and update after completing tasks
+
+================================================================================
+BEST PRACTICES & NOTES
+================================================================================
+
+See CLAUDE.md for detailed code patterns and examples.
+
+CODE ORGANIZATION
+-----------------
+- Keep controllers thin, business logic in services
+- Use ViewModels for complex views (not raw entities)
+- Organize by feature when projects grow large
+
+VIEWS & RAZOR
+-------------
+- _Layout.cshtml handles the main structure (nav, sidebar, footer)
+- Use partials for reusable UI components
+- Keep JavaScript minimal; prefer server-rendered content
+- Dark/light mode via CSS variables, toggle stored in localStorage
+
+CSS & STYLING
+-------------
+- Custom components with CSS variables (shadcn-inspired) + Bootstrap grid
+- Mobile-first responsive design
+- Dark/light mode with CSS custom properties
+- 20 reusable partial components across all apps
+
+SECURITY
+--------
+- Always use HTTPS in production
+- Validate all user input server-side
+- Use anti-forgery tokens on forms
+- Keep Authentik and app secrets out of source control
+- Use environment variables or user-secrets for sensitive config
+- Internal APIs only accessible on Docker network
+
+LOGGING
+-------
+- Use built-in ILogger<T>
+- Log to stdout (captured by Docker)
+- Consider Seq or Loki for centralized logging later
+
+================================================================================
+REVISION HISTORY
+================================================================================
+
+2026-02-05  Major documentation update
+            - Rewrote plan to reflect actual projects built
+            - Updated deployment strategy: Podman → Docker Compose
+            - Added inter-app communication architecture
+            - Added development environment / Linux migration notes
+            - Updated directory structure and app inventory
+            - Documented all 6 applications with current status
+
+2026-01-16  Initial plan created
+            - Defined project scope and structure
+            - Documented authentication strategy
+            - Established template approach
+
+================================================================================

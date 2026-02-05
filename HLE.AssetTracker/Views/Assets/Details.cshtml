@@ -1,0 +1,312 @@
+@using HLE.AssetTracker.Models.Entities
+@model Asset
+@{
+    ViewData["Title"] = Model.Name;
+}
+
+<div class="container py-4">
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <div class="d-flex justify-content-between align-items-start mb-4">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a asp-action="Index">Assets</a></li>
+                    <li class="breadcrumb-item active">@Model.Name</li>
+                </ol>
+            </nav>
+            <h2 class="mb-1">@Model.Name</h2>
+            @if (Model.IsArchived)
+            {
+                <span class="badge bg-secondary">Archived</span>
+            }
+        </div>
+        <div class="d-flex gap-2">
+            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-primary">Edit</a>
+            @if (Model.IsArchived)
+            {
+                <form asp-action="Restore" asp-route-id="@Model.Id" method="post" class="d-inline">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-outline-success">
+                        <i data-lucide="archive-restore" style="width: 16px; height: 16px;"></i>
+                        Restore
+                    </button>
+                </form>
+            }
+            else
+            {
+                <form asp-action="Archive" asp-route-id="@Model.Id" method="post" class="d-inline">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-outline-warning" onclick="return confirm('Archive this asset?')">
+                        <i data-lucide="archive" style="width: 16px; height: 16px;"></i>
+                        Archive
+                    </button>
+                </form>
+            }
+            <form asp-action="Delete" asp-route-id="@Model.Id" method="post" class="d-inline">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-outline-danger" onclick="return confirm('⚠️ PERMANENTLY DELETE this asset? This cannot be undone!')">
+                    <i data-lucide="trash-2" style="width: 16px; height: 16px;"></i>
+                    Delete Permanently
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <!-- Basic Info -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Details</h5>
+                </div>
+                <div class="card-body">
+                    @if (!string.IsNullOrWhiteSpace(Model.Description))
+                    {
+                        <p class="mb-4">@Model.Description</p>
+                    }
+
+                    <div class="row">
+                        <div class="col-sm-6 mb-3">
+                            <label class="text-muted small">Category</label>
+                            <div>@(Model.Category?.Name ?? "-")</div>
+                        </div>
+                        <div class="col-sm-6 mb-3">
+                            <label class="text-muted small">Location</label>
+                            <div>@(Model.Location?.Name ?? "-")</div>
+                        </div>
+                        <div class="col-sm-6 mb-3">
+                            <label class="text-muted small">Quantity</label>
+                            <div>@Model.Quantity</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Product Details -->
+            @if (!string.IsNullOrWhiteSpace(Model.Manufacturer) || !string.IsNullOrWhiteSpace(Model.Model) || !string.IsNullOrWhiteSpace(Model.SerialNumber))
+            {
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Product Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            @if (!string.IsNullOrWhiteSpace(Model.Manufacturer))
+                            {
+                                <div class="col-sm-6 mb-3">
+                                    <label class="text-muted small">Manufacturer</label>
+                                    <div>@Model.Manufacturer</div>
+                                </div>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(Model.Model))
+                            {
+                                <div class="col-sm-6 mb-3">
+                                    <label class="text-muted small">Model</label>
+                                    <div>@Model.Model</div>
+                                </div>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(Model.SerialNumber))
+                            {
+                                <div class="col-sm-6 mb-3">
+                                    <label class="text-muted small">Serial Number</label>
+                                    <div><code>@Model.SerialNumber</code></div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- Purchase Info -->
+            @if (Model.PurchaseDate.HasValue || Model.PurchasePrice.HasValue || !string.IsNullOrWhiteSpace(Model.PurchaseLocation))
+            {
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Purchase Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            @if (Model.PurchaseDate.HasValue)
+                            {
+                                <div class="col-sm-6 mb-3">
+                                    <label class="text-muted small">Purchase Date</label>
+                                    <div>@Model.PurchaseDate.Value.ToString("MMMM d, yyyy")</div>
+                                </div>
+                            }
+                            @if (Model.PurchasePrice.HasValue)
+                            {
+                                <div class="col-sm-6 mb-3">
+                                    <label class="text-muted small">Purchase Price</label>
+                                    <div class="fw-medium">$@Model.PurchasePrice.Value.ToString("N2")</div>
+                                </div>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(Model.PurchaseLocation))
+                            {
+                                <div class="col-sm-6 mb-3">
+                                    <label class="text-muted small">Purchased From</label>
+                                    <div>@Model.PurchaseLocation</div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- Warranty -->
+            @if (Model.WarrantyExpiration.HasValue || !string.IsNullOrWhiteSpace(Model.WarrantyNotes))
+            {
+                var isExpired = Model.WarrantyExpiration.HasValue && Model.WarrantyExpiration.Value < DateOnly.FromDateTime(DateTime.UtcNow);
+                var daysLeft = Model.WarrantyExpiration.HasValue ? (Model.WarrantyExpiration.Value.ToDateTime(TimeOnly.MinValue) - DateTime.UtcNow).Days : 0;
+
+                <div class="card mb-4 @(isExpired ? "border-secondary" : daysLeft <= 30 ? "border-warning" : "")">
+                    <div class="card-header">
+                        <h5 class="mb-0">Warranty</h5>
+                    </div>
+                    <div class="card-body">
+                        @if (Model.WarrantyExpiration.HasValue)
+                        {
+                            <div class="mb-3">
+                                <label class="text-muted small">Expiration Date</label>
+                                <div>
+                                    @Model.WarrantyExpiration.Value.ToString("MMMM d, yyyy")
+                                    @if (isExpired)
+                                    {
+                                        <span class="badge bg-secondary ms-2">Expired</span>
+                                    }
+                                    else if (daysLeft <= 30)
+                                    {
+                                        <span class="badge bg-warning text-dark ms-2">@daysLeft days left</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-success ms-2">Active</span>
+                                    }
+                                </div>
+                            </div>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(Model.WarrantyNotes))
+                        {
+                            <div>
+                                <label class="text-muted small">Notes</label>
+                                <div>@Model.WarrantyNotes</div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+
+            <!-- Notes -->
+            @if (!string.IsNullOrWhiteSpace(Model.Notes))
+            {
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Notes</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="mb-0" style="white-space: pre-wrap;">@Model.Notes</p>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <div class="col-lg-4">
+            <!-- Metadata -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="mb-0">Info</h6>
+                </div>
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span class="text-muted">Created</span>
+                        <span>@Model.CreatedAt.ToString("MMM d, yyyy")</span>
+                    </li>
+                    @if (Model.UpdatedAt.HasValue)
+                    {
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span class="text-muted">Updated</span>
+                            <span>@Model.UpdatedAt.Value.ToString("MMM d, yyyy")</span>
+                        </li>
+                    }
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span class="text-muted">ID</span>
+                        <span class="text-muted">#@Model.Id</span>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Labels -->
+            @if (Model.AssetLabels.Any())
+            {
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h6 class="mb-0">Labels</h6>
+                    </div>
+                    <div class="card-body">
+                        @foreach (var assetLabel in Model.AssetLabels)
+                        {
+                            <span class="badge bg-secondary me-1">@assetLabel.Label.Name</span>
+                        }
+                    </div>
+                </div>
+            }
+
+            <!-- Maintenance -->
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0">Maintenance</h6>
+                    <a asp-controller="Maintenance" asp-action="ByAsset" asp-route-id="@Model.Id" class="btn btn-sm btn-outline-primary">
+                        Manage
+                    </a>
+                </div>
+                <div class="card-body">
+                    @if (Model.MaintenanceSchedules.Any())
+                    {
+                        <h6 class="text-muted small mb-2">Upcoming Schedules</h6>
+                        @foreach (var schedule in Model.MaintenanceSchedules.Take(3))
+                        {
+                            <div class="mb-2">
+                                <div>@schedule.Name</div>
+                                <small class="text-muted">Due @schedule.NextDueDate.ToString("MMM d, yyyy")</small>
+                            </div>
+                        }
+                        @if (Model.MaintenanceSchedules.Count > 3)
+                        {
+                            <small class="text-muted">...and @(Model.MaintenanceSchedules.Count - 3) more</small>
+                        }
+                    }
+
+                    @if (Model.MaintenanceLogs.Any())
+                    {
+                        <h6 class="text-muted small mb-2 @(Model.MaintenanceSchedules.Any() ? "mt-3" : "")">Recent History</h6>
+                        @foreach (var log in Model.MaintenanceLogs.Take(3))
+                        {
+                            <div class="mb-2">
+                                <div>@log.Description</div>
+                                <small class="text-muted">@log.PerformedAt.ToString("MMM d, yyyy")</small>
+                            </div>
+                        }
+                        @if (Model.MaintenanceLogs.Count > 3)
+                        {
+                            <small class="text-muted">...and @(Model.MaintenanceLogs.Count - 3) more</small>
+                        }
+                    }
+
+                    @if (!Model.MaintenanceSchedules.Any() && !Model.MaintenanceLogs.Any())
+                    {
+                        <p class="text-muted small mb-2">No maintenance scheduled</p>
+                        <a asp-controller="Maintenance" asp-action="CreateSchedule" asp-route-assetId="@Model.Id" class="btn btn-sm btn-primary">
+                            Add Schedule
+                        </a>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

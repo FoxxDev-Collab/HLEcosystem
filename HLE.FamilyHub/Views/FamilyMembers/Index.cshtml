@@ -1,0 +1,163 @@
+@model List<HLE.FamilyHub.Services.Interfaces.FamilyMemberSummaryDto>
+@{
+    ViewData["Title"] = "Family Members";
+}
+
+@{
+    ViewData["BreadcrumbItems"] = new List<(string Text, string? Url, bool IsActive)>
+    {
+        ("Home", Url.Action("Index", "Home"), false),
+        ("Family", null, true)
+    };
+}
+<partial name="_Breadcrumb" />
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>
+        <i class="bi bi-people"></i> Family Members
+    </h2>
+    @{
+        ViewData["Text"] = "Add Family Member";
+        ViewData["Variant"] = "primary";
+        ViewData["Icon"] = "bi-person-plus";
+        ViewData["Href"] = Url.Action("Create");
+    }
+    <partial name="_Button" />
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-6">
+        <form method="get" class="input-group">
+            <input type="text" class="form-control" name="search" placeholder="Search family members..." value="@ViewData["SearchQuery"]" />
+            <button class="btn btn-outline-secondary" type="submit">
+                <i class="bi bi-search"></i> Search
+            </button>
+        </form>
+    </div>
+</div>
+
+@if (Model.Any())
+{
+    <div class="row g-3">
+        @foreach (var member in Model)
+        {
+            <div class="col-md-6 col-lg-4">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            @member.FirstName @member.LastName
+                            @if (!string.IsNullOrEmpty(member.Nickname))
+                            {
+                                <span class="text-muted small">(@member.Nickname)</span>
+                            }
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        @if (member.Relationship != HLE.FamilyHub.Models.Enums.Relationship.Other)
+                        {
+                            <div class="mb-2">
+                                @{
+                                    ViewData["Text"] = member.Relationship.ToString();
+                                    ViewData["Variant"] = "primary";
+                                }
+                                <partial name="_Badge" />
+                            </div>
+                        }
+
+                        @if (member.Birthday.HasValue)
+                        {
+                            <p class="mb-2">
+                                <i class="bi bi-cake2"></i>
+                                <strong>Birthday:</strong> @member.Birthday.Value.ToString("MMM d, yyyy")
+                            </p>
+                        }
+
+                        @if (!string.IsNullOrEmpty(member.Phone))
+                        {
+                            <p class="mb-2">
+                                <i class="bi bi-telephone"></i>
+                                <strong>Phone:</strong> @member.Phone
+                            </p>
+                        }
+
+                        @if (!string.IsNullOrEmpty(member.Email))
+                        {
+                            <p class="mb-2">
+                                <i class="bi bi-envelope"></i>
+                                <strong>Email:</strong> @member.Email
+                            </p>
+                        }
+
+                        @if (!string.IsNullOrEmpty(member.City) || !string.IsNullOrEmpty(member.State))
+                        {
+                            <p class="mb-2">
+                                <i class="bi bi-geo-alt"></i>
+                                <strong>Location:</strong>
+                                @if (!string.IsNullOrEmpty(member.City))
+                                {
+                                    @member.City
+                                }
+                                @if (!string.IsNullOrEmpty(member.State))
+                                {
+                                    if (!string.IsNullOrEmpty(member.City))
+                                    {
+                                        <text>, </text>
+                                    }
+                                    @member.State
+                                }
+                            </p>
+                        }
+
+                        @if (member.GiftIdeaCount > 0)
+                        {
+                            <div class="mt-3">
+                                <i class="bi bi-lightbulb"></i>
+                                @{
+                                    ViewData["Text"] = $"{member.GiftIdeaCount} gift ideas";
+                                    ViewData["Variant"] = "info";
+                                }
+                                <partial name="_Badge" />
+                            </div>
+                        }
+                    </div>
+                    <div class="card-footer">
+                        <div class="d-flex gap-2">
+                            @{
+                                ViewData["Text"] = "View";
+                                ViewData["Variant"] = "outline-primary";
+                                ViewData["Size"] = "sm";
+                                ViewData["Href"] = Url.Action("Details", new { id = member.Id });
+                            }
+                            <partial name="_Button" />
+
+                            @{
+                                ViewData["Text"] = "Edit";
+                                ViewData["Variant"] = "outline-secondary";
+                                ViewData["Size"] = "sm";
+                                ViewData["Href"] = Url.Action("Edit", new { id = member.Id });
+                            }
+                            <partial name="_Button" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+else
+{
+    <div class="card">
+        <div class="card-body text-center py-5">
+            <i class="bi bi-people display-1 text-muted d-block mb-3"></i>
+            <h4>No Family Members Yet</h4>
+            <p class="text-muted">Start by adding your first family member to track birthdays, anniversaries, and gift ideas.</p>
+            @{
+                ViewData["Text"] = "Add Your First Family Member";
+                ViewData["Variant"] = "primary";
+                ViewData["Icon"] = "bi-person-plus";
+                ViewData["Href"] = Url.Action("Create");
+            }
+            <partial name="_Button" />
+        </div>
+    </div>
+}

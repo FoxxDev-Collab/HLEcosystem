@@ -1,0 +1,143 @@
+@using HLE.FamilyFinance.Services.Interfaces
+@model List<BudgetTrendDto>
+@{
+    ViewData["Title"] = "Budget Trends";
+}
+
+<div class="py-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-action="Index">Budget Planning</a></li>
+            <li class="breadcrumb-item active">Trends</li>
+        </ol>
+    </nav>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Budget Trends</h2>
+        <a asp-action="Index" class="btn btn-outline-secondary">Back to Planning</a>
+    </div>
+
+    @if (!Model.Any())
+    {
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <p class="text-muted mb-3">No budget history available yet. Start tracking budgets to see trends.</p>
+                <a asp-action="Index" class="btn btn-primary">Set Up Budgets</a>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Budget vs Actual (Last 6 Months)</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Month</th>
+                                <th class="text-end">Budgeted</th>
+                                <th class="text-end">Actual</th>
+                                <th class="text-end">Difference</th>
+                                <th style="width: 30%">Performance</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var trend in Model.OrderByDescending(t => t.Year).ThenByDescending(t => t.Month))
+                            {
+                                var diff = trend.Budgeted - trend.Actual;
+                                var percentage = trend.Budgeted > 0 ? (trend.Actual / trend.Budgeted) * 100 : 0;
+                                var progressClass = percentage > 100 ? "bg-danger" :
+                                                   percentage > 80 ? "bg-warning" : "bg-success";
+                                <tr>
+                                    <td>
+                                        <strong>
+                                            @System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetAbbreviatedMonthName(trend.Month)
+                                            @trend.Year
+                                        </strong>
+                                    </td>
+                                    <td class="text-end">$@trend.Budgeted.ToString("N2")</td>
+                                    <td class="text-end">$@trend.Actual.ToString("N2")</td>
+                                    <td class="text-end @(diff >= 0 ? "text-success" : "text-danger")">
+                                        @(diff >= 0 ? "+" : "")$@diff.ToString("N2")
+                                    </td>
+                                    <td>
+                                        <div class="progress" style="height: 25px;">
+                                            <div class="progress-bar @progressClass" role="progressbar"
+                                                 style="width: @Math.Min(percentage, 100)%">
+                                                @percentage.ToString("N0")%
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Summary Statistics</h5>
+                    </div>
+                    <div class="card-body">
+                        @{
+                            var totalBudgeted = Model.Sum(t => t.Budgeted);
+                            var totalActual = Model.Sum(t => t.Actual);
+                            var avgDiff = Model.Count > 0 ? (totalBudgeted - totalActual) / Model.Count : 0;
+                            var underBudgetMonths = Model.Count(t => t.Actual <= t.Budgeted);
+                        }
+                        <dl class="row mb-0">
+                            <dt class="col-sm-7">Total Budgeted (6 mo)</dt>
+                            <dd class="col-sm-5 text-end">$@totalBudgeted.ToString("N2")</dd>
+
+                            <dt class="col-sm-7">Total Spent (6 mo)</dt>
+                            <dd class="col-sm-5 text-end">$@totalActual.ToString("N2")</dd>
+
+                            <dt class="col-sm-7">Average Monthly Savings</dt>
+                            <dd class="col-sm-5 text-end @(avgDiff >= 0 ? "text-success" : "text-danger")">
+                                @(avgDiff >= 0 ? "+" : "")$@avgDiff.ToString("N2")
+                            </dd>
+
+                            <dt class="col-sm-7">Months Under Budget</dt>
+                            <dd class="col-sm-5 text-end">
+                                @underBudgetMonths / @Model.Count
+                                (@((Model.Count > 0 ? (decimal)underBudgetMonths / Model.Count * 100 : 0).ToString("N0"))%)
+                            </dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Tips</h5>
+                    </div>
+                    <div class="card-body">
+                        <ul class="mb-0">
+                            @if (avgDiff < 0)
+                            {
+                                <li class="text-danger">You're averaging $@Math.Abs(avgDiff).ToString("N2") over budget per month. Consider reviewing your spending categories.</li>
+                            }
+                            else if (avgDiff > 0)
+                            {
+                                <li class="text-success">Great job! You're averaging $@avgDiff.ToString("N2") under budget each month.</li>
+                            }
+                            @if (underBudgetMonths < Model.Count / 2)
+                            {
+                                <li>Consider adjusting your budget to be more realistic based on actual spending patterns.</li>
+                            }
+                            <li>Review your largest expense categories for potential savings opportunities.</li>
+                            <li>Use the copy feature to quickly set up next month's budget based on this month.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
