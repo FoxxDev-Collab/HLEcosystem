@@ -1,7 +1,0 @@
-@using HLE.FileServer.Helpers
-@{
-    var name = ViewData["Name"]?.ToString() ?? "";
-    var size = ViewData["Size"] != null ? Convert.ToInt32(ViewData["Size"]) : 16;
-    var cssClass = ViewData["Class"]?.ToString();
-}
-@Html.Raw(Icons.Get(name, size, cssClass))
