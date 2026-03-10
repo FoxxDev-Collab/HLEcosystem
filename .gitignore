@@ -1,0 +1,116 @@
+# Build output
+[Bb]in/
+[Oo]bj/
+[Oo]ut/
+[Ll]og/
+[Ll]ogs/
+
+# Visual Studio
+.vs/
+*.csproj.user
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.rsuser
+
+# Visual Studio Code
+.vscode/
+*.code-workspace
+
+# JetBrains Rider
+.idea/
+*.sln.iml
+
+# User-specific files
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# NuGet
+*.nupkg
+*.snupkg
+**/[Pp]ackages/*
+!**/[Pp]ackages/build/
+*.nuget.props
+*.nuget.targets
+project.lock.json
+project.fragment.lock.json
+
+# ASP.NET Core
+**/Properties/launchSettings.json
+appsettings.Development.json
+appsettings.Local.json
+appsettings.*.local.json
+
+# User secrets (never commit)
+secrets.json
+
+# Entity Framework migrations - keep these but ignore local SQLite dev DBs
+*.db
+*.db-shm
+*.db-wal
+
+# Publish profiles user data
+**/PublishProfiles/*.pubxml.user
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Test results
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+*.trx
+*.coverage
+*.coveragexml
+coverage*.json
+coverage*.xml
+*.coverlet.xml
+
+# NCrunch
+*.ncrunch*
+_NCrunch_*
+.*crunch*.local.xml
+
+# Benchmark results
+BenchmarkDotNet.Artifacts/
+
+# Docker
+**/docker-compose*.override.yml
+
+# Temp files
+*.tmp
+*.temp
+*.bak
+*.swp
+*~
+
+# Misc
+*.log
+!important.log
+*.cache
+
+# Visual Studio diagnostic sessions
+*.diagsession
+
+# Claude Code local settings
+**/.claude/settings.local.json
+
+# User-uploaded data (runtime, not source)
+**/Data/uploads/
+**/Data/group_files/
+**/TaxDocuments/
+
+# Linux/macOS
+*.so
+*.dylib
