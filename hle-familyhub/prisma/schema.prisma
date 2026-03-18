@@ -1,0 +1,199 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ───────────────────────────────────────────────
+
+enum Relationship {
+  Spouse
+  Partner
+  Parent
+  Child
+  Sibling
+  Grandparent
+  Grandchild
+  AuntUncle
+  NieceNephew
+  Cousin
+  InLaw
+  StepParent
+  StepChild
+  StepSibling
+  Godparent
+  Godchild
+  Friend
+  Other
+}
+
+enum PreferredContactMethod {
+  NONE
+  PHONE
+  EMAIL
+  TEXT
+}
+
+enum ImportantDateType {
+  BIRTHDAY
+  ANNIVERSARY
+  GRADUATION
+  MEMORIAL
+  HOLIDAY
+  CUSTOM
+}
+
+enum RecurrenceType {
+  ONCE
+  ANNUAL
+}
+
+enum GiftStatus {
+  IDEA
+  PURCHASED
+  WRAPPED
+  GIVEN
+}
+
+enum GiftIdeaStatus {
+  ACTIVE
+  PURCHASED
+  NOT_INTERESTED
+}
+
+enum GiftIdeaPriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+// ─── Models ──────────────────────────────────────────────
+
+model FamilyMember {
+  id                     String                @id @default(cuid())
+  householdId            String
+  linkedUserId           String?
+  firstName              String
+  lastName               String
+  nickname               String?
+  relationship           Relationship?
+  relationshipNotes      String?
+  birthday               DateTime?             @db.Date
+  anniversary            DateTime?             @db.Date
+  phone                  String?
+  email                  String?
+  preferredContactMethod PreferredContactMethod @default(NONE)
+  addressLine1           String?
+  addressLine2           String?
+  city                   String?
+  state                  String?
+  zipCode                String?
+  country                String?
+  profilePhotoUrl        String?
+  notes                  String?
+  isActive               Boolean               @default(true)
+  includeInHolidayCards  Boolean               @default(false)
+  createdAt              DateTime              @default(now())
+  updatedAt              DateTime              @updatedAt
+
+  importantDates ImportantDate[]
+  gifts          Gift[]
+  giftIdeas      GiftIdea[]
+  relationsFrom  FamilyRelation[] @relation("relationsFrom")
+  relationsTo    FamilyRelation[] @relation("relationsTo")
+
+  @@unique([householdId, linkedUserId])
+  @@index([householdId])
+  @@index([linkedUserId])
+}
+
+model ImportantDate {
+  id                 String            @id @default(cuid())
+  householdId        String
+  familyMemberId     String?
+  label              String
+  date               DateTime          @db.Date
+  type               ImportantDateType
+  recurrenceType     RecurrenceType    @default(ANNUAL)
+  reminderDaysBefore Int               @default(14)
+  notes              String?
+  createdAt          DateTime          @default(now())
+
+  familyMember FamilyMember? @relation(fields: [familyMemberId], references: [id], onDelete: SetNull)
+
+  @@index([householdId])
+  @@index([familyMemberId])
+}
+
+model Gift {
+  id             String     @id @default(cuid())
+  householdId    String
+  familyMemberId String
+  description    String
+  giftDate       DateTime?  @db.Date
+  occasion       String?
+  status         GiftStatus @default(IDEA)
+  estimatedCost  Decimal?   @db.Decimal(10, 2)
+  actualCost     Decimal?   @db.Decimal(10, 2)
+  rating         Int?
+  notes          String?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  familyMember FamilyMember @relation(fields: [familyMemberId], references: [id], onDelete: Cascade)
+
+  @@index([householdId])
+  @@index([familyMemberId])
+}
+
+model GiftIdea {
+  id             String           @id @default(cuid())
+  householdId    String
+  familyMemberId String?
+  idea           String
+  dateCaptured   DateTime         @default(now()) @db.Date
+  source         String?
+  priority       GiftIdeaPriority @default(MEDIUM)
+  status         GiftIdeaStatus   @default(ACTIVE)
+  estimatedCost  Decimal?         @db.Decimal(10, 2)
+  url            String?
+  notes          String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  familyMember FamilyMember? @relation(fields: [familyMemberId], references: [id], onDelete: SetNull)
+
+  @@index([householdId])
+  @@index([familyMemberId])
+}
+
+model LinkedHousehold {
+  id                String   @id @default(cuid())
+  householdId       String
+  linkedHouseholdId String
+  label             String?
+  notes             String?
+  relationship      String?
+  createdAt         DateTime @default(now())
+
+  @@unique([householdId, linkedHouseholdId])
+  @@index([householdId])
+}
+
+model FamilyRelation {
+  id           String       @id @default(cuid())
+  householdId  String
+  fromMemberId String
+  toMemberId   String
+  relationType Relationship
+  createdAt    DateTime     @default(now())
+
+  fromMember FamilyMember @relation("relationsFrom", fields: [fromMemberId], references: [id], onDelete: Cascade)
+  toMember   FamilyMember @relation("relationsTo", fields: [toMemberId], references: [id], onDelete: Cascade)
+
+  @@unique([fromMemberId, toMemberId])
+  @@index([householdId])
+}

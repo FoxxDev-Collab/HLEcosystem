@@ -1,0 +1,85 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ───────────────────────────────────────────────
+
+enum Role {
+  ADMIN
+  MEMBER
+}
+
+enum HouseholdRole {
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
+enum FamilyRelationship {
+  Spouse
+  Partner
+  Child
+  Parent
+  Sibling
+  Grandparent
+  Grandchild
+  AuntUncle
+  NieceNephew
+  Cousin
+  InLaw
+  StepParent
+  StepChild
+  StepSibling
+  Godparent
+  Godchild
+  Friend
+  Other
+}
+
+// ─── Users ───────────────────────────────────────────────
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  password  String?
+  avatar    String?
+  role      Role     @default(MEMBER)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  memberships HouseholdMember[]
+}
+
+// ─── Households ──────────────────────────────────────────
+
+model Household {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members HouseholdMember[]
+}
+
+model HouseholdMember {
+  id                 String              @id @default(cuid())
+  householdId        String
+  userId             String
+  displayName        String
+  role               HouseholdRole       @default(MEMBER)
+  familyRelationship FamilyRelationship?
+  joinedAt           DateTime            @default(now())
+
+  household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([householdId, userId])
+  @@index([userId])
+}

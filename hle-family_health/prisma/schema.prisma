@@ -1,0 +1,396 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Users are managed by FamilyHub (familyhub schema).
+// This app reads users via cross-schema queries.
+
+// ============================================================================
+// ENUMS
+// ============================================================================
+
+enum BloodType {
+  A_POSITIVE
+  A_NEGATIVE
+  B_POSITIVE
+  B_NEGATIVE
+  AB_POSITIVE
+  AB_NEGATIVE
+  O_POSITIVE
+  O_NEGATIVE
+  UNKNOWN
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+  RESCHEDULED
+}
+
+enum AppointmentType {
+  ANNUAL_CHECKUP
+  FOLLOW_UP
+  SPECIALIST
+  PROCEDURE
+  LAB_WORK
+  DENTAL
+  VISION
+  URGENT_CARE
+  TELEHEALTH
+  OTHER
+}
+
+enum ProviderType {
+  DOCTOR
+  DENTIST
+  OPTOMETRIST
+  SPECIALIST
+  HOSPITAL
+  LAB
+  PHARMACY
+  THERAPIST
+  CHIROPRACTOR
+  OTHER
+}
+
+enum InsuranceType {
+  MEDICAL
+  DENTAL
+  VISION
+  PRESCRIPTION
+  SUPPLEMENTAL
+  OTHER
+}
+
+enum VisitType {
+  IN_PERSON
+  TELEHEALTH
+  EMERGENCY
+  HOSPITAL
+  URGENT_CARE
+}
+
+enum SetType {
+  NORMAL
+  WARMUP
+  FAILURE
+  DROPSET
+}
+
+enum ExpenseCategory {
+  MEDICAL_EQUIPMENT
+  VISION
+  DENTAL
+  SUPPLIES
+  OVER_THE_COUNTER
+  PRESCRIPTION
+  COPAY
+  LAB_WORK
+  THERAPY
+  OTHER
+}
+
+// Households are managed by Family Manager (family_manager schema).
+// This app reads households via cross-schema queries in lib/household.ts.
+// Domain models keep householdId as a plain String for scoping.
+
+// ============================================================================
+// FAMILY MEMBERS & HEALTH PROFILES
+// ============================================================================
+
+model FamilyMember {
+  id           String    @id @default(cuid())
+  householdId  String
+  linkedUserId String?
+  firstName    String
+  lastName     String
+  dateOfBirth  DateTime? @db.Date
+  relationship String?
+  gender       String?
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  healthProfile     HealthProfile?
+  appointments      Appointment[]
+  medications       Medication[]
+  vaccinations      Vaccination[]
+  emergencyContacts EmergencyContact[]
+  insurances        Insurance[]
+  medicalExpenses   MedicalExpense[]
+  visitSummaries    VisitSummary[]
+  workouts          Workout[]
+
+  @@unique([householdId, linkedUserId])
+}
+
+model HealthProfile {
+  id                  String   @id @default(cuid())
+  familyMemberId      String   @unique
+  bloodType           BloodType @default(UNKNOWN)
+  heightCm            Decimal? @db.Decimal(5, 2)
+  weightKg            Decimal? @db.Decimal(5, 2)
+  allergies           String[] @default([])
+  chronicConditions   String[] @default([])
+  majorSurgeries      String[] @default([])
+  primaryCareProvider String?
+  preferredHospital   String?
+  medicalNotes        String?
+  isOrganDonor        Boolean  @default(false)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  familyMember FamilyMember @relation(fields: [familyMemberId], references: [id], onDelete: Cascade)
+}
+
+// ============================================================================
+// APPOINTMENTS
+// ============================================================================
+
+model Appointment {
+  id                  String            @id @default(cuid())
+  familyMemberId      String
+  providerId          String?
+  appointmentDateTime DateTime
+  durationMinutes     Int               @default(30)
+  appointmentType     AppointmentType   @default(OTHER)
+  status              AppointmentStatus @default(SCHEDULED)
+  location            String?
+  reasonForVisit      String?
+  preAppointmentNotes String?
+  reminderSent        Boolean           @default(false)
+  reminderSentAt      DateTime?
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+
+  familyMember FamilyMember  @relation(fields: [familyMemberId], references: [id], onDelete: Cascade)
+  provider     Provider?     @relation(fields: [providerId], references: [id], onDelete: SetNull)
+  visitSummary VisitSummary?
+}
+
+// ============================================================================
+// MEDICATIONS
+// ============================================================================
+
+model Medication {
+  id               String    @id @default(cuid())
+  familyMemberId   String
+  medicationName   String
+  dosage           String?
+  frequency        String?
+  startDate        DateTime? @db.Date
+  endDate          DateTime? @db.Date
+  isActive         Boolean   @default(true)
+  prescribedBy     String?
+  pharmacy         String?
+  lastRefillDate   DateTime? @db.Date
+  nextRefillDate   DateTime? @db.Date
+  refillsRemaining Int?
+  purpose          String?
+  sideEffects      String?
+  notes            String?
+  costPerRefill    Decimal?  @db.Decimal(10, 2)
+  copay            Decimal?  @db.Decimal(10, 2)
+  paidFromHsa      Boolean   @default(false)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  familyMember FamilyMember @relation(fields: [familyMemberId], references: [id], onDelete: Cascade)
+}
+
+// ============================================================================
+// VACCINATIONS
+// ============================================================================
+
+model Vaccination {
+  id                String   @id @default(cuid())
+  familyMemberId    String
+  vaccineName       String
+  doseNumber        String?
+  dateAdministered  DateTime @db.Date
+  nextDoseDate      DateTime? @db.Date
+  administeredBy    String?
+  lotNumber         String?
+  notes             String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  familyMember FamilyMember @relation(fields: [familyMemberId], references: [id], onDelete: Cascade)
+}
+
+// ============================================================================
+// EMERGENCY CONTACTS
+// ============================================================================
+
+model EmergencyContact {
+  id             String   @id @default(cuid())
+  familyMemberId String
+  name           String
+  relationship   String
+  phoneNumber    String
+  alternatePhone String?
+  email          String?
+  address        String?
+  priority       Int      @default(1)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  familyMember FamilyMember @relation(fields: [familyMemberId], references: [id], onDelete: Cascade)
+}
+
+// ============================================================================
+// INSURANCE
+// ============================================================================
+
+model Insurance {
+  id               String        @id @default(cuid())
+  familyMemberId   String
+  providerName     String
+  policyNumber     String
+  groupNumber      String?
+  policyHolderName String?
+  insuranceType    InsuranceType @default(MEDICAL)
+  phoneNumber      String?
+  website          String?
+  effectiveDate    DateTime?     @db.Date
+  expirationDate   DateTime?     @db.Date
+  deductible       Decimal?      @db.Decimal(10, 2)
+  outOfPocketMax   Decimal?      @db.Decimal(10, 2)
+  copay            Decimal?      @db.Decimal(10, 2)
+  notes            String?
+  isActive         Boolean       @default(true)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  familyMember FamilyMember @relation(fields: [familyMemberId], references: [id], onDelete: Cascade)
+}
+
+// ============================================================================
+// PROVIDERS
+// ============================================================================
+
+model Provider {
+  id                     String       @id @default(cuid())
+  householdId            String
+  name                   String
+  specialty              String?
+  type                   ProviderType @default(DOCTOR)
+  address                String?
+  phoneNumber            String?
+  faxNumber              String?
+  email                  String?
+  website                String?
+  portalUrl              String?
+  preferredContactMethod String?
+  notes                  String?
+  isActive               Boolean      @default(true)
+  createdAt              DateTime     @default(now())
+  updatedAt              DateTime     @updatedAt
+
+  appointments Appointment[]
+  visits       VisitSummary[]
+}
+
+// ============================================================================
+// MEDICAL EXPENSES
+// ============================================================================
+
+model MedicalExpense {
+  id                     String          @id @default(cuid())
+  familyMemberId         String
+  description            String
+  category               ExpenseCategory @default(OTHER)
+  amount                 Decimal         @db.Decimal(10, 2)
+  expenseDate            DateTime        @db.Date
+  paidFromHsa            Boolean         @default(false)
+  insuranceReimbursement Decimal?        @db.Decimal(10, 2)
+  notes                  String?
+  receiptPath            String?
+  createdAt              DateTime        @default(now())
+  updatedAt              DateTime        @updatedAt
+
+  familyMember FamilyMember @relation(fields: [familyMemberId], references: [id], onDelete: Cascade)
+}
+
+// ============================================================================
+// VISIT SUMMARIES
+// ============================================================================
+
+model VisitSummary {
+  id                    String    @id @default(cuid())
+  appointmentId         String?   @unique
+  familyMemberId        String
+  providerId            String?
+  visitDate             DateTime
+  visitType             VisitType @default(IN_PERSON)
+  chiefComplaint        String?
+  diagnosis             String?
+  treatmentProvided     String?
+  prescriptionsWritten  String?
+  labTestsOrdered       String?
+  followUpInstructions  String?
+  nextVisitRecommended  DateTime?
+  attachedDocuments     String?
+  notes                 String?
+  billedAmount          Decimal?  @db.Decimal(10, 2)
+  insurancePaid         Decimal?  @db.Decimal(10, 2)
+  outOfPocketCost       Decimal?  @db.Decimal(10, 2)
+  paidFromHsa           Boolean   @default(false)
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  appointment  Appointment?  @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  familyMember FamilyMember  @relation(fields: [familyMemberId], references: [id], onDelete: Cascade)
+  provider     Provider?     @relation(fields: [providerId], references: [id], onDelete: SetNull)
+}
+
+// ============================================================================
+// WORKOUT TRACKING
+// ============================================================================
+
+model Workout {
+  id             String    @id @default(cuid())
+  familyMemberId String
+  title          String
+  startTime      DateTime
+  endTime        DateTime?
+  description    String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  familyMember FamilyMember      @relation(fields: [familyMemberId], references: [id], onDelete: Cascade)
+  exercises    WorkoutExercise[]
+}
+
+model WorkoutExercise {
+  id              String  @id @default(cuid())
+  workoutId       String
+  exerciseName    String
+  orderIndex      Int     @default(0)
+  supersetGroupId Int?
+  notes           String?
+
+  workout Workout       @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+  sets    ExerciseSet[]
+}
+
+model ExerciseSet {
+  id                String   @id @default(cuid())
+  workoutExerciseId String
+  setIndex          Int      @default(0)
+  setType           SetType  @default(NORMAL)
+  weightLbs         Decimal? @db.Decimal(7, 2)
+  reps              Int?
+  distanceMiles     Decimal? @db.Decimal(7, 2)
+  durationSeconds   Int?
+  rpe               Decimal? @db.Decimal(3, 1)
+
+  workoutExercise WorkoutExercise @relation(fields: [workoutExerciseId], references: [id], onDelete: Cascade)
+}

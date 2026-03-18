@@ -1,0 +1,38 @@
+import { redirect } from "next/navigation";
+import { getCurrentUser } from "@/lib/auth";
+import { getCurrentHouseholdId, getHouseholdById, getHouseholdsForUser } from "@/lib/household";
+import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
+import { AppSidebar } from "@/components/app-sidebar";
+import { Separator } from "@/components/ui/separator";
+
+export default async function AppLayout({ children }: { children: React.ReactNode }) {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) redirect("/setup");
+
+  const [household, households] = await Promise.all([
+    getHouseholdById(householdId),
+    getHouseholdsForUser(user.id),
+  ]);
+
+  if (!household) redirect("/setup");
+
+  return (
+    <SidebarProvider>
+      <AppSidebar
+        user={{ name: user.name, email: user.email }}
+        household={{ id: household.id, name: household.name }}
+        households={households.map((h) => ({ id: h.id, name: h.name }))}
+      />
+      <SidebarInset>
+        <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
+          <SidebarTrigger className="-ml-1" />
+          <Separator orientation="vertical" className="mr-2 data-[orientation=vertical]:h-4" />
+        </header>
+        <main className="flex-1 overflow-auto p-4 md:p-6">{children}</main>
+      </SidebarInset>
+    </SidebarProvider>
+  );
+}

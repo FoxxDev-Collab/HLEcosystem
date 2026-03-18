@@ -1,0 +1,26 @@
+**/node_modules
+**/.next
+.git
+.gitignore
+.gitattributes
+*.md
+.claude/
+authentik.txt
+postgres.txt
+global_colors.txt
+.vscode
+.idea
+**/.env
+**/.env.*
+!**/.env.example
+volumes/
+
+# Exclude non-app dirs from build context
+HLEcosystem_Dotnet_Backup/
+config/
+*.sh
+*.txt
+*.yaml
+compose.yaml
+Containerfile.*
+!Containerfile.nextjs

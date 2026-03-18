@@ -1,0 +1,47 @@
+hle — HLEcosystem Container Management
+=======================================
+
+Usage: ./hle <command> [service|all] [flags]
+
+
+COMMANDS
+--------
+  rebuild  [service|all] [--no-cache]   Build & restart (parallel when "all")
+  up       [service|all]                Start services without rebuilding
+  down     [service|all]                Stop services
+  restart  [service|all]                Restart without rebuilding
+  status                                Show container states & health checks
+  logs     <service> [--follow|-f]      View container logs
+  shell    <service|postgres>           Open shell (postgres opens psql)
+  clean                                 Remove stopped containers & dangling images
+  nuke                                  Full teardown (containers, images, volumes)
+
+
+SERVICES
+--------
+  hle-family-manager    :8080
+  hle-familyhub         :8081
+  hle-family-finance    :8082
+  hle-family-health     :8083
+  hle-family-home-care  :8084
+  hle-file-server       :8085
+  hle-grocery-planner   :8086
+  postgres              (logs/shell only)
+
+
+EXAMPLES
+--------
+  ./hle rebuild hle-familyhub             Rebuild single service (cached)
+  ./hle rebuild hle-familyhub --no-cache  Rebuild with no cache
+  ./hle rebuild all                       Rebuild all (2 at a time, parallel)
+  ./hle rebuild all --no-cache            Clean rebuild all (parallel, no cache)
+  ./hle up all                            Start all services
+  ./hle down hle-file-server              Stop one service
+  ./hle restart hle-family-finance        Restart without rebuilding
+  ./hle status                            Check all container states & health
+  ./hle logs hle-family-finance -f        Tail logs for a service
+  ./hle logs postgres                     View postgres logs
+  ./hle shell hle-familyhub               Open shell in a container
+  ./hle shell postgres                    Open psql session
+  ./hle clean                             Prune unused containers & images
+  ./hle nuke                              Tear down everything (asks for confirmation)

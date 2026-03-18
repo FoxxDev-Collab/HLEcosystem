@@ -1,0 +1,177 @@
+# compose.yaml
+# HLEcosystem — PostgreSQL + 7 Next.js apps
+
+x-nextjs-app: &nextjs-app
+  restart: unless-stopped
+  networks:
+    - hle-net
+  depends_on:
+    postgres:
+      condition: service_healthy
+  environment: &nextjs-env
+    NODE_ENV: production
+    NEXT_TELEMETRY_DISABLED: "1"
+    HOSTNAME: "0.0.0.0"
+    PORT: "3000"
+  deploy:
+    resources:
+      limits:
+        memory: 512M
+      reservations:
+        memory: 128M
+
+services:
+
+  # PostgreSQL 16
+  postgres:
+    image: docker.io/postgres:16-alpine
+    container_name: foxxlab-postgres
+    restart: unless-stopped
+    networks:
+      - hle-net
+    ports:
+      - "127.0.0.1:5432:5432"
+    environment:
+      POSTGRES_DB: foxxlab
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./config/postgres/init-schemas.sql:/docker-entrypoint-initdb.d/01-init-schemas.sql:ro,z
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d foxxlab"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 256M
+
+  # Family Manager — Central auth & user management
+  hle-family-manager:
+    <<: *nextjs-app
+    container_name: foxxlab-family-manager
+    build:
+      context: .
+      dockerfile: Containerfile.nextjs
+      args:
+        APP_DIR: hle-family_manager
+        NEXT_PUBLIC_APP_NAME: "HLE Family Manager"
+    ports:
+      - "8080:3000"
+    environment:
+      <<: *nextjs-env
+      DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/foxxlab?schema=family_manager"
+
+  # FamilyHub — Family relationships, dates, gifts
+  hle-familyhub:
+    <<: *nextjs-app
+    container_name: foxxlab-familyhub
+    build:
+      context: .
+      dockerfile: Containerfile.nextjs
+      args:
+        APP_DIR: hle-familyhub
+        NEXT_PUBLIC_APP_NAME: "HLE FamilyHub"
+    ports:
+      - "8081:3000"
+    environment:
+      <<: *nextjs-env
+      DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/foxxlab?schema=familyhub"
+
+  # Family Finance
+  hle-family-finance:
+    <<: *nextjs-app
+    container_name: foxxlab-family-finance
+    build:
+      context: .
+      dockerfile: Containerfile.nextjs
+      args:
+        APP_DIR: hle-family_finance
+        NEXT_PUBLIC_APP_NAME: "HLE Family Finance"
+    ports:
+      - "8082:3000"
+    volumes:
+      - family-finance-uploads:/app/uploads
+    environment:
+      <<: *nextjs-env
+      DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/foxxlab?schema=family_finance"
+
+  # Family Health
+  hle-family-health:
+    <<: *nextjs-app
+    container_name: foxxlab-family-health
+    build:
+      context: .
+      dockerfile: Containerfile.nextjs
+      args:
+        APP_DIR: hle-family_health
+        NEXT_PUBLIC_APP_NAME: "HLE Family Health"
+    ports:
+      - "8083:3000"
+    environment:
+      <<: *nextjs-env
+      DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/foxxlab?schema=family_health"
+
+  # Family Home Care
+  hle-family-home-care:
+    <<: *nextjs-app
+    container_name: foxxlab-family-home-care
+    build:
+      context: .
+      dockerfile: Containerfile.nextjs
+      args:
+        APP_DIR: hle-family_home_care
+        NEXT_PUBLIC_APP_NAME: "HLE Family Home Care"
+    ports:
+      - "8084:3000"
+    environment:
+      <<: *nextjs-env
+      DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/foxxlab?schema=family_home_care"
+
+  # File Server
+  hle-file-server:
+    <<: *nextjs-app
+    container_name: foxxlab-file-server
+    build:
+      context: .
+      dockerfile: Containerfile.nextjs
+      args:
+        APP_DIR: hle-file_server
+        NEXT_PUBLIC_APP_NAME: "HLE File Server"
+    ports:
+      - "8085:3000"
+    environment:
+      <<: *nextjs-env
+      DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/foxxlab?schema=file_server"
+
+  # Grocery Planner
+  hle-grocery-planner:
+    <<: *nextjs-app
+    container_name: foxxlab-grocery-planner
+    build:
+      context: .
+      dockerfile: Containerfile.nextjs
+      args:
+        APP_DIR: hle-grocery_planner
+        NEXT_PUBLIC_APP_NAME: "HLE Grocery Planner"
+    ports:
+      - "8086:3000"
+    environment:
+      <<: *nextjs-env
+      DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/foxxlab?schema=grocery_planner"
+
+networks:
+  hle-net:
+    driver: bridge
+    name: hle-net
+
+volumes:
+  postgres-data:
+    name: hle-postgres-data
+  family-finance-uploads:
+    name: hle-family-finance-uploads

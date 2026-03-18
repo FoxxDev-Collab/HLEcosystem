@@ -1,0 +1,651 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Users are managed by FamilyHub (familyhub schema).
+// This app reads users via cross-schema queries in lib/users.ts.
+// All finance data is scoped to a Household.
+
+// ============================================================================
+// ENUMS
+// ============================================================================
+
+enum AccountType {
+  CHECKING
+  SAVINGS
+  CREDIT_CARD
+  CASH
+  INVESTMENT
+  LOAN
+  HSA
+  OTHER
+}
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+  TRANSFER
+}
+
+enum CategoryType {
+  INCOME
+  EXPENSE
+  TRANSFER
+}
+
+enum DebtType {
+  MORTGAGE
+  AUTO_LOAN
+  STUDENT_LOAN
+  PERSONAL_LOAN
+  HELOC
+  CREDIT_CARD
+  MEDICAL_DEBT
+  OTHER
+}
+
+enum AssetType {
+  REAL_ESTATE
+  VEHICLE
+  JEWELRY
+  ELECTRONICS
+  COLLECTIBLES
+  RETIREMENT
+  INVESTMENT
+  OTHER
+}
+
+enum BudgetPlannerProjectStatus {
+  PLANNING
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum RecurrenceFrequency {
+  DAILY
+  WEEKLY
+  BI_WEEKLY
+  MONTHLY
+  QUARTERLY
+  YEARLY
+}
+
+enum BillCategory {
+  UTILITIES
+  INSURANCE
+  SUBSCRIPTIONS
+  PHONE
+  INTERNET
+  RENT
+  MORTGAGE
+  CAR_PAYMENT
+  CHILD_CARE
+  STREAMING
+  OTHER
+}
+
+enum BillPaymentStatus {
+  PENDING
+  PAID
+  OVERDUE
+  SCHEDULED
+}
+
+enum CategoryRuleMatchType {
+  CONTAINS
+  STARTS_WITH
+  EXACT
+  REGEX
+}
+
+enum TaxDocumentType {
+  W2
+  FORM_1099_INT
+  FORM_1099_DIV
+  FORM_1099_NEC
+  FORM_1098
+  FORM_1099_B
+  FORM_1099_R
+  K1
+  FORM_1099_SA
+  FORM_5498_SA
+  OTHER
+}
+
+enum TaxFilingStatus {
+  SINGLE
+  MARRIED_FILING_JOINTLY
+  MARRIED_FILING_SEPARATELY
+  HEAD_OF_HOUSEHOLD
+  QUALIFYING_WIDOWER
+}
+
+enum ImportFileFormat {
+  CSV
+  QFX
+  OFX
+}
+
+enum ImportMatchStatus {
+  PENDING
+  AUTO_MATCHED
+  IMPORTED
+  SKIPPED
+  DUPLICATE
+}
+
+// Households are managed by Family Manager (family_manager schema).
+// This app reads households via cross-schema queries in lib/household.ts.
+// Domain models keep householdId as a plain String for scoping.
+
+// ============================================================================
+// ACCOUNTS & TRANSACTIONS
+// ============================================================================
+
+model Account {
+  id               String      @id @default(cuid())
+  householdId      String
+  name             String
+  type             AccountType
+  institution      String?
+  accountNumberLast4 String?
+  initialBalance   Decimal     @default(0) @db.Decimal(18, 2)
+  currentBalance   Decimal     @default(0) @db.Decimal(18, 2)
+  creditLimit      Decimal?    @db.Decimal(18, 2)
+  interestRate     Decimal?    @db.Decimal(6, 4)
+  hsaAnnualLimit   Decimal?    @db.Decimal(18, 2)
+  hsaFamilyCoverage Boolean    @default(false)
+  currency         String      @default("USD")
+  notes            String?
+  color            String?
+  icon             String?
+  isArchived       Boolean     @default(false)
+  includeInNetWorth Boolean    @default(true)
+  sortOrder        Int         @default(0)
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  transactions          Transaction[]          @relation("AccountTransactions")
+  transfersIn           Transaction[]          @relation("TransferToAccount")
+  recurringTransactions RecurringTransaction[] @relation("RecurringAccount")
+  recurringTransfersIn  RecurringTransaction[] @relation("RecurringTransferTo")
+  linkedDebts           Debt[]
+  autoPayBills          MonthlyBill[]
+  importBatches         ImportBatch[]
+}
+
+model Transaction {
+  id                    String          @id @default(cuid())
+  householdId           String
+  accountId             String
+  categoryId            String?
+  transferToAccountId   String?
+  linkedTransactionId   String?         @unique
+  recurringTransactionId String?
+  type                  TransactionType
+  amount                Decimal         @db.Decimal(18, 2)
+  date                  DateTime        @db.Date
+  payee                 String?
+  description           String?
+  isReconciled          Boolean         @default(false)
+  isCleared             Boolean         @default(false)
+  isBalanceAdjustment   Boolean         @default(false)
+  tags                  String[]        @default([])
+  externalId            String?         // for bank import duplicate detection
+  createdByUserId       String?         // familyhub.User.id
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+
+  account              Account               @relation("AccountTransactions", fields: [accountId], references: [id])
+  category             Category?             @relation(fields: [categoryId], references: [id])
+  transferToAccount    Account?              @relation("TransferToAccount", fields: [transferToAccountId], references: [id])
+  linkedTransaction    Transaction?          @relation("LinkedTransactions", fields: [linkedTransactionId], references: [id])
+  linkedBy             Transaction?          @relation("LinkedTransactions")
+  recurringTransaction RecurringTransaction? @relation(fields: [recurringTransactionId], references: [id])
+  linkedDebtPayments   DebtPayment[]
+  linkedBillPayments   BillPayment[]
+  matchedImports       ImportedTransaction[] @relation("MatchedTransaction")
+  createdFromImports   ImportedTransaction[] @relation("CreatedTransaction")
+
+  @@index([householdId, date])
+  @@index([accountId])
+  @@index([categoryId])
+  @@index([externalId])
+}
+
+model RecurringTransaction {
+  id                  String              @id @default(cuid())
+  householdId         String
+  accountId           String
+  categoryId          String?
+  transferToAccountId String?
+  name                String
+  type                TransactionType
+  amount              Decimal             @db.Decimal(18, 2)
+  payee               String?
+  description         String?
+  frequency           RecurrenceFrequency
+  frequencyInterval   Int                 @default(1)
+  dayOfPeriod         Int?                // day of month/week
+  startDate           DateTime            @db.Date
+  endDate             DateTime?           @db.Date
+  nextOccurrence      DateTime?           @db.Date
+  lastProcessed       DateTime?           @db.Date
+  isActive            Boolean             @default(true)
+  autoCreate          Boolean             @default(false)
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+
+  account           Account       @relation("RecurringAccount", fields: [accountId], references: [id])
+  category          Category?     @relation(fields: [categoryId], references: [id])
+  transferToAccount Account?      @relation("RecurringTransferTo", fields: [transferToAccountId], references: [id])
+  generatedTransactions Transaction[]
+}
+
+// ============================================================================
+// CATEGORIES & RULES
+// ============================================================================
+
+model Category {
+  id                  String       @id @default(cuid())
+  householdId         String
+  parentCategoryId    String?
+  name                String
+  type                CategoryType
+  icon                String?
+  color               String?
+  defaultBudgetAmount Decimal?     @db.Decimal(18, 2)
+  sortOrder           Int          @default(0)
+  isArchived          Boolean      @default(false)
+  createdAt           DateTime     @default(now())
+
+  parentCategory       Category?              @relation("SubCategories", fields: [parentCategoryId], references: [id])
+  subCategories        Category[]             @relation("SubCategories")
+  transactions         Transaction[]
+  budgets              Budget[]
+  recurringTransactions RecurringTransaction[]
+  categoryRules        CategoryRule[]
+  defaultForBills      MonthlyBill[]
+  suggestedForImports  ImportedTransaction[]
+
+  @@unique([householdId, name, parentCategoryId])
+}
+
+model CategoryRule {
+  id            String                @id @default(cuid())
+  householdId   String
+  pattern       String
+  matchType     CategoryRuleMatchType
+  categoryId    String
+  assignPayee   String?
+  priority      Int                   @default(0)
+  isActive      Boolean               @default(true)
+  matchCount    Int                   @default(0)
+  lastMatchedAt DateTime?
+  notes         String?
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+
+  category  Category  @relation(fields: [categoryId], references: [id])
+
+  @@index([householdId, isActive])
+}
+
+// ============================================================================
+// BUDGETS
+// ============================================================================
+
+model Budget {
+  id          String   @id @default(cuid())
+  householdId String
+  categoryId  String
+  year        Int
+  month       Int      // 1-12
+  amount      Decimal  @db.Decimal(18, 2)
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  category  Category  @relation(fields: [categoryId], references: [id])
+
+  @@unique([householdId, categoryId, year, month])
+}
+
+model BudgetPlannerProject {
+  id          String                     @id @default(cuid())
+  householdId String
+  name        String
+  description String?
+  status      BudgetPlannerProjectStatus @default(PLANNING)
+  targetDate  DateTime?                  @db.Date
+  totalCost   Decimal                    @default(0) @db.Decimal(18, 2)
+  icon        String?
+  color       String?
+  notes       String?
+  sortOrder   Int                        @default(0)
+  createdAt   DateTime                   @default(now())
+  updatedAt   DateTime                   @updatedAt
+
+  items     BudgetPlannerItem[]
+}
+
+model BudgetPlannerItem {
+  id           String   @id @default(cuid())
+  projectId    String
+  name         String
+  description  String?
+  quantity     Int      @default(1)
+  unitCost     Decimal  @db.Decimal(18, 2)
+  lineTotal    Decimal  @db.Decimal(18, 2)
+  sortOrder    Int      @default(0)
+  isPurchased  Boolean  @default(false)
+  referenceUrl String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  project BudgetPlannerProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+// ============================================================================
+// ASSETS & NET WORTH
+// ============================================================================
+
+model Asset {
+  id               String    @id @default(cuid())
+  householdId      String
+  type             AssetType
+  name             String
+  purchasePrice    Decimal?  @db.Decimal(18, 2)
+  purchaseDate     DateTime? @db.Date
+  currentValue     Decimal   @default(0) @db.Decimal(18, 2)
+  valueAsOfDate    DateTime? @db.Date
+  // Real estate
+  address          String?
+  city             String?
+  state            String?
+  zipCode          String?
+  squareFootage    Int?
+  yearBuilt        Int?
+  propertyTaxAnnual Decimal? @db.Decimal(18, 2)
+  // Vehicle
+  make             String?
+  model            String?
+  vehicleYear      Int?
+  vin              String?
+  mileage          Int?
+  licensePlate     String?
+  // Common
+  linkedDebtId     String?
+  icon             String?
+  color            String?
+  includeInNetWorth Boolean  @default(true)
+  notes            String?
+  isArchived       Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  linkedDebt   Debt?              @relation(fields: [linkedDebtId], references: [id])
+  valueHistory AssetValueHistory[]
+}
+
+model AssetValueHistory {
+  id        String   @id @default(cuid())
+  assetId   String
+  date      DateTime @db.Date
+  value     Decimal  @db.Decimal(18, 2)
+  source    String?  // "manual", "zillow", "kbb", etc.
+  notes     String?
+  createdAt DateTime @default(now())
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([assetId, date])
+}
+
+// ============================================================================
+// DEBTS & LIABILITIES
+// ============================================================================
+
+model Debt {
+  id                 String    @id @default(cuid())
+  householdId        String
+  type               DebtType
+  name               String
+  lender             String?
+  accountNumberLast4 String?
+  originalPrincipal  Decimal   @db.Decimal(18, 2)
+  currentBalance     Decimal   @db.Decimal(18, 2)
+  interestRate       Decimal   @db.Decimal(6, 4)
+  termMonths         Int?
+  minimumPayment     Decimal?  @db.Decimal(18, 2)
+  paymentDayOfMonth  Int?
+  originationDate    DateTime? @db.Date
+  expectedPayoffDate DateTime? @db.Date
+  linkedAccountId    String?
+  icon               String?
+  color              String?
+  includeInNetWorth  Boolean   @default(true)
+  notes              String?
+  isArchived         Boolean   @default(false)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  linkedAccount Account?      @relation(fields: [linkedAccountId], references: [id])
+  payments      DebtPayment[]
+  linkedAssets  Asset[]
+  linkedBills   MonthlyBill[]
+}
+
+model DebtPayment {
+  id                  String    @id @default(cuid())
+  debtId              String
+  paymentDate         DateTime  @db.Date
+  totalAmount         Decimal   @db.Decimal(18, 2)
+  principalAmount     Decimal   @default(0) @db.Decimal(18, 2)
+  interestAmount      Decimal   @default(0) @db.Decimal(18, 2)
+  escrowAmount        Decimal   @default(0) @db.Decimal(18, 2)
+  extraPrincipal      Decimal   @default(0) @db.Decimal(18, 2)
+  remainingBalance    Decimal?  @db.Decimal(18, 2)
+  linkedTransactionId String?
+  notes               String?
+  createdAt           DateTime  @default(now())
+
+  debt              Debt         @relation(fields: [debtId], references: [id], onDelete: Cascade)
+  linkedTransaction Transaction? @relation(fields: [linkedTransactionId], references: [id])
+
+  @@index([debtId, paymentDate])
+}
+
+// ============================================================================
+// MONTHLY BILLS
+// ============================================================================
+
+model MonthlyBill {
+  id                String       @id @default(cuid())
+  householdId       String
+  name              String
+  payee             String?
+  category          BillCategory @default(OTHER)
+  expectedAmount    Decimal      @db.Decimal(18, 2)
+  isVariableAmount  Boolean      @default(false)
+  dueDayOfMonth     Int
+  autoPay           Boolean      @default(false)
+  autoPayAccountId  String?
+  linkedDebtId      String?
+  defaultCategoryId String?
+  icon              String?
+  color             String?
+  websiteUrl        String?
+  notes             String?
+  isActive          Boolean      @default(true)
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  autoPayAccount  Account?      @relation(fields: [autoPayAccountId], references: [id])
+  linkedDebt      Debt?         @relation(fields: [linkedDebtId], references: [id])
+  defaultCategory Category?     @relation(fields: [defaultCategoryId], references: [id])
+  payments        BillPayment[]
+}
+
+model BillPayment {
+  id                  String            @id @default(cuid())
+  monthlyBillId       String
+  dueDate             DateTime          @db.Date
+  paidDate            DateTime?         @db.Date
+  amountDue           Decimal           @db.Decimal(18, 2)
+  amountPaid          Decimal?          @db.Decimal(18, 2)
+  status              BillPaymentStatus @default(PENDING)
+  linkedTransactionId String?
+  confirmationNumber  String?
+  notes               String?
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+
+  monthlyBill       MonthlyBill  @relation(fields: [monthlyBillId], references: [id], onDelete: Cascade)
+  linkedTransaction Transaction? @relation(fields: [linkedTransactionId], references: [id])
+
+  @@index([monthlyBillId, dueDate])
+}
+
+// ============================================================================
+// TAX TRACKING
+// ============================================================================
+
+model TaxYear {
+  id                  String          @id @default(cuid())
+  householdId         String
+  year                Int
+  federalFilingStatus TaxFilingStatus?
+  state               String?
+  isFederalFiled      Boolean         @default(false)
+  federalFiledDate    DateTime?       @db.Date
+  isStateFiled        Boolean         @default(false)
+  stateFiledDate      DateTime?       @db.Date
+  federalRefund       Decimal?        @db.Decimal(18, 2)
+  stateRefund         Decimal?        @db.Decimal(18, 2)
+  federalOwed         Decimal?        @db.Decimal(18, 2)
+  stateOwed           Decimal?        @db.Decimal(18, 2)
+  refundReceived      Boolean         @default(false)
+  refundReceivedDate  DateTime?       @db.Date
+  federalOwedPaid     Boolean         @default(false)
+  stateOwedPaid       Boolean         @default(false)
+  notes               String?
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+
+  documents TaxDocument[]
+
+  @@unique([householdId, year])
+}
+
+model TaxDocument {
+  id                     String          @id @default(cuid())
+  taxYearId              String
+  documentType           TaxDocumentType
+  issuer                 String
+  description            String?
+  grossAmount            Decimal?        @db.Decimal(18, 2)
+  federalWithheld        Decimal?        @db.Decimal(18, 2)
+  stateWithheld          Decimal?        @db.Decimal(18, 2)
+  socialSecurityWithheld Decimal?        @db.Decimal(18, 2)
+  medicareWithheld       Decimal?        @db.Decimal(18, 2)
+  isReceived             Boolean         @default(false)
+  receivedDate           DateTime?       @db.Date
+  expectedDate           DateTime?       @db.Date
+  notes                  String?
+  uploadedFileName       String?
+  storagePath            String?
+  fileSize               Int?
+  contentHash            String?
+  uploadedAt             DateTime?
+  createdAt              DateTime        @default(now())
+  updatedAt              DateTime        @updatedAt
+
+  taxYear TaxYear @relation(fields: [taxYearId], references: [id], onDelete: Cascade)
+}
+
+// ============================================================================
+// BANK IMPORT
+// ============================================================================
+
+model ImportBatch {
+  id               String           @id @default(cuid())
+  householdId      String
+  accountId        String
+  fileName         String
+  format           ImportFileFormat
+  importedAt       DateTime         @default(now())
+  importedByUserId String           // familyhub.User.id
+  totalRows        Int              @default(0)
+  importedCount    Int              @default(0)
+  duplicateCount   Int              @default(0)
+  skippedCount     Int              @default(0)
+  isFinalized      Boolean          @default(false)
+  notes            String?
+
+  account      Account               @relation(fields: [accountId], references: [id])
+  transactions ImportedTransaction[]
+}
+
+model ImportedTransaction {
+  id                    String            @id @default(cuid())
+  importBatchId         String
+  date                  DateTime          @db.Date
+  amount                Decimal           @db.Decimal(18, 2)
+  description           String?
+  payee                 String?
+  checkNumber           String?
+  referenceNumber       String?
+  rawData               String?           // original CSV/OFX line
+  matchStatus           ImportMatchStatus @default(PENDING)
+  matchedTransactionId  String?
+  suggestedCategoryId   String?
+  createdTransactionId  String?
+  notes                 String?
+  createdAt             DateTime          @default(now())
+
+  importBatch        ImportBatch  @relation(fields: [importBatchId], references: [id], onDelete: Cascade)
+  matchedTransaction Transaction? @relation("MatchedTransaction", fields: [matchedTransactionId], references: [id])
+  suggestedCategory  Category?    @relation(fields: [suggestedCategoryId], references: [id])
+  createdTransaction Transaction? @relation("CreatedTransaction", fields: [createdTransactionId], references: [id])
+}
+
+// ============================================================================
+// WISHLISTS
+// ============================================================================
+
+model Wishlist {
+  id          String   @id @default(cuid())
+  householdId String
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  items WishlistItem[]
+
+  @@index([householdId])
+}
+
+model WishlistItem {
+  id         String   @id @default(cuid())
+  wishlistId String
+  name       String
+  lowPrice   Decimal? @db.Decimal(18, 2)
+  highPrice  Decimal? @db.Decimal(18, 2)
+  url        String?
+  sortOrder  Int      @default(0)
+  isPurchased Boolean @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  wishlist Wishlist @relation(fields: [wishlistId], references: [id], onDelete: Cascade)
+
+  @@index([wishlistId])
+}
