@@ -179,12 +179,12 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
             <div className="divide-y mb-4">
               {item.documents.map((doc) => (
                 <div key={doc.id} className="flex items-center justify-between py-2">
-                  <div className="text-sm">
+                  <Link href={`/documents/${doc.id}`} className="text-sm hover:underline">
                     <span className="font-medium">{doc.name}</span>
                     <span className="text-muted-foreground ml-2 text-xs">{doc.type}</span>
-                  </div>
+                  </Link>
                   <div className="flex gap-1">
-                    <Link href={`/api/documents/serve/${doc.id}`} target="_blank">
+                    <Link href={`/documents/${doc.id}`}>
                       <Button variant="ghost" size="icon" className="h-7 w-7"><Eye className="size-3.5" /></Button>
                     </Link>
                     <Link href={`/api/documents/download/${doc.id}`}>

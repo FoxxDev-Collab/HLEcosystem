@@ -98,7 +98,7 @@ export default async function DocumentsPage() {
                 {documents.map((doc) => (
                   <TableRow key={doc.id}>
                     <TableCell>
-                      <div className="flex items-center gap-2">
+                      <Link href={`/documents/${doc.id}`} className="flex items-center gap-2 hover:underline">
                         <FileIcon mimeType={doc.mimeType} />
                         <div>
                           <div className="font-medium text-sm">{doc.name}</div>
@@ -106,7 +106,7 @@ export default async function DocumentsPage() {
                             <p className="text-xs text-muted-foreground max-w-[200px] truncate">{doc.notes}</p>
                           )}
                         </div>
-                      </div>
+                      </Link>
                     </TableCell>
                     <TableCell>
                       <Badge className={TYPE_COLORS[doc.type]}>{doc.type}</Badge>
@@ -128,7 +128,7 @@ export default async function DocumentsPage() {
                     <TableCell className="text-sm">{formatDate(doc.createdAt)}</TableCell>
                     <TableCell>
                       <div className="flex justify-end gap-1">
-                        <Link href={`/api/documents/serve/${doc.id}`} target="_blank">
+                        <Link href={`/documents/${doc.id}`}>
                           <Button variant="ghost" size="icon" className="h-7 w-7" title="View">
                             <Eye className="size-3.5" />
                           </Button>
