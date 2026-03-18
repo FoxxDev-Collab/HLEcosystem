@@ -33,6 +33,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { logoutAction, switchHouseholdAction } from "@/app/actions";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 const overviewNav = [
   { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -144,6 +145,10 @@ export function AppSidebar({
       </SidebarContent>
 
       <SidebarFooter className="border-t p-4">
+        <div className="flex items-center justify-between mb-3">
+          <span className="text-xs text-muted-foreground">Theme</span>
+          <ThemeToggle />
+        </div>
         <div className="flex items-center gap-3">
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-medium">
             {user.name.charAt(0).toUpperCase()}
