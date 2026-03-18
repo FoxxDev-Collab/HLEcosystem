@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, ClipboardList, Trash2 } from "lucide-react";
 import { createMaintenanceLogAction, deleteMaintenanceLogAction } from "./actions";
@@ -120,34 +121,51 @@ export default async function MaintenanceLogPage({
         <Card>
           <CardHeader><CardTitle>History ({logs.length})</CardTitle></CardHeader>
           <CardContent>
-            <div className="divide-y">
-              {logs.map((log) => (
-                <div key={log.id} className="flex items-center justify-between py-3 gap-4">
-                  <div>
-                    <div className="text-sm font-medium">{log.title}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {formatDate(log.completedDate)}
-                      {log.completedBy && ` · ${log.completedBy}`}
-                      {log.item && ` · ${log.item.name}`}
-                      {log.vehicle && ` · ${log.vehicle.year ? `${log.vehicle.year} ` : ""}${log.vehicle.make} ${log.vehicle.model}`}
-                      {log.mileageAtService && ` · ${formatMileage(log.mileageAtService)}`}
-                      {log.cost && ` · ${formatCurrency(log.cost)}`}
-                    </div>
-                    {log.partsUsed && <div className="text-xs text-muted-foreground">Parts: {log.partsUsed}</div>}
-                    {log.notes && <p className="text-xs text-muted-foreground mt-0.5">{log.notes}</p>}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="secondary">{log.status}</Badge>
-                    <form action={deleteMaintenanceLogAction}>
-                      <input type="hidden" name="id" value={log.id} />
-                      <Button type="submit" variant="ghost" size="icon" className="h-7 w-7">
-                        <Trash2 className="size-3.5 text-red-500" />
-                      </Button>
-                    </form>
-                  </div>
-                </div>
-              ))}
-            </div>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Task</TableHead>
+                  <TableHead>Item / Vehicle</TableHead>
+                  <TableHead>Done By</TableHead>
+                  <TableHead>Parts</TableHead>
+                  <TableHead className="text-right">Cost</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {logs.map((log) => (
+                  <TableRow key={log.id}>
+                    <TableCell>{formatDate(log.completedDate)}</TableCell>
+                    <TableCell className="font-medium">
+                      {log.title}
+                      {log.notes && (
+                        <p className="text-xs text-muted-foreground mt-0.5 max-w-[200px] truncate">{log.notes}</p>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {log.item?.name || (log.vehicle ? `${log.vehicle.year ? `${log.vehicle.year} ` : ""}${log.vehicle.make} ${log.vehicle.model}` : "\u2014")}
+                      {log.mileageAtService ? ` (${formatMileage(log.mileageAtService)})` : ""}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">{log.completedBy || "\u2014"}</TableCell>
+                    <TableCell className="text-muted-foreground">{log.partsUsed || "\u2014"}</TableCell>
+                    <TableCell className="text-right">{log.cost ? formatCurrency(log.cost) : "\u2014"}</TableCell>
+                    <TableCell>
+                      <Badge variant="secondary">{log.status}</Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <form action={deleteMaintenanceLogAction}>
+                        <input type="hidden" name="id" value={log.id} />
+                        <Button type="submit" variant="ghost" size="icon" className="h-7 w-7">
+                          <Trash2 className="size-3.5 text-red-500" />
+                        </Button>
+                      </form>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </CardContent>
         </Card>
       )}

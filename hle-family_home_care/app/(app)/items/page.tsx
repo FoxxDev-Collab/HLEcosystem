@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Refrigerator, ShieldCheck, AlertTriangle } from "lucide-react";
 import { createItemAction } from "./actions";
@@ -145,38 +146,55 @@ export default async function ItemsPage({
         </Card>
       ) : (
         <Card>
-          <CardHeader>
-            <CardTitle>All Items ({items.length})</CardTitle>
-          </CardHeader>
+          <CardHeader><CardTitle>All Items ({items.length})</CardTitle></CardHeader>
           <CardContent>
-            <div className="divide-y">
-              {items.map((item) => (
-                <Link key={item.id} href={`/items/${item.id}`} className="flex items-center justify-between py-3 gap-4 hover:bg-muted/50 -mx-2 px-2 rounded">
-                  <div>
-                    <div className="text-sm font-medium">{item.name}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {item.room?.name || "No room"}
-                      {item.manufacturer && ` · ${item.manufacturer}`}
-                      {item.model && ` ${item.model}`}
-                    </div>
-                    {item.warrantyExpires && (
-                      <div className="flex items-center gap-1 text-xs mt-0.5">
-                        <ShieldCheck className="size-3" />
-                        <span className={item.warrantyExpires < now ? "text-red-600" : "text-green-600"}>
-                          Warranty {item.warrantyExpires < now ? "expired" : "until"} {formatDate(item.warrantyExpires)}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {item.purchasePrice && (
-                      <span className="text-xs text-muted-foreground">{formatCurrency(item.purchasePrice)}</span>
-                    )}
-                    <Badge className={CONDITION_COLORS[item.condition]}>{item.condition.replace(/_/g, " ")}</Badge>
-                  </div>
-                </Link>
-              ))}
-            </div>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Room</TableHead>
+                  <TableHead>Manufacturer / Model</TableHead>
+                  <TableHead>Warranty</TableHead>
+                  <TableHead className="text-right">Price</TableHead>
+                  <TableHead>Condition</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {items.map((item) => (
+                  <TableRow key={item.id} className="cursor-pointer hover:bg-muted/50">
+                    <TableCell>
+                      <Link href={`/items/${item.id}`} className="font-medium hover:underline">
+                        {item.name}
+                      </Link>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {item.room?.name || "\u2014"}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {[item.manufacturer, item.model].filter(Boolean).join(" ") || "\u2014"}
+                    </TableCell>
+                    <TableCell>
+                      {item.warrantyExpires ? (
+                        <div className="flex items-center gap-1 text-xs">
+                          <ShieldCheck className={`size-3 ${item.warrantyExpires < now ? "text-red-500" : "text-green-600"}`} />
+                          <span className={item.warrantyExpires < now ? "text-red-600" : "text-green-600"}>
+                            {formatDate(item.warrantyExpires)}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">\u2014</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right text-muted-foreground">
+                      {item.purchasePrice ? formatCurrency(item.purchasePrice) : "\u2014"}
+                    </TableCell>
+                    <TableCell>
+                      <Badge className={CONDITION_COLORS[item.condition]}>{item.condition.replace(/_/g, " ")}</Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </CardContent>
         </Card>
       )}

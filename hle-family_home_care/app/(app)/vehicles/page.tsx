@@ -3,12 +3,13 @@ import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
 import { getCurrentHouseholdId } from "@/lib/household";
 import prisma from "@/lib/prisma";
-import { formatDate, formatCurrency, formatMileage } from "@/lib/format";
+import { formatCurrency, formatMileage } from "@/lib/format";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Car } from "lucide-react";
 import { createVehicleAction } from "./actions";
 
@@ -95,29 +96,44 @@ export default async function VehiclesPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {vehicles.map((v) => (
-            <Link key={v.id} href={`/vehicles/${v.id}`}>
-              <Card className="hover:bg-muted/50 transition-colors cursor-pointer">
-                <CardHeader className="flex flex-row items-start justify-between pb-2">
-                  <div>
-                    <CardTitle className="text-base">
-                      {v.year ? `${v.year} ` : ""}{v.make} {v.model}
-                    </CardTitle>
-                    {v.trim && <p className="text-xs text-muted-foreground">{v.trim}</p>}
-                  </div>
-                  <Badge className={STATUS_COLORS[v.status]}>{v.status}</Badge>
-                </CardHeader>
-                <CardContent className="space-y-1 text-sm text-muted-foreground">
-                  {v.currentMileage && <div>{formatMileage(v.currentMileage)}</div>}
-                  {v.licensePlate && <div>Plate: {v.licensePlate}</div>}
-                  {v.color && <div>Color: {v.color}</div>}
-                  {v.purchasePrice && <div>Paid: {formatCurrency(v.purchasePrice)}</div>}
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
-        </div>
+        <Card>
+          <CardHeader><CardTitle>All Vehicles ({vehicles.length})</CardTitle></CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Vehicle</TableHead>
+                  <TableHead>Color</TableHead>
+                  <TableHead>Plate</TableHead>
+                  <TableHead className="text-right">Mileage</TableHead>
+                  <TableHead className="text-right">Purchase Price</TableHead>
+                  <TableHead>Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {vehicles.map((v) => (
+                  <TableRow key={v.id} className="cursor-pointer hover:bg-muted/50">
+                    <TableCell>
+                      <Link href={`/vehicles/${v.id}`} className="font-medium hover:underline">
+                        {v.year ? `${v.year} ` : ""}{v.make} {v.model}
+                      </Link>
+                      {v.trim && <span className="text-muted-foreground text-xs ml-1">{v.trim}</span>}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">{v.color || "\u2014"}</TableCell>
+                    <TableCell className="text-muted-foreground">{v.licensePlate || "\u2014"}</TableCell>
+                    <TableCell className="text-right">{formatMileage(v.currentMileage)}</TableCell>
+                    <TableCell className="text-right text-muted-foreground">
+                      {v.purchasePrice ? formatCurrency(v.purchasePrice) : "\u2014"}
+                    </TableCell>
+                    <TableCell>
+                      <Badge className={STATUS_COLORS[v.status]}>{v.status}</Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
       )}
     </div>
   );

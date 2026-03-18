@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Wrench, CheckCircle2, Trash2 } from "lucide-react";
 import { createRepairAction, updateRepairStatusAction, deleteRepairAction } from "./actions";
@@ -140,83 +141,116 @@ export default async function RepairsPage() {
         </CardContent>
       </Card>
 
-      {/* Active Repairs */}
-      {active.length > 0 && (
-        <Card>
-          <CardHeader><CardTitle>Active Repairs ({active.length})</CardTitle></CardHeader>
-          <CardContent>
-            <div className="divide-y">
-              {active.map((repair) => (
-                <div key={repair.id} className="flex items-center justify-between py-3 gap-4">
-                  <div>
-                    <div className="text-sm font-medium">{repair.title}</div>
-                    <div className="text-xs text-muted-foreground">
-                      Reported {formatDate(repair.reportedDate)}
-                      {repair.item && ` · ${repair.item.name}`}
-                      {repair.vehicle && ` · ${repair.vehicle.year ? `${repair.vehicle.year} ` : ""}${repair.vehicle.make} ${repair.vehicle.model}`}
-                      {repair.provider && ` · ${repair.provider.name}`}
-                      {repair.scheduledDate && ` · Scheduled: ${formatDate(repair.scheduledDate)}`}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge className={STATUS_COLORS[repair.status]}>{repair.status.replace(/_/g, " ")}</Badge>
-                    <form action={updateRepairStatusAction}>
-                      <input type="hidden" name="id" value={repair.id} />
-                      <input type="hidden" name="status" value="COMPLETED" />
-                      <Button type="submit" variant="ghost" size="icon" className="h-7 w-7" title="Mark Complete">
-                        <CheckCircle2 className="size-3.5 text-green-600" />
-                      </Button>
-                    </form>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Completed */}
-      {completed.length > 0 && (
-        <Card>
-          <CardHeader><CardTitle className="text-muted-foreground">Completed ({completed.length})</CardTitle></CardHeader>
-          <CardContent>
-            <div className="divide-y">
-              {completed.map((repair) => (
-                <div key={repair.id} className="flex items-center justify-between py-3 gap-4 opacity-70">
-                  <div>
-                    <div className="text-sm font-medium">{repair.title}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {formatDate(repair.completedDate || repair.reportedDate)}
-                      {repair.completedBy && ` · ${repair.completedBy}`}
-                      {repair.item && ` · ${repair.item.name}`}
-                      {repair.vehicle && ` · ${repair.vehicle.year ? `${repair.vehicle.year} ` : ""}${repair.vehicle.make} ${repair.vehicle.model}`}
-                      {repair.provider && ` · ${repair.provider.name}`}
-                      {repair.totalCost && ` · ${formatCurrency(repair.totalCost)}`}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge className={STATUS_COLORS[repair.status]}>{repair.status.replace(/_/g, " ")}</Badge>
-                    <form action={deleteRepairAction}>
-                      <input type="hidden" name="id" value={repair.id} />
-                      <Button type="submit" variant="ghost" size="icon" className="h-7 w-7">
-                        <Trash2 className="size-3.5 text-red-500" />
-                      </Button>
-                    </form>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {repairs.length === 0 && (
+      {repairs.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
             <Wrench className="size-10 mx-auto mb-3 opacity-40" />
             <p>No repairs recorded. Report issues when things break to build your repair history.</p>
           </CardContent>
         </Card>
+      ) : (
+        <>
+          {active.length > 0 && (
+            <Card>
+              <CardHeader><CardTitle>Active Repairs ({active.length})</CardTitle></CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Issue</TableHead>
+                      <TableHead>Item / Vehicle</TableHead>
+                      <TableHead>Provider</TableHead>
+                      <TableHead>Reported</TableHead>
+                      <TableHead>Scheduled</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {active.map((r) => (
+                      <TableRow key={r.id}>
+                        <TableCell className="font-medium">{r.title}</TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {r.item?.name || (r.vehicle ? `${r.vehicle.year ? `${r.vehicle.year} ` : ""}${r.vehicle.make} ${r.vehicle.model}` : "\u2014")}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">{r.provider?.name || "\u2014"}</TableCell>
+                        <TableCell>{formatDate(r.reportedDate)}</TableCell>
+                        <TableCell>{r.scheduledDate ? formatDate(r.scheduledDate) : "\u2014"}</TableCell>
+                        <TableCell>
+                          <Badge className={STATUS_COLORS[r.status]}>{r.status.replace(/_/g, " ")}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex justify-end gap-1">
+                            <form action={updateRepairStatusAction}>
+                              <input type="hidden" name="id" value={r.id} />
+                              <input type="hidden" name="status" value="COMPLETED" />
+                              <Button type="submit" variant="ghost" size="icon" className="h-7 w-7" title="Mark Complete">
+                                <CheckCircle2 className="size-3.5 text-green-600" />
+                              </Button>
+                            </form>
+                            <form action={deleteRepairAction}>
+                              <input type="hidden" name="id" value={r.id} />
+                              <Button type="submit" variant="ghost" size="icon" className="h-7 w-7" title="Delete">
+                                <Trash2 className="size-3.5 text-red-500" />
+                              </Button>
+                            </form>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          )}
+
+          {completed.length > 0 && (
+            <Card>
+              <CardHeader><CardTitle className="text-muted-foreground">Completed ({completed.length})</CardTitle></CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Issue</TableHead>
+                      <TableHead>Item / Vehicle</TableHead>
+                      <TableHead>Done By</TableHead>
+                      <TableHead>Completed</TableHead>
+                      <TableHead className="text-right">Total Cost</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {completed.map((r) => (
+                      <TableRow key={r.id} className="opacity-70">
+                        <TableCell className="font-medium">{r.title}</TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {r.item?.name || (r.vehicle ? `${r.vehicle.year ? `${r.vehicle.year} ` : ""}${r.vehicle.make} ${r.vehicle.model}` : "\u2014")}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {r.completedBy || r.provider?.name || "\u2014"}
+                        </TableCell>
+                        <TableCell>{formatDate(r.completedDate || r.reportedDate)}</TableCell>
+                        <TableCell className="text-right">{r.totalCost ? formatCurrency(r.totalCost) : "\u2014"}</TableCell>
+                        <TableCell>
+                          <Badge className={STATUS_COLORS[r.status]}>{r.status.replace(/_/g, " ")}</Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <form action={deleteRepairAction}>
+                            <input type="hidden" name="id" value={r.id} />
+                            <Button type="submit" variant="ghost" size="icon" className="h-7 w-7">
+                              <Trash2 className="size-3.5 text-red-500" />
+                            </Button>
+                          </form>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          )}
+        </>
       )}
     </div>
   );

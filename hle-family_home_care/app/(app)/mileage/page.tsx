@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Gauge, Trash2 } from "lucide-react";
 import { createMileageEntryAction, deleteMileageEntryAction } from "./actions";
@@ -74,25 +75,37 @@ export default async function MileagePage() {
         <Card>
           <CardHeader><CardTitle>Recent Entries ({entries.length})</CardTitle></CardHeader>
           <CardContent>
-            <div className="divide-y">
-              {entries.map((entry) => (
-                <div key={entry.id} className="flex items-center justify-between py-3">
-                  <div>
-                    <div className="text-sm font-medium">{formatMileage(entry.mileage)}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {entry.vehicle.year ? `${entry.vehicle.year} ` : ""}{entry.vehicle.make} {entry.vehicle.model} · {formatDate(entry.date)}
-                    </div>
-                    {entry.notes && <p className="text-xs text-muted-foreground mt-0.5">{entry.notes}</p>}
-                  </div>
-                  <form action={deleteMileageEntryAction}>
-                    <input type="hidden" name="id" value={entry.id} />
-                    <Button type="submit" variant="ghost" size="icon" className="h-7 w-7">
-                      <Trash2 className="size-3.5 text-red-500" />
-                    </Button>
-                  </form>
-                </div>
-              ))}
-            </div>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Vehicle</TableHead>
+                  <TableHead className="text-right">Odometer</TableHead>
+                  <TableHead>Notes</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {entries.map((entry) => (
+                  <TableRow key={entry.id}>
+                    <TableCell>{formatDate(entry.date)}</TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {entry.vehicle.year ? `${entry.vehicle.year} ` : ""}{entry.vehicle.make} {entry.vehicle.model}
+                    </TableCell>
+                    <TableCell className="text-right font-medium">{formatMileage(entry.mileage)}</TableCell>
+                    <TableCell className="text-muted-foreground">{entry.notes || "\u2014"}</TableCell>
+                    <TableCell className="text-right">
+                      <form action={deleteMileageEntryAction}>
+                        <input type="hidden" name="id" value={entry.id} />
+                        <Button type="submit" variant="ghost" size="icon" className="h-7 w-7">
+                          <Trash2 className="size-3.5 text-red-500" />
+                        </Button>
+                      </form>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </CardContent>
         </Card>
       )}

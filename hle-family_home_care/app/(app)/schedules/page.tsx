@@ -2,12 +2,13 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { getCurrentHouseholdId } from "@/lib/household";
 import prisma from "@/lib/prisma";
-import { formatDate, formatCurrency, formatFrequency } from "@/lib/format";
+import { formatDate, formatFrequency } from "@/lib/format";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, CalendarClock, CheckCircle2, Trash2, AlertTriangle } from "lucide-react";
 import { createScheduleAction, completeScheduleAction, deleteScheduleAction } from "./actions";
@@ -118,110 +119,122 @@ export default async function SchedulesPage() {
         </CardContent>
       </Card>
 
-      {/* Overdue */}
-      {overdue.length > 0 && (
-        <Card>
-          <CardHeader><CardTitle className="text-red-700">Overdue ({overdue.length})</CardTitle></CardHeader>
-          <CardContent>
-            <div className="divide-y">
-              {overdue.map((schedule) => (
-                <ScheduleRow key={schedule.id} schedule={schedule} isOverdue />
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Upcoming */}
-      {upcoming.length > 0 && (
-        <Card>
-          <CardHeader><CardTitle>Active Schedules ({upcoming.length})</CardTitle></CardHeader>
-          <CardContent>
-            <div className="divide-y">
-              {upcoming.map((schedule) => (
-                <ScheduleRow key={schedule.id} schedule={schedule} />
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Inactive */}
-      {inactive.length > 0 && (
-        <Card>
-          <CardHeader><CardTitle className="text-muted-foreground">Inactive ({inactive.length})</CardTitle></CardHeader>
-          <CardContent>
-            <div className="divide-y opacity-60">
-              {inactive.map((schedule) => (
-                <ScheduleRow key={schedule.id} schedule={schedule} />
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {schedules.length === 0 && (
+      {schedules.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
             <CalendarClock className="size-10 mx-auto mb-3 opacity-40" />
             <p>No maintenance schedules yet. Create recurring tasks to stay on top of home & vehicle care.</p>
           </CardContent>
         </Card>
+      ) : (
+        <>
+          {overdue.length > 0 && (
+            <Card>
+              <CardHeader><CardTitle className="text-red-700">Overdue ({overdue.length})</CardTitle></CardHeader>
+              <CardContent>
+                <ScheduleTable schedules={overdue} now={now} isOverdue />
+              </CardContent>
+            </Card>
+          )}
+
+          {upcoming.length > 0 && (
+            <Card>
+              <CardHeader><CardTitle>Active Schedules ({upcoming.length})</CardTitle></CardHeader>
+              <CardContent>
+                <ScheduleTable schedules={upcoming} now={now} />
+              </CardContent>
+            </Card>
+          )}
+
+          {inactive.length > 0 && (
+            <Card>
+              <CardHeader><CardTitle className="text-muted-foreground">Inactive ({inactive.length})</CardTitle></CardHeader>
+              <CardContent className="opacity-60">
+                <ScheduleTable schedules={inactive} now={now} />
+              </CardContent>
+            </Card>
+          )}
+        </>
       )}
     </div>
   );
 }
 
-function ScheduleRow({
-  schedule,
+function ScheduleTable({
+  schedules,
+  now,
   isOverdue = false,
 }: {
-  schedule: {
+  schedules: {
     id: string;
     title: string;
     frequency: string;
     customIntervalDays: number | null;
     nextDueDate: Date | null;
     lastCompletedDate: Date | null;
-    estimatedCost: unknown;
     assignedTo: string | null;
     item: { name: string } | null;
     vehicle: { year: number | null; make: string; model: string } | null;
-  };
+  }[];
+  now: Date;
   isOverdue?: boolean;
 }) {
   return (
-    <div className="flex items-center justify-between py-3 gap-4">
-      <div>
-        <div className={`text-sm font-medium ${isOverdue ? "text-red-700" : ""}`}>
-          {schedule.title}
-        </div>
-        <div className="text-xs text-muted-foreground">
-          {formatFrequency(schedule.frequency, schedule.customIntervalDays)}
-          {schedule.item && ` · ${schedule.item.name}`}
-          {schedule.vehicle && ` · ${schedule.vehicle.year ? `${schedule.vehicle.year} ` : ""}${schedule.vehicle.make} ${schedule.vehicle.model}`}
-          {schedule.assignedTo && ` · ${schedule.assignedTo}`}
-        </div>
-        <div className="text-xs text-muted-foreground">
-          {schedule.nextDueDate && `Due: ${formatDate(schedule.nextDueDate)}`}
-          {schedule.lastCompletedDate && ` · Last done: ${formatDate(schedule.lastCompletedDate)}`}
-        </div>
-      </div>
-      <div className="flex gap-1">
-        <form action={completeScheduleAction}>
-          <input type="hidden" name="scheduleId" value={schedule.id} />
-          <input type="hidden" name="completedDate" value={new Date().toISOString().split("T")[0]} />
-          <Button type="submit" variant="ghost" size="icon" className="h-7 w-7" title="Mark Complete">
-            <CheckCircle2 className="size-3.5 text-green-600" />
-          </Button>
-        </form>
-        <form action={deleteScheduleAction}>
-          <input type="hidden" name="id" value={schedule.id} />
-          <Button type="submit" variant="ghost" size="icon" className="h-7 w-7" title="Delete">
-            <Trash2 className="size-3.5 text-red-500" />
-          </Button>
-        </form>
-      </div>
-    </div>
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Task</TableHead>
+          <TableHead>For</TableHead>
+          <TableHead>Frequency</TableHead>
+          <TableHead>Next Due</TableHead>
+          <TableHead>Last Done</TableHead>
+          <TableHead>Assigned</TableHead>
+          <TableHead className="text-right">Actions</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {schedules.map((s) => (
+          <TableRow key={s.id}>
+            <TableCell className={`font-medium ${isOverdue ? "text-red-700" : ""}`}>
+              {s.title}
+            </TableCell>
+            <TableCell className="text-muted-foreground">
+              {s.item?.name || (s.vehicle ? `${s.vehicle.year ? `${s.vehicle.year} ` : ""}${s.vehicle.make} ${s.vehicle.model}` : "\u2014")}
+            </TableCell>
+            <TableCell className="text-muted-foreground">
+              {formatFrequency(s.frequency, s.customIntervalDays)}
+            </TableCell>
+            <TableCell>
+              {s.nextDueDate ? (
+                <span className={s.nextDueDate < now ? "text-red-600 font-medium" : ""}>
+                  {formatDate(s.nextDueDate)}
+                </span>
+              ) : "\u2014"}
+            </TableCell>
+            <TableCell className="text-muted-foreground">
+              {s.lastCompletedDate ? formatDate(s.lastCompletedDate) : "Never"}
+            </TableCell>
+            <TableCell className="text-muted-foreground">{s.assignedTo || "\u2014"}</TableCell>
+            <TableCell>
+              <div className="flex justify-end gap-1">
+                <form action={completeScheduleAction}>
+                  <input type="hidden" name="scheduleId" value={s.id} />
+                  <input type="hidden" name="completedDate" value={new Date().toISOString().split("T")[0]} />
+                  <Button type="submit" variant="ghost" size="icon" className="h-7 w-7" title="Mark Complete">
+                    <CheckCircle2 className="size-3.5 text-green-600" />
+                  </Button>
+                </form>
+                <form action={deleteScheduleAction}>
+                  <input type="hidden" name="id" value={s.id} />
+                  <Button type="submit" variant="ghost" size="icon" className="h-7 w-7" title="Delete">
+                    <Trash2 className="size-3.5 text-red-500" />
+                  </Button>
+                </form>
+              </div>
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
   );
 }

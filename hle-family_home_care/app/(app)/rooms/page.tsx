@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
 import { getCurrentHouseholdId } from "@/lib/household";
 import prisma from "@/lib/prisma";
@@ -6,9 +7,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Plus, Trash2, Home } from "lucide-react";
-import { createRoomAction, deleteRoomAction } from "./actions";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Plus, Trash2, Save, Home } from "lucide-react";
+import { createRoomAction, updateRoomAction, deleteRoomAction } from "./actions";
 
 export default async function RoomsPage() {
   const user = await getCurrentUser();
@@ -29,7 +30,7 @@ export default async function RoomsPage() {
       <Card>
         <CardHeader><CardTitle>Add Room</CardTitle></CardHeader>
         <CardContent>
-          <form action={createRoomAction} className="grid gap-4 sm:grid-cols-3 items-end">
+          <form action={createRoomAction} className="grid gap-4 sm:grid-cols-4 items-end">
             <div className="space-y-1">
               <Label>Name</Label>
               <Input name="name" placeholder="e.g. Kitchen, Garage" required />
@@ -40,11 +41,9 @@ export default async function RoomsPage() {
             </div>
             <div className="space-y-1">
               <Label>Description</Label>
-              <div className="flex gap-2">
-                <Input name="description" placeholder="Optional notes" />
-                <Button type="submit"><Plus className="size-4 mr-2" />Add</Button>
-              </div>
+              <Input name="description" placeholder="Optional notes" />
             </div>
+            <Button type="submit"><Plus className="size-4 mr-2" />Add Room</Button>
           </form>
         </CardContent>
       </Card>
@@ -57,32 +56,82 @@ export default async function RoomsPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {rooms.map((room) => (
-            <Card key={room.id}>
-              <CardHeader className="flex flex-row items-start justify-between pb-2">
-                <div>
-                  <CardTitle className="text-base">{room.name}</CardTitle>
-                  {room.floor && (
-                    <p className="text-xs text-muted-foreground">{room.floor}</p>
-                  )}
-                </div>
-                <form action={deleteRoomAction}>
-                  <input type="hidden" name="id" value={room.id} />
-                  <Button type="submit" variant="ghost" size="icon" className="h-7 w-7" title="Delete room">
-                    <Trash2 className="size-3.5 text-red-500" />
-                  </Button>
-                </form>
-              </CardHeader>
-              <CardContent>
-                {room.description && (
-                  <p className="text-sm text-muted-foreground mb-2">{room.description}</p>
-                )}
-                <Badge variant="secondary">{room._count.items} item{room._count.items !== 1 ? "s" : ""}</Badge>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        <Card>
+          <CardHeader><CardTitle>All Rooms ({rooms.length})</CardTitle></CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Floor</TableHead>
+                  <TableHead>Description</TableHead>
+                  <TableHead className="text-center">Items</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {rooms.map((room) => (
+                  <TableRow key={room.id}>
+                    <TableCell>
+                      <form id={`edit-${room.id}`} action={updateRoomAction}>
+                        <input type="hidden" name="id" value={room.id} />
+                        <Input
+                          name="name"
+                          defaultValue={room.name}
+                          className="h-8 text-sm"
+                          required
+                        />
+                      </form>
+                    </TableCell>
+                    <TableCell>
+                      <Input
+                        name="floor"
+                        form={`edit-${room.id}`}
+                        defaultValue={room.floor || ""}
+                        placeholder="—"
+                        className="h-8 text-sm"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Input
+                        name="description"
+                        form={`edit-${room.id}`}
+                        defaultValue={room.description || ""}
+                        placeholder="—"
+                        className="h-8 text-sm"
+                      />
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Link href={`/items?roomId=${room.id}`} className="text-sm hover:underline">
+                        {room._count.items}
+                      </Link>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex justify-end gap-1">
+                        <Button
+                          type="submit"
+                          form={`edit-${room.id}`}
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          title="Save changes"
+                        >
+                          <Save className="size-3.5 text-blue-600" />
+                        </Button>
+                        <form action={deleteRoomAction}>
+                          <input type="hidden" name="id" value={room.id} />
+                          <Button type="submit" variant="ghost" size="icon" className="h-7 w-7" title="Delete room">
+                            <Trash2 className="size-3.5 text-red-500" />
+                          </Button>
+                        </form>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
       )}
     </div>
   );

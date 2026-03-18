@@ -7,8 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2, HardHat, Phone, Mail, Star } from "lucide-react";
+import { Plus, Trash2, HardHat, Star } from "lucide-react";
 import { createProviderAction, deleteProviderAction } from "./actions";
 
 const SPECIALTIES = [
@@ -86,42 +87,56 @@ export default async function ProvidersPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {providers.map((p) => (
-            <Card key={p.id}>
-              <CardHeader className="flex flex-row items-start justify-between pb-2">
-                <div>
-                  <CardTitle className="text-base">{p.name}</CardTitle>
-                  {p.company && <p className="text-xs text-muted-foreground">{p.company}</p>}
-                </div>
-                <form action={deleteProviderAction}>
-                  <input type="hidden" name="id" value={p.id} />
-                  <Button type="submit" variant="ghost" size="icon" className="h-7 w-7" title="Delete">
-                    <Trash2 className="size-3.5 text-red-500" />
-                  </Button>
-                </form>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <Badge variant="secondary">{p.specialty.replace(/_/g, " ")}</Badge>
-                {p.rating && (
-                  <div className="flex items-center gap-1 text-sm">
-                    {Array.from({ length: p.rating }).map((_, i) => (
-                      <Star key={i} className="size-3.5 fill-yellow-400 text-yellow-400" />
-                    ))}
-                  </div>
-                )}
-                <div className="text-sm text-muted-foreground space-y-1">
-                  {p.phone && <div className="flex items-center gap-2"><Phone className="size-3" />{p.phone}</div>}
-                  {p.email && <div className="flex items-center gap-2"><Mail className="size-3" />{p.email}</div>}
-                </div>
-                {p._count.repairs > 0 && (
-                  <p className="text-xs text-muted-foreground">{p._count.repairs} repair{p._count.repairs !== 1 ? "s" : ""}</p>
-                )}
-                {p.notes && <p className="text-xs text-muted-foreground italic">{p.notes}</p>}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        <Card>
+          <CardHeader><CardTitle>All Providers ({providers.length})</CardTitle></CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Company</TableHead>
+                  <TableHead>Specialty</TableHead>
+                  <TableHead>Phone</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Rating</TableHead>
+                  <TableHead className="text-center">Repairs</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {providers.map((p) => (
+                  <TableRow key={p.id}>
+                    <TableCell className="font-medium">{p.name}</TableCell>
+                    <TableCell className="text-muted-foreground">{p.company || "\u2014"}</TableCell>
+                    <TableCell>
+                      <Badge variant="secondary">{p.specialty.replace(/_/g, " ")}</Badge>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">{p.phone || "\u2014"}</TableCell>
+                    <TableCell className="text-muted-foreground">{p.email || "\u2014"}</TableCell>
+                    <TableCell>
+                      {p.rating ? (
+                        <div className="flex items-center gap-0.5">
+                          {Array.from({ length: p.rating }).map((_, i) => (
+                            <Star key={i} className="size-3 fill-yellow-400 text-yellow-400" />
+                          ))}
+                        </div>
+                      ) : "\u2014"}
+                    </TableCell>
+                    <TableCell className="text-center text-muted-foreground">{p._count.repairs}</TableCell>
+                    <TableCell className="text-right">
+                      <form action={deleteProviderAction}>
+                        <input type="hidden" name="id" value={p.id} />
+                        <Button type="submit" variant="ghost" size="icon" className="h-7 w-7" title="Delete">
+                          <Trash2 className="size-3.5 text-red-500" />
+                        </Button>
+                      </form>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
       )}
     </div>
   );
