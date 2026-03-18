@@ -74,6 +74,15 @@ enum VehicleStatus {
   STORED
 }
 
+enum DocumentType {
+  MANUAL
+  WARRANTY
+  RECEIPT
+  INVOICE
+  PHOTO
+  OTHER
+}
+
 // ============================================================================
 // ROOMS / LOCATIONS
 // ============================================================================
@@ -123,6 +132,7 @@ model Item {
   maintenanceSchedules MaintenanceSchedule[]
   maintenanceLogs      MaintenanceLog[]
   repairs              Repair[]
+  documents            Document[]
 
   @@index([householdId])
   @@index([roomId])
@@ -157,6 +167,7 @@ model Vehicle {
   maintenanceLogs      MaintenanceLog[]
   repairs              Repair[]
   mileageEntries       MileageEntry[]
+  documents            Document[]
 
   @@index([householdId])
 }
@@ -261,9 +272,10 @@ model Repair {
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
-  item     Item?            @relation(fields: [itemId], references: [id], onDelete: SetNull)
-  vehicle  Vehicle?         @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
-  provider ServiceProvider? @relation(fields: [providerId], references: [id], onDelete: SetNull)
+  item      Item?            @relation(fields: [itemId], references: [id], onDelete: SetNull)
+  vehicle   Vehicle?         @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+  provider  ServiceProvider? @relation(fields: [providerId], references: [id], onDelete: SetNull)
+  documents Document[]
 
   @@index([householdId])
   @@index([itemId])
@@ -293,4 +305,36 @@ model ServiceProvider {
   repairs Repair[]
 
   @@index([householdId])
+}
+
+// ============================================================================
+// DOCUMENTS / ATTACHMENTS
+// ============================================================================
+
+model Document {
+  id           String       @id @default(cuid())
+  householdId  String
+  itemId       String?
+  vehicleId    String?
+  repairId     String?
+  type         DocumentType @default(OTHER)
+  name         String
+  originalName String
+  mimeType     String
+  size         BigInt
+  storagePath  String
+  contentHash  String
+  uploadedBy   String
+  notes        String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  item    Item?    @relation(fields: [itemId], references: [id], onDelete: SetNull)
+  vehicle Vehicle? @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+  repair  Repair?  @relation(fields: [repairId], references: [id], onDelete: SetNull)
+
+  @@index([householdId])
+  @@index([itemId])
+  @@index([vehicleId])
+  @@index([repairId])
 }

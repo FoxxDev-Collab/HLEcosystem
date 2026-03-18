@@ -7,11 +7,13 @@ import {
   Home,
   Refrigerator,
   Car,
+  Calendar,
   CalendarClock,
   ClipboardList,
   Wrench,
   HardHat,
   Gauge,
+  FileText,
   Settings,
   LogOut,
   ChevronDown,
@@ -38,11 +40,13 @@ import { logoutAction, switchHouseholdAction } from "@/app/actions";
 
 const overviewNav = [
   { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { title: "Calendar", href: "/calendar", icon: Calendar },
 ];
 
 const homeNav = [
   { title: "Rooms", href: "/rooms", icon: Home },
   { title: "Items & Appliances", href: "/items", icon: Refrigerator },
+  { title: "Documents", href: "/documents", icon: FileText },
   { title: "Service Providers", href: "/providers", icon: HardHat },
 ];
 

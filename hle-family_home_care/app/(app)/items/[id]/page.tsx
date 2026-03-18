@@ -10,8 +10,10 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Trash2, ShieldCheck, Wrench, ClipboardList } from "lucide-react";
+import { ArrowLeft, Trash2, ShieldCheck, Wrench, ClipboardList, FileText, Eye, Download } from "lucide-react";
 import { updateItemAction, deleteItemAction, archiveItemAction } from "../actions";
+import { DocumentUpload } from "@/components/document-upload";
+import { deleteDocumentAction } from "../../documents/actions";
 
 const CONDITIONS = ["EXCELLENT", "GOOD", "FAIR", "POOR", "NEEDS_REPAIR", "DECOMMISSIONED"];
 
@@ -29,6 +31,7 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
         room: true,
         maintenanceLogs: { orderBy: { completedDate: "desc" }, take: 10 },
         repairs: { orderBy: { reportedDate: "desc" }, take: 10, include: { provider: true } },
+        documents: { orderBy: { createdAt: "desc" } },
       },
     }),
     prisma.room.findMany({ where: { householdId }, orderBy: { name: "asc" } }),
@@ -163,6 +166,44 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
           </CardContent>
         </Card>
       )}
+
+      {/* Documents */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FileText className="size-4" />Documents ({item.documents.length})
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {item.documents.length > 0 && (
+            <div className="divide-y mb-4">
+              {item.documents.map((doc) => (
+                <div key={doc.id} className="flex items-center justify-between py-2">
+                  <div className="text-sm">
+                    <span className="font-medium">{doc.name}</span>
+                    <span className="text-muted-foreground ml-2 text-xs">{doc.type}</span>
+                  </div>
+                  <div className="flex gap-1">
+                    <Link href={`/api/documents/serve/${doc.id}`} target="_blank">
+                      <Button variant="ghost" size="icon" className="h-7 w-7"><Eye className="size-3.5" /></Button>
+                    </Link>
+                    <Link href={`/api/documents/download/${doc.id}`}>
+                      <Button variant="ghost" size="icon" className="h-7 w-7"><Download className="size-3.5" /></Button>
+                    </Link>
+                    <form action={deleteDocumentAction}>
+                      <input type="hidden" name="id" value={doc.id} />
+                      <Button type="submit" variant="ghost" size="icon" className="h-7 w-7">
+                        <Trash2 className="size-3.5 text-red-500" />
+                      </Button>
+                    </form>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          <DocumentUpload itemId={item.id} compact />
+        </CardContent>
+      </Card>
 
       {/* Maintenance History */}
       <Card>

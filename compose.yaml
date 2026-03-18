@@ -129,9 +129,13 @@ services:
         NEXT_PUBLIC_APP_NAME: "HLE Family Home Care"
     ports:
       - "8084:3000"
+    volumes:
+      - home-care-uploads:/app/uploads
     environment:
       <<: *nextjs-env
       DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/foxxlab?schema=family_home_care"
+      UPLOAD_DIR: "/app/uploads"
+      MAX_FILE_SIZE_MB: "50"
 
   # File Server
   hle-file-server:
@@ -179,5 +183,7 @@ volumes:
     name: hle-postgres-data
   family-finance-uploads:
     name: hle-family-finance-uploads
+  home-care-uploads:
+    name: hle-home-care-uploads
   file-server-uploads:
     name: hle-file-server-uploads
