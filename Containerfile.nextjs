@@ -17,7 +17,9 @@ COPY ${APP_DIR}/package.json ${APP_DIR}/package-lock.json ./
 COPY ${APP_DIR}/prisma ./prisma/
 
 RUN npm ci --ignore-scripts && \
-    npx prisma generate
+    npx prisma generate && \
+    # Rebuild native modules (sharp, etc.) if present
+    npm rebuild 2>/dev/null || true
 
 # ============================================
 # Stage 2: Build the application
@@ -56,6 +58,15 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 # Prisma client for runtime (Server Actions need it)
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+
+# Copy any native modules needed at runtime (sharp, etc.)
+# Uses a shell command to avoid failing when modules don't exist
+RUN --mount=from=builder,source=/app/node_modules,target=/tmp/node_modules \
+    for pkg in sharp @img; do \
+      if [ -d "/tmp/node_modules/$pkg" ]; then \
+        cp -r "/tmp/node_modules/$pkg" "./node_modules/$pkg"; \
+      fi; \
+    done
 
 COPY --from=builder --chown=nextjs:nodejs /app/entrypoint.sh ./entrypoint.sh
 RUN chmod +x entrypoint.sh

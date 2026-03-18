@@ -5,9 +5,10 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   Files,
-  Upload,
+  User,
+  Star,
   Share2,
-  FolderTree,
+  Trash2,
   Tags,
   Settings,
   LogOut,
@@ -39,12 +40,13 @@ const overviewNav = [
 
 const filesNav = [
   { title: "Browse", href: "/browse", icon: Files },
-  { title: "Uploads", href: "/uploads", icon: Upload },
+  { title: "My Files", href: "/my-files", icon: User },
+  { title: "Favorites", href: "/favorites", icon: Star },
   { title: "Shared", href: "/shared", icon: Share2 },
+  { title: "Trash", href: "/trash", icon: Trash2 },
 ];
 
 const organizationNav = [
-  { title: "Folders", href: "/folders", icon: FolderTree },
   { title: "Tags", href: "/tags", icon: Tags },
 ];
 

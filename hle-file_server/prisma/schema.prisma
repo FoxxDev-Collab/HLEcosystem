@@ -7,6 +7,210 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Users are managed by FamilyHub (familyhub schema).
-// This app reads users via cross-schema queries.
-// Add file server-specific models below.
+// Users are managed by Family Manager (family_manager schema).
+// This app reads users via cross-schema queries in lib/users.ts.
+// All file data is scoped to a Household.
+
+// ============================================================================
+// ENUMS
+// ============================================================================
+
+enum FileStatus {
+  ACTIVE
+  ARCHIVED
+  DELETED
+}
+
+enum SharePermission {
+  VIEW
+  DOWNLOAD
+  EDIT
+}
+
+// ============================================================================
+// FOLDERS
+// ============================================================================
+
+model Folder {
+  id              String    @id @default(cuid())
+  householdId     String
+  parentFolderId  String?
+  ownerId         String?   // null = household shared, set = personal to user
+  name            String
+  description     String?
+  color           String?
+  icon            String?
+  sortOrder       Int       @default(0)
+  createdByUserId String
+  deletedAt       DateTime? // soft delete for trash
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  parentFolder Folder?  @relation("SubFolders", fields: [parentFolderId], references: [id])
+  subFolders   Folder[] @relation("SubFolders")
+  files        File[]
+
+  @@unique([householdId, parentFolderId, name, ownerId])
+  @@index([householdId])
+  @@index([parentFolderId])
+  @@index([ownerId])
+}
+
+// ============================================================================
+// FILES
+// ============================================================================
+
+model File {
+  id               String     @id @default(cuid())
+  householdId      String
+  folderId         String?
+  ownerId          String?    // null = household shared, set = personal to user
+  name             String
+  originalName     String
+  mimeType         String
+  size             BigInt
+  storagePath      String
+  contentHash      String?
+  thumbnailPath    String?    // generated thumbnail location
+  status           FileStatus @default(ACTIVE)
+  description      String?
+  uploadedByUserId String
+  deletedAt        DateTime?  // soft delete for trash
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+
+  folder     Folder?       @relation(fields: [folderId], references: [id])
+  tags       FileTag[]
+  shares     FileShare[]
+  versions   FileVersion[]
+  favorites  Favorite[]
+  shareLinks ShareLink[]
+
+  @@index([householdId])
+  @@index([folderId])
+  @@index([householdId, status])
+  @@index([contentHash])
+  @@index([ownerId])
+  @@index([deletedAt])
+}
+
+// ============================================================================
+// FILE VERSIONS
+// ============================================================================
+
+model FileVersion {
+  id               String   @id @default(cuid())
+  fileId           String
+  versionNumber    Int
+  size             BigInt
+  storagePath      String
+  contentHash      String?
+  uploadedByUserId String
+  comment          String?
+  createdAt        DateTime @default(now())
+
+  file File @relation(fields: [fileId], references: [id], onDelete: Cascade)
+
+  @@unique([fileId, versionNumber])
+  @@index([fileId])
+}
+
+// ============================================================================
+// TAGS
+// ============================================================================
+
+model Tag {
+  id          String   @id @default(cuid())
+  householdId String
+  name        String
+  color       String?
+  createdAt   DateTime @default(now())
+
+  files FileTag[]
+
+  @@unique([householdId, name])
+  @@index([householdId])
+}
+
+model FileTag {
+  id        String   @id @default(cuid())
+  fileId    String
+  tagId     String
+  createdAt DateTime @default(now())
+
+  file File @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  tag  Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([fileId, tagId])
+}
+
+// ============================================================================
+// SHARING
+// ============================================================================
+
+model FileShare {
+  id               String          @id @default(cuid())
+  fileId           String
+  sharedWithUserId String
+  sharedByUserId   String
+  permission       SharePermission @default(VIEW)
+  expiresAt        DateTime?
+  createdAt        DateTime        @default(now())
+
+  file File @relation(fields: [fileId], references: [id], onDelete: Cascade)
+
+  @@unique([fileId, sharedWithUserId])
+  @@index([sharedWithUserId])
+}
+
+// ============================================================================
+// SHARE LINKS (token-based public access)
+// ============================================================================
+
+model ShareLink {
+  id              String          @id @default(cuid())
+  fileId          String
+  token           String          @unique @default(cuid())
+  permission      SharePermission @default(VIEW)
+  createdByUserId String
+  expiresAt       DateTime?
+  maxDownloads    Int?
+  downloadCount   Int             @default(0)
+  isActive        Boolean         @default(true)
+  createdAt       DateTime        @default(now())
+
+  file File @relation(fields: [fileId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([fileId])
+}
+
+// ============================================================================
+// FAVORITES
+// ============================================================================
+
+model Favorite {
+  id        String   @id @default(cuid())
+  userId    String
+  fileId    String
+  createdAt DateTime @default(now())
+
+  file File @relation(fields: [fileId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, fileId])
+  @@index([userId])
+}
+
+// ============================================================================
+// STORAGE QUOTAS
+// ============================================================================
+
+model StorageQuota {
+  id               String   @id @default(cuid())
+  householdId      String   @unique
+  maxStorageBytes  BigInt   @default(5368709120) // 5 GB default
+  usedStorageBytes BigInt   @default(0)
+  updatedAt        DateTime @updatedAt
+
+  @@index([householdId])
+}

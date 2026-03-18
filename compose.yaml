@@ -145,9 +145,13 @@ services:
         NEXT_PUBLIC_APP_NAME: "HLE File Server"
     ports:
       - "8085:3000"
+    volumes:
+      - file-server-uploads:/app/uploads
     environment:
       <<: *nextjs-env
       DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/foxxlab?schema=file_server"
+      UPLOAD_DIR: "/app/uploads"
+      MAX_FILE_SIZE_MB: "500"
 
   # Grocery Planner
   hle-grocery-planner:
@@ -175,3 +179,5 @@ volumes:
     name: hle-postgres-data
   family-finance-uploads:
     name: hle-family-finance-uploads
+  file-server-uploads:
+    name: hle-file-server-uploads
