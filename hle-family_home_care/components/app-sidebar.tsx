@@ -4,11 +4,14 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
+  Home,
+  Refrigerator,
+  Car,
+  CalendarClock,
   ClipboardList,
   Wrench,
-  Refrigerator,
-  TreePine,
-  Flower2,
+  HardHat,
+  Gauge,
   Settings,
   LogOut,
   ChevronDown,
@@ -37,15 +40,21 @@ const overviewNav = [
   { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
 ];
 
-const maintenanceNav = [
-  { title: "Tasks", href: "/tasks", icon: ClipboardList },
-  { title: "Repairs", href: "/repairs", icon: Wrench },
-  { title: "Appliances", href: "/appliances", icon: Refrigerator },
+const homeNav = [
+  { title: "Rooms", href: "/rooms", icon: Home },
+  { title: "Items & Appliances", href: "/items", icon: Refrigerator },
+  { title: "Service Providers", href: "/providers", icon: HardHat },
 ];
 
-const gardenNav = [
-  { title: "Lawn", href: "/lawn", icon: TreePine },
-  { title: "Garden", href: "/garden", icon: Flower2 },
+const vehicleNav = [
+  { title: "Vehicles", href: "/vehicles", icon: Car },
+  { title: "Mileage Log", href: "/mileage", icon: Gauge },
+];
+
+const maintenanceNav = [
+  { title: "Schedules", href: "/schedules", icon: CalendarClock },
+  { title: "Maintenance Log", href: "/maintenance-log", icon: ClipboardList },
+  { title: "Repairs", href: "/repairs", icon: Wrench },
 ];
 
 const accountNav = [
@@ -136,8 +145,9 @@ export function AppSidebar({
 
       <SidebarContent>
         <NavGroup label="Overview" items={overviewNav} pathname={pathname} />
+        <NavGroup label="Home" items={homeNav} pathname={pathname} />
+        <NavGroup label="Vehicles" items={vehicleNav} pathname={pathname} />
         <NavGroup label="Maintenance" items={maintenanceNav} pathname={pathname} />
-        <NavGroup label="Garden" items={gardenNav} pathname={pathname} />
         <NavGroup label="Account" items={accountNav} pathname={pathname} />
       </SidebarContent>
 

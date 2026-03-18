@@ -7,6 +7,290 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Users are managed by FamilyHub (familyhub schema).
+// Users are managed by Family Manager (family_manager schema).
 // This app reads users via cross-schema queries.
-// Add home care-specific models below.
+
+// ============================================================================
+// ENUMS
+// ============================================================================
+
+enum ItemCondition {
+  EXCELLENT
+  GOOD
+  FAIR
+  POOR
+  NEEDS_REPAIR
+  DECOMMISSIONED
+}
+
+enum MaintenanceFrequency {
+  WEEKLY
+  BI_WEEKLY
+  MONTHLY
+  QUARTERLY
+  SEMI_ANNUALLY
+  ANNUALLY
+  CUSTOM_DAYS
+}
+
+enum MaintenanceStatus {
+  PENDING
+  COMPLETED
+  SKIPPED
+  OVERDUE
+}
+
+enum RepairStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum ProviderSpecialty {
+  HVAC
+  PLUMBING
+  ELECTRICAL
+  APPLIANCE_REPAIR
+  GENERAL_CONTRACTOR
+  LANDSCAPING
+  PEST_CONTROL
+  ROOFING
+  PAINTING
+  FLOORING
+  AUTO_MECHANIC
+  AUTO_BODY
+  AUTO_DEALER
+  CLEANING
+  LOCKSMITH
+  HANDYMAN
+  OTHER
+}
+
+enum VehicleStatus {
+  ACTIVE
+  SOLD
+  SCRAPPED
+  STORED
+}
+
+// ============================================================================
+// ROOMS / LOCATIONS
+// ============================================================================
+
+model Room {
+  id          String   @id @default(cuid())
+  householdId String
+  name        String
+  description String?
+  floor       String?
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  items Item[]
+
+  @@unique([householdId, name])
+  @@index([householdId])
+}
+
+// ============================================================================
+// ITEMS / APPLIANCES
+// ============================================================================
+
+model Item {
+  id              String        @id @default(cuid())
+  householdId     String
+  roomId          String?
+  name            String
+  description     String?
+  manufacturer    String?
+  model           String?
+  serialNumber    String?
+  purchaseDate    DateTime?     @db.Date
+  purchasePrice   Decimal?      @db.Decimal(10, 2)
+  purchasedFrom   String?
+  warrantyExpires DateTime?     @db.Date
+  warrantyNotes   String?
+  condition       ItemCondition @default(GOOD)
+  manualUrl       String?
+  notes           String?
+  isArchived      Boolean       @default(false)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  room                 Room?                 @relation(fields: [roomId], references: [id], onDelete: SetNull)
+  maintenanceSchedules MaintenanceSchedule[]
+  maintenanceLogs      MaintenanceLog[]
+  repairs              Repair[]
+
+  @@index([householdId])
+  @@index([roomId])
+}
+
+// ============================================================================
+// VEHICLES
+// ============================================================================
+
+model Vehicle {
+  id             String        @id @default(cuid())
+  householdId    String
+  year           Int?
+  make           String
+  model          String
+  trim           String?
+  vin            String?
+  licensePlate   String?
+  color          String?
+  currentMileage Int?
+  mileageAsOf    DateTime?     @db.Date
+  purchaseDate   DateTime?     @db.Date
+  purchasePrice  Decimal?      @db.Decimal(10, 2)
+  purchasedFrom  String?
+  status         VehicleStatus @default(ACTIVE)
+  notes          String?
+  isArchived     Boolean       @default(false)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  maintenanceSchedules MaintenanceSchedule[]
+  maintenanceLogs      MaintenanceLog[]
+  repairs              Repair[]
+  mileageEntries       MileageEntry[]
+
+  @@index([householdId])
+}
+
+model MileageEntry {
+  id        String   @id @default(cuid())
+  vehicleId String
+  mileage   Int
+  date      DateTime @db.Date
+  notes     String?
+  createdAt DateTime @default(now())
+
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@index([vehicleId, date])
+}
+
+// ============================================================================
+// MAINTENANCE SCHEDULES (recurring tasks)
+// ============================================================================
+
+model MaintenanceSchedule {
+  id                 String               @id @default(cuid())
+  householdId        String
+  itemId             String?
+  vehicleId          String?
+  title              String
+  description        String?
+  frequency          MaintenanceFrequency
+  customIntervalDays Int?
+  lastCompletedDate  DateTime?            @db.Date
+  nextDueDate        DateTime?            @db.Date
+  estimatedCost      Decimal?             @db.Decimal(10, 2)
+  assignedTo         String?
+  isActive           Boolean              @default(true)
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+
+  item    Item?    @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  vehicle Vehicle? @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  logs    MaintenanceLog[]
+
+  @@index([householdId])
+  @@index([nextDueDate])
+}
+
+// ============================================================================
+// MAINTENANCE LOGS (actual records — "when did I do X?")
+// ============================================================================
+
+model MaintenanceLog {
+  id                    String            @id @default(cuid())
+  householdId           String
+  maintenanceScheduleId String?
+  itemId                String?
+  vehicleId             String?
+  title                 String
+  description           String?
+  completedDate         DateTime          @db.Date
+  completedBy           String?
+  status                MaintenanceStatus @default(COMPLETED)
+  cost                  Decimal?          @db.Decimal(10, 2)
+  mileageAtService      Int?
+  partsUsed             String?
+  notes                 String?
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+
+  maintenanceSchedule MaintenanceSchedule? @relation(fields: [maintenanceScheduleId], references: [id], onDelete: SetNull)
+  item                Item?                @relation(fields: [itemId], references: [id], onDelete: SetNull)
+  vehicle             Vehicle?             @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+
+  @@index([householdId])
+  @@index([itemId])
+  @@index([vehicleId])
+  @@index([completedDate])
+}
+
+// ============================================================================
+// REPAIRS
+// ============================================================================
+
+model Repair {
+  id             String       @id @default(cuid())
+  householdId    String
+  itemId         String?
+  vehicleId      String?
+  providerId     String?
+  title          String
+  description    String?
+  status         RepairStatus @default(SCHEDULED)
+  reportedDate   DateTime     @db.Date
+  scheduledDate  DateTime?    @db.Date
+  completedDate  DateTime?    @db.Date
+  completedBy    String?
+  laborCost      Decimal?     @db.Decimal(10, 2)
+  partsCost      Decimal?     @db.Decimal(10, 2)
+  totalCost      Decimal?     @db.Decimal(10, 2)
+  warrantyClaimId String?
+  partsUsed      String?
+  notes          String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  item     Item?            @relation(fields: [itemId], references: [id], onDelete: SetNull)
+  vehicle  Vehicle?         @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+  provider ServiceProvider? @relation(fields: [providerId], references: [id], onDelete: SetNull)
+
+  @@index([householdId])
+  @@index([itemId])
+  @@index([vehicleId])
+}
+
+// ============================================================================
+// SERVICE PROVIDERS / CONTRACTORS
+// ============================================================================
+
+model ServiceProvider {
+  id          String            @id @default(cuid())
+  householdId String
+  name        String
+  company     String?
+  specialty   ProviderSpecialty @default(OTHER)
+  phone       String?
+  email       String?
+  website     String?
+  address     String?
+  rating      Int?
+  notes       String?
+  isActive    Boolean           @default(true)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  repairs Repair[]
+
+  @@index([householdId])
+}

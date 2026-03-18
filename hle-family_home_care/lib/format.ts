@@ -77,3 +77,21 @@ export function formatDurationSeconds(seconds: number): string {
   const s = seconds % 60;
   return s > 0 ? `${m}:${String(s).padStart(2, "0")}` : `${m}:00`;
 }
+
+export function formatMileage(miles: number | null | undefined): string {
+  if (miles === null || miles === undefined) return "\u2014";
+  return `${miles.toLocaleString("en-US")} mi`;
+}
+
+export function formatFrequency(frequency: string, customDays?: number | null): string {
+  switch (frequency) {
+    case "WEEKLY": return "Weekly";
+    case "BI_WEEKLY": return "Every 2 weeks";
+    case "MONTHLY": return "Monthly";
+    case "QUARTERLY": return "Every 3 months";
+    case "SEMI_ANNUALLY": return "Every 6 months";
+    case "ANNUALLY": return "Annually";
+    case "CUSTOM_DAYS": return customDays ? `Every ${customDays} days` : "Custom";
+    default: return frequency;
+  }
+}
