@@ -152,6 +152,18 @@ services:
       DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/foxxlab?schema=meal_prep"
       APP_URL: ${MEALS_URL:-http://localhost:8086}
 
+  # Family Wiki — Confluence-like knowledge management
+  hle-family-wiki:
+    <<: *nextjs-app
+    image: ghcr.io/foxxdev-collab/hle-family-wiki:latest
+    container_name: foxxlab-family-wiki
+    ports:
+      - "${WIKI_PORT:-8087}:3000"
+    environment:
+      <<: *nextjs-env
+      DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/foxxlab?schema=family_wiki"
+      APP_URL: ${WIKI_URL:-http://localhost:8087}
+
 networks:
   hle-net:
     driver: bridge

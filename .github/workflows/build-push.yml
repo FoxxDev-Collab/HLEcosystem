@@ -41,6 +41,9 @@ jobs:
           - app_dir: hle-meal_prep
             image_name: hle-meal-prep
             app_name: "HLE Meal Prep"
+          - app_dir: hle-family_wiki
+            image_name: hle-family-wiki
+            app_name: "HLE Family Wiki"
 
     steps:
       - name: Checkout
