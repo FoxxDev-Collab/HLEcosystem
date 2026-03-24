@@ -1,0 +1,101 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["fullTextSearchPostgres"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ───────────────────────────────────────────────
+
+enum PageVisibility {
+  PRIVATE
+  HOUSEHOLD
+  SHARED
+  PUBLIC
+}
+
+enum SharePermission {
+  VIEW
+  EDIT
+}
+
+// ─── Models ──────────────────────────────────────────────
+
+model WikiPage {
+  id          String         @id @default(cuid())
+  // Ownership: PRIVATE pages use ownerId = userId, HOUSEHOLD/SHARED/PUBLIC use ownerId = householdId
+  ownerId     String
+  visibility  PageVisibility @default(HOUSEHOLD)
+  // Hierarchy: up to 3 levels (null = root, parentId = section, grandparent = top section)
+  parentId    String?
+  title       String
+  slug        String
+  content     Json           @default("{}")
+  contentText String         @default("")  // Plain text extraction for full-text search
+  icon        String?        // Lucide icon name or emoji
+  pinned      Boolean        @default(false)
+  archived    Boolean        @default(false)
+  sortOrder   Int            @default(0)
+  createdBy   String
+  updatedBy   String
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  parent   WikiPage?  @relation("PageHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  children WikiPage[] @relation("PageHierarchy")
+  shares   PageShare[]
+  comments PageComment[]
+  tags     PageTag[]
+
+  @@unique([ownerId, parentId, slug])
+  @@index([ownerId])
+  @@index([parentId])
+  @@index([visibility])
+  @@index([createdBy])
+  @@index([archived])
+}
+
+model PageShare {
+  id          String          @id @default(cuid())
+  pageId      String
+  householdId String          // The household being granted access
+  permission  SharePermission @default(VIEW)
+  grantedBy   String
+  createdAt   DateTime        @default(now())
+
+  page WikiPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@unique([pageId, householdId])
+  @@index([householdId])
+}
+
+model PageComment {
+  id        String   @id @default(cuid())
+  pageId    String
+  userId    String
+  parentId  String?  // For threaded replies
+  message   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  page    WikiPage       @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  parent  PageComment?   @relation("CommentThread", fields: [parentId], references: [id], onDelete: Cascade)
+  replies PageComment[]  @relation("CommentThread")
+
+  @@index([pageId])
+  @@index([parentId])
+}
+
+model PageTag {
+  id     String @id @default(cuid())
+  pageId String
+  tag    String
+
+  page WikiPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@unique([pageId, tag])
+  @@index([tag])
+}
