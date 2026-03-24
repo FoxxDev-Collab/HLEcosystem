@@ -13,29 +13,74 @@ export default async function FamilyTreePage() {
   if (!user) redirect("/login");
   const householdId = (await getCurrentHouseholdId())!;
 
-  // Fetch linked households
-  const linkedHouseholds = await prisma.linkedHousehold.findMany({
+  // Step 1: Get current household members
+  const currentMembers = await prisma.familyMember.findMany({
+    where: { householdId, isActive: true },
+    orderBy: { firstName: "asc" },
+  });
+
+  // Step 2: Get all relations owned by this household to discover cross-household members
+  const currentRelations = await prisma.familyRelation.findMany({
     where: { householdId },
   });
-  const linkedHouseholdIds = linkedHouseholds.map((lh) => lh.linkedHouseholdId);
-  const allHouseholdIds = [householdId, ...linkedHouseholdIds];
 
-  // Fetch members and relations from all households
-  const [members, relations] = await Promise.all([
-    prisma.familyMember.findMany({
-      where: { householdId: { in: allHouseholdIds }, isActive: true },
-      orderBy: { firstName: "asc" },
-    }),
-    prisma.familyRelation.findMany({
-      where: { householdId: { in: allHouseholdIds } },
-    }),
-  ]);
+  // Step 3: Find member IDs from other households referenced in relations
+  const currentMemberIds = new Set(currentMembers.map((m) => m.id));
+  const otherMemberIds = new Set<string>();
+  for (const r of currentRelations) {
+    if (!currentMemberIds.has(r.fromMemberId)) otherMemberIds.add(r.fromMemberId);
+    if (!currentMemberIds.has(r.toMemberId)) otherMemberIds.add(r.toMemberId);
+  }
 
-  // Build household name map for display
+  // Step 4: Fetch those other-household members and their inter-household relations
+  let otherMembers: typeof currentMembers = [];
+  let otherRelations: typeof currentRelations = [];
+  if (otherMemberIds.size > 0) {
+    otherMembers = await prisma.familyMember.findMany({
+      where: { id: { in: [...otherMemberIds] }, isActive: true },
+    });
+
+    // Discover all household IDs involved
+    const otherHouseholdIds = [...new Set(otherMembers.map((m) => m.householdId))];
+
+    // Also fetch relations within those other households (so the tree is complete)
+    if (otherHouseholdIds.length > 0) {
+      otherRelations = await prisma.familyRelation.findMany({
+        where: {
+          householdId: { in: otherHouseholdIds },
+          id: { notIn: currentRelations.map((r) => r.id) },
+        },
+      });
+
+      // Check if other-household relations reference additional members we haven't loaded
+      const allLoadedIds = new Set([...currentMemberIds, ...otherMemberIds]);
+      const additionalIds = new Set<string>();
+      for (const r of otherRelations) {
+        if (!allLoadedIds.has(r.fromMemberId)) additionalIds.add(r.fromMemberId);
+        if (!allLoadedIds.has(r.toMemberId)) additionalIds.add(r.toMemberId);
+      }
+      if (additionalIds.size > 0) {
+        const additionalMembers = await prisma.familyMember.findMany({
+          where: { id: { in: [...additionalIds] }, isActive: true },
+        });
+        otherMembers = [...otherMembers, ...additionalMembers];
+      }
+    }
+  }
+
+  const members = [...currentMembers, ...otherMembers];
+  const relations = [...currentRelations, ...otherRelations];
+
+  // Build household name map for non-current households
+  const otherHouseholdIds = [...new Set(
+    otherMembers.map((m) => m.householdId).filter((id) => id !== householdId)
+  )];
+  const allHouseholdIds = [householdId, ...otherHouseholdIds];
+
   const householdNames: Record<string, string> = {};
-  if (linkedHouseholdIds.length > 0) {
+  if (otherHouseholdIds.length > 0) {
     const households = await Promise.all(
-      linkedHouseholdIds.map((id) => getHouseholdById(id))
+      otherHouseholdIds.map((id) => getHouseholdById(id))
     );
     for (const h of households) {
       if (h) householdNames[h.id] = h.name;

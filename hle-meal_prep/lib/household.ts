@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { prisma } from "./prisma";
 
-const HOUSEHOLD_COOKIE = "gp_household_id";
+const HOUSEHOLD_COOKIE = "mp_household_id";
 
 export type Household = {
   id: string;

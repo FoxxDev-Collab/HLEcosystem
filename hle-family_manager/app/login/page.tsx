@@ -9,7 +9,7 @@ import { loginAction } from "../actions";
 export default function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; email?: string; redirect?: string }>;
 }) {
   return <LoginForm searchParams={searchParams} />;
 }
@@ -17,20 +17,26 @@ export default function LoginPage({
 async function LoginForm({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; email?: string; redirect?: string }>;
 }) {
   const params = await searchParams;
   const error = params.error;
+  const email = params.email ?? "";
+  const redirectTo = params.redirect ?? "";
+  const needsMfa = error === "MFA code required" || error === "Invalid MFA code";
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-muted/30 p-4">
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl">Family Manager</CardTitle>
+          <CardTitle className="text-2xl">HLEcosystem</CardTitle>
           <CardDescription>Sign in to continue</CardDescription>
         </CardHeader>
         <CardContent>
           <form action={loginAction} className="space-y-4">
+            {redirectTo && (
+              <input type="hidden" name="redirect" value={redirectTo} />
+            )}
             {error && (
               <div className="rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">
                 {error}
@@ -43,8 +49,9 @@ async function LoginForm({
                 name="email"
                 type="email"
                 placeholder="you@example.com"
+                defaultValue={email}
                 required
-                autoFocus
+                autoFocus={!needsMfa}
               />
             </div>
             <div className="space-y-2">
@@ -57,6 +64,22 @@ async function LoginForm({
                 required
               />
             </div>
+            {needsMfa && (
+              <div className="space-y-2">
+                <Label htmlFor="totpCode">MFA Code</Label>
+                <Input
+                  id="totpCode"
+                  name="totpCode"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]{6}"
+                  maxLength={6}
+                  placeholder="6-digit code"
+                  autoFocus
+                  autoComplete="one-time-code"
+                />
+              </div>
+            )}
             <Button type="submit" className="w-full">
               Sign In
             </Button>

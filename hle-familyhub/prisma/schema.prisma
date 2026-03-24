@@ -9,6 +9,19 @@ datasource db {
 
 // ─── Enums ───────────────────────────────────────────────
 
+enum MediaType {
+  MOVIE
+  TV_SHOW
+  MUSIC
+}
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  FULFILLED
+  DENIED
+}
+
 enum Relationship {
   Spouse
   Partner
@@ -170,19 +183,6 @@ model GiftIdea {
   @@index([familyMemberId])
 }
 
-model LinkedHousehold {
-  id                String   @id @default(cuid())
-  householdId       String
-  linkedHouseholdId String
-  label             String?
-  notes             String?
-  relationship      String?
-  createdAt         DateTime @default(now())
-
-  @@unique([householdId, linkedHouseholdId])
-  @@index([householdId])
-}
-
 model FamilyRelation {
   id           String       @id @default(cuid())
   householdId  String
@@ -196,4 +196,38 @@ model FamilyRelation {
 
   @@unique([fromMemberId, toMemberId])
   @@index([householdId])
+}
+
+// ─── Media Requests (cross-household) ────────────────────
+
+model MediaRequest {
+  id          String        @id @default(cuid())
+  requesterId String
+  mediaType   MediaType
+  title       String
+  artist      String?
+  year        Int?
+  status      RequestStatus @default(PENDING)
+  notes       String?
+  adminNote   String?
+  fulfilledAt DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  comments MediaRequestComment[]
+
+  @@index([requesterId])
+  @@index([status])
+}
+
+model MediaRequestComment {
+  id        String   @id @default(cuid())
+  requestId String
+  userId    String
+  message   String
+  createdAt DateTime @default(now())
+
+  request MediaRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@index([requestId])
 }

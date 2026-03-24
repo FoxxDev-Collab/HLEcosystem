@@ -9,14 +9,16 @@ export type User = {
   avatar: string | null;
   role: "ADMIN" | "MEMBER";
   active: boolean;
+  totpSecret: string | null;
+  totpEnabled: boolean;
   createdAt: Date;
   updatedAt: Date;
 };
 
-export type UserPublic = Omit<User, "password">;
+export type UserPublic = Omit<User, "password" | "totpSecret">;
 
 function toPublic(user: User): UserPublic {
-  const { password: _, ...rest } = user;
+  const { password: _, totpSecret: __, ...rest } = user;
   return rest;
 }
 

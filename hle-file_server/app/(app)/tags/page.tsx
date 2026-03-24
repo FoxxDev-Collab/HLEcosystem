@@ -49,7 +49,7 @@ export default async function TagsPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <form action={createTagAction} className="flex items-end gap-4">
+          <form action={createTagAction} className="flex flex-col sm:flex-row sm:items-end gap-4">
             <div className="flex-1 space-y-2">
               <Label htmlFor="tag-name">Name</Label>
               <Input
@@ -61,7 +61,7 @@ export default async function TagsPage() {
             </div>
             <div className="space-y-2">
               <Label>Color</Label>
-              <div className="flex gap-1.5">
+              <div className="flex flex-wrap gap-1.5">
                 {PRESET_COLORS.map((color) => (
                   <label key={color} className="cursor-pointer">
                     <input
@@ -71,14 +71,14 @@ export default async function TagsPage() {
                       className="sr-only peer"
                     />
                     <div
-                      className="size-7 rounded-full border-2 border-transparent peer-checked:border-foreground peer-checked:ring-2 peer-checked:ring-offset-2 peer-checked:ring-offset-background peer-checked:ring-foreground/20 transition-all"
+                      className="size-8 sm:size-7 rounded-full border-2 border-transparent peer-checked:border-foreground peer-checked:ring-2 peer-checked:ring-offset-2 peer-checked:ring-offset-background peer-checked:ring-foreground/20 transition-all"
                       style={{ backgroundColor: color }}
                     />
                   </label>
                 ))}
               </div>
             </div>
-            <Button type="submit">
+            <Button type="submit" className="w-full sm:w-auto">
               <Plus className="size-4 mr-1" />
               Create
             </Button>

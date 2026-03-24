@@ -49,6 +49,11 @@
 
 :root {
   --radius: 0.625rem;
+  --tree-grid: #e2e8f0;
+  --tree-edge-couple: #ec4899;
+  --tree-edge-default: #6b7280;
+  --tree-edge-label: #6b7280;
+  --tree-minimap-mask: rgba(255, 255, 255, 0.8);
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
@@ -83,6 +88,11 @@
 }
 
 .dark {
+  --tree-grid: #334155;
+  --tree-edge-couple: #f472b6;
+  --tree-edge-default: #9ca3af;
+  --tree-edge-label: #9ca3af;
+  --tree-minimap-mask: rgba(0, 0, 0, 0.6);
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);

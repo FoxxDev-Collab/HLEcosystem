@@ -20,6 +20,7 @@ import {
   ChevronDown,
   BarChart3,
   Repeat,
+  Luggage,
 } from "lucide-react";
 import {
   Sidebar,
@@ -52,6 +53,7 @@ const mainNav = [
 const budgetNav = [
   { title: "Budgets", href: "/budgets", icon: PieChart },
   { title: "Budget Planner", href: "/budget-planner", icon: FolderKanban },
+  { title: "Trips", href: "/trips", icon: Luggage },
   { title: "Wishlists", href: "/wishlist", icon: Heart },
   { title: "Reports", href: "/reports", icon: BarChart3 },
 ];

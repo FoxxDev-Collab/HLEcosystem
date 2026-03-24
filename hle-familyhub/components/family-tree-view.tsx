@@ -46,7 +46,7 @@ interface PersonNodeData extends Record<string, unknown> {
   isHousehold: boolean;
   isSelf: boolean;
   memberId: string;
-  isLinkedHousehold: boolean;
+  isOtherHousehold: boolean;
   householdName: string | null;
 }
 
@@ -58,62 +58,43 @@ const HORIZONTAL_GAP = 40;
 const VERTICAL_GAP = 120;
 const COUPLE_GAP = 10;
 
-// Generation-level colors
-const GEN_COLORS: Record<number, string> = {
-  "-2": "#dbeafe", // blue-100 (grandparents)
-  "-1": "#e0e7ff", // indigo-100 (parents)
-  "0": "#dcfce7",  // green-100 (self/same gen)
-  "1": "#fef3c7",  // amber-100 (children)
-  "2": "#fce7f3",  // pink-100 (grandchildren)
-};
-
 // ─── Custom Node Component ───────────────────────────────
 
 function PersonNode({ data }: NodeProps<Node<PersonNodeData>>) {
-  const bgColor = data.isSelf
-    ? "#dcfce7"
-    : data.isLinkedHousehold
-      ? "#faf5ff"
-      : "#ffffff";
-  const borderColor = data.isSelf
-    ? "#16a34a"
-    : data.isLinkedHousehold
-      ? "#9333ea"
+  const nodeClass = data.isSelf
+    ? "bg-green-100 dark:bg-green-900/30 border-green-600 dark:border-green-500"
+    : data.isOtherHousehold
+      ? "bg-purple-50 dark:bg-purple-900/20 border-purple-600 dark:border-purple-400"
       : data.isHousehold
-        ? "#3b82f6"
-        : "#d1d5db";
+        ? "bg-card border-blue-500 dark:border-blue-400"
+        : "bg-card border-border";
 
   return (
     <div
-      className="rounded-lg shadow-md px-3 py-2 text-center"
-      style={{
-        width: NODE_WIDTH,
-        minHeight: NODE_HEIGHT,
-        background: bgColor,
-        border: `2px solid ${borderColor}`,
-      }}
+      className={`rounded-lg shadow-md px-3 py-2 text-center border-2 ${nodeClass}`}
+      style={{ width: NODE_WIDTH, minHeight: NODE_HEIGHT }}
     >
-      <Handle type="target" position={Position.Top} className="!bg-gray-400 !w-2 !h-2" />
-      <div className="font-semibold text-sm truncate">
+      <Handle type="target" position={Position.Top} className="!bg-muted-foreground !w-2 !h-2" />
+      <div className="font-semibold text-sm truncate text-foreground">
         {data.firstName} {data.lastName}
       </div>
       {data.relationship ? (
-        <div className="text-xs text-gray-500 mt-0.5">
+        <div className="text-xs text-muted-foreground mt-0.5">
           {formatRelationship(data.relationship)}
         </div>
       ) : (
-        <div className="text-xs text-amber-500 mt-0.5">Not connected</div>
+        <div className="text-xs text-amber-500 dark:text-amber-400 mt-0.5">Not connected</div>
       )}
       {data.age !== null && (
-        <div className="text-xs text-gray-400 mt-0.5">Age {data.age}</div>
+        <div className="text-xs text-muted-foreground mt-0.5">Age {data.age}</div>
       )}
-      {data.isLinkedHousehold && data.householdName && (
-        <div className="text-[10px] text-purple-600 mt-0.5">{data.householdName}</div>
+      {data.isOtherHousehold && data.householdName && (
+        <div className="text-[10px] text-purple-600 dark:text-purple-400 mt-0.5">{data.householdName}</div>
       )}
-      {data.isHousehold && !data.isSelf && !data.isLinkedHousehold && (
-        <div className="text-[10px] text-blue-600 mt-0.5">Household</div>
+      {data.isHousehold && !data.isSelf && !data.isOtherHousehold && (
+        <div className="text-[10px] text-blue-600 dark:text-blue-400 mt-0.5">Household</div>
       )}
-      <Handle type="source" position={Position.Bottom} className="!bg-gray-400 !w-2 !h-2" />
+      <Handle type="source" position={Position.Bottom} className="!bg-muted-foreground !w-2 !h-2" />
     </div>
   );
 }
@@ -170,7 +151,6 @@ function buildLayout(
     }
   }
   if (!selfId) {
-    // Fallback: find member with relationship "Spouse" or first member
     selfId = members[0]?.id ?? null;
   }
   if (!selfId) return { nodes: [], edges: [] };
@@ -271,7 +251,7 @@ function buildLayout(
         if (positioned.has(memberId)) continue;
         const member = memberMap.get(memberId)!;
 
-        const isLinked = member.householdId !== currentHouseholdId;
+        const isOther = member.householdId !== currentHouseholdId;
 
         nodes.push({
           id: memberId,
@@ -286,8 +266,8 @@ function buildLayout(
             isHousehold: member.linkedUserId !== null,
             isSelf: member.linkedUserId === currentUserId,
             memberId: member.id,
-            isLinkedHousehold: isLinked,
-            householdName: isLinked ? (householdNames[member.householdId] ?? null) : null,
+            isOtherHousehold: isOther,
+            householdName: isOther ? (householdNames[member.householdId] ?? null) : null,
           },
         });
 
@@ -327,15 +307,15 @@ function buildLayout(
       type: isCouple ? "straight" : "smoothstep",
       animated: isCouple,
       style: {
-        stroke: isCouple ? "#ec4899" : "#6b7280",
+        stroke: isCouple ? "var(--tree-edge-couple)" : "var(--tree-edge-default)",
         strokeWidth: isCouple ? 2 : 1.5,
         strokeDasharray: isCouple ? "5 5" : undefined,
       },
       markerEnd: isVertical
-        ? { type: MarkerType.ArrowClosed, color: "#6b7280", width: 15, height: 15 }
+        ? { type: MarkerType.ArrowClosed, color: "var(--tree-edge-default)", width: 15, height: 15 }
         : undefined,
       label: isCouple ? "" : formatRelationship(r.relationType),
-      labelStyle: { fontSize: 10, fill: "#9ca3af" },
+      labelStyle: { fontSize: 10, fill: "var(--tree-edge-label)" },
     });
   }
 
@@ -380,7 +360,7 @@ export function FamilyTreeView({
           <p className="text-lg font-medium">No family members yet</p>
           <p className="text-sm">
             Add people on the{" "}
-            <a href="/people" className="text-blue-600 hover:underline">
+            <a href="/people" className="text-primary hover:underline">
               People page
             </a>{" "}
             first, then connect them here.
@@ -397,7 +377,7 @@ export function FamilyTreeView({
           <p className="text-lg font-medium">No connections defined</p>
           <p className="text-sm">
             Use{" "}
-            <a href="/family-tree/manage" className="text-blue-600 hover:underline">
+            <a href="/family-tree/manage" className="text-primary hover:underline">
               Manage Connections
             </a>{" "}
             to define how your family members are related.
@@ -419,17 +399,17 @@ export function FamilyTreeView({
       maxZoom={2}
       proOptions={{ hideAttribution: true }}
     >
-      <Background gap={20} size={1} color="#f1f5f9" />
+      <Background gap={20} size={1} color="var(--tree-grid)" />
       <Controls showInteractive={false} />
       <MiniMap
         nodeColor={(node) => {
           const data = node.data as PersonNodeData;
           if (data.isSelf) return "#16a34a";
-          if (data.isLinkedHousehold) return "#9333ea";
+          if (data.isOtherHousehold) return "#9333ea";
           if (data.isHousehold) return "#3b82f6";
-          return "#d1d5db";
+          return "#6b7280";
         }}
-        maskColor="rgba(255, 255, 255, 0.8)"
+        maskColor="var(--tree-minimap-mask)"
       />
     </ReactFlow>
   );

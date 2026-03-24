@@ -196,7 +196,7 @@ export default async function FamilyMemberDetailPage({ params }: { params: Promi
                       {r.toMember.firstName} {r.toMember.lastName}
                     </Link>
                     {r.toMember.householdId !== householdId && (
-                      <Badge variant="secondary" className="text-[10px] text-purple-700">Linked</Badge>
+                      <Badge variant="secondary" className="text-[10px] text-purple-700 dark:text-purple-400">Other Household</Badge>
                     )}
                   </div>
                 </div>

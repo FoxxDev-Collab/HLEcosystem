@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getCurrentHouseholdId, getHouseholdById } from "@/lib/household";
+import { getCurrentHouseholdId, getHouseholdById, getAllHouseholds } from "@/lib/household";
 import prisma from "@/lib/prisma";
 import { FAMILY_RELATIONSHIPS, formatRelationship } from "@/lib/relationships";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,20 +13,17 @@ import { createRelationAction, deleteRelationAction } from "../actions";
 export default async function ManageRelationsPage() {
   const householdId = (await getCurrentHouseholdId())!;
 
-  // Fetch linked households
-  const linkedHouseholds = await prisma.linkedHousehold.findMany({
-    where: { householdId },
-  });
-  const linkedHouseholdIds = linkedHouseholds.map((lh) => lh.linkedHouseholdId);
-  const allHouseholdIds = [householdId, ...linkedHouseholdIds];
+  // Fetch all households so we can connect members from any household
+  const allHouseholds = await getAllHouseholds();
 
-  const [members, relations, currentHousehold] = await Promise.all([
+  // Fetch members from all households (for the dropdowns)
+  const [allMembers, relations, currentHousehold] = await Promise.all([
     prisma.familyMember.findMany({
-      where: { householdId: { in: allHouseholdIds }, isActive: true },
+      where: { isActive: true },
       orderBy: { firstName: "asc" },
     }),
     prisma.familyRelation.findMany({
-      where: { householdId: { in: allHouseholdIds } },
+      where: { householdId },
       include: {
         fromMember: { select: { id: true, firstName: true, lastName: true, householdId: true } },
         toMember: { select: { id: true, firstName: true, lastName: true, householdId: true } },
@@ -38,28 +35,29 @@ export default async function ManageRelationsPage() {
 
   // Build household name map
   const householdNameMap: Record<string, string> = {};
-  householdNameMap[householdId] = currentHousehold?.name ?? "My Household";
-  if (linkedHouseholdIds.length > 0) {
-    const linkedNames = await Promise.all(
-      linkedHouseholdIds.map((id) => getHouseholdById(id))
-    );
-    for (const h of linkedNames) {
-      if (h) householdNameMap[h.id] = h.name;
-    }
+  for (const h of allHouseholds) {
+    householdNameMap[h.id] = h.name;
+  }
+  if (currentHousehold) {
+    householdNameMap[householdId] = currentHousehold.name;
   }
 
   // Group members by household for optgroup dropdowns
-  const membersByHousehold = new Map<string, typeof members>();
-  for (const m of members) {
+  const membersByHousehold = new Map<string, typeof allMembers>();
+  for (const m of allMembers) {
     if (!membersByHousehold.has(m.householdId)) {
       membersByHousehold.set(m.householdId, []);
     }
     membersByHousehold.get(m.householdId)!.push(m);
   }
-  // Current household first, then linked
-  const orderedHouseholdIds = [householdId, ...linkedHouseholdIds.filter((id) => membersByHousehold.has(id))];
 
-  // Only show one direction per pair (A→B, skip B→A)
+  // Current household first, then other households that have members (sorted by name)
+  const otherHouseholdIds = allHouseholds
+    .filter((h) => h.id !== householdId && membersByHousehold.has(h.id))
+    .map((h) => h.id);
+  const orderedHouseholdIds = [householdId, ...otherHouseholdIds].filter((id) => membersByHousehold.has(id));
+
+  // Only show one direction per pair (A->B, skip B->A)
   const seen = new Set<string>();
   const uniqueRelations = relations.filter((r) => {
     const key = [r.fromMemberId, r.toMemberId].sort().join("|");
@@ -81,7 +79,7 @@ export default async function ManageRelationsPage() {
             Manage Connections
           </h1>
           <p className="text-muted-foreground">
-            Define how people in your family are related to each other
+            Define how people in your family are related — across any household
           </p>
         </div>
       </div>
@@ -92,10 +90,10 @@ export default async function ManageRelationsPage() {
           <CardTitle>Add Connection</CardTitle>
         </CardHeader>
         <CardContent>
-          {members.length < 2 ? (
+          {allMembers.length < 2 ? (
             <p className="text-sm text-muted-foreground">
               You need at least 2 people to create a connection.{" "}
-              <Link href="/people" className="text-blue-600 hover:underline">
+              <Link href="/people" className="text-primary hover:underline">
                 Add people first
               </Link>
               .
@@ -206,8 +204,8 @@ export default async function ManageRelationsPage() {
                     <TableCell className="font-medium">
                       <span>{r.fromMember.firstName} {r.fromMember.lastName}</span>
                       {r.fromMember.householdId !== householdId && (
-                        <Badge variant="secondary" className="ml-2 text-[10px] text-purple-700">
-                          {householdNameMap[r.fromMember.householdId] ?? "Linked"}
+                        <Badge variant="secondary" className="ml-2 text-[10px] text-purple-700 dark:text-purple-400">
+                          {householdNameMap[r.fromMember.householdId] ?? "Other"}
                         </Badge>
                       )}
                     </TableCell>
@@ -222,8 +220,8 @@ export default async function ManageRelationsPage() {
                     <TableCell className="font-medium">
                       <span>{r.toMember.firstName} {r.toMember.lastName}</span>
                       {r.toMember.householdId !== householdId && (
-                        <Badge variant="secondary" className="ml-2 text-[10px] text-purple-700">
-                          {householdNameMap[r.toMember.householdId] ?? "Linked"}
+                        <Badge variant="secondary" className="ml-2 text-[10px] text-purple-700 dark:text-purple-400">
+                          {householdNameMap[r.toMember.householdId] ?? "Other"}
                         </Badge>
                       )}
                     </TableCell>

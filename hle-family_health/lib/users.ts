@@ -11,15 +11,6 @@ export type User = {
   updatedAt: Date;
 };
 
-export async function getUsers(): Promise<User[]> {
-  return prisma.$queryRaw<User[]>`
-    SELECT "id", "email", "name", "avatar", "role", "active", "createdAt", "updatedAt"
-    FROM family_manager."User"
-    WHERE "active" = true
-    ORDER BY "name"
-  `;
-}
-
 export async function getUserById(id: string): Promise<User | null> {
   const users = await prisma.$queryRaw<User[]>`
     SELECT "id", "email", "name", "avatar", "role", "active", "createdAt", "updatedAt"

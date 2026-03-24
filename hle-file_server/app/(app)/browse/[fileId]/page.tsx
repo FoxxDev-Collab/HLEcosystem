@@ -11,6 +11,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { FileIcon } from "@/components/file-icon";
 import { TextPreview } from "@/components/preview/text-preview";
+import { FileTagManager } from "@/components/file-tag-manager";
+import { FileShareManager } from "@/components/file-share-manager";
 import { deleteFileAction } from "@/app/(app)/browse/actions";
 import {
   ArrowLeft,
@@ -20,7 +22,6 @@ import {
   Calendar,
   User,
   HardDrive,
-  Tag,
   History,
   File,
 } from "lucide-react";
@@ -45,6 +46,7 @@ export default async function FileDetailPage({
       tags: { include: { tag: true } },
       versions: { orderBy: { versionNumber: "desc" } },
       shares: true,
+      shareLinks: true,
       favorites: { where: { userId: user.id } },
     },
   });
@@ -56,9 +58,19 @@ export default async function FileDetailPage({
     notFound();
   }
 
+  // Fetch uploader name and share recipient names
   const uploader = await getUserById(file.uploadedByUserId);
   const category = getFileCategory(file.mimeType);
   const isFavorited = file.favorites.length > 0;
+
+  // Resolve share user names
+  const shareUserIds = file.shares.map((s) => s.sharedWithUserId);
+  const shareUsers = shareUserIds.length > 0
+    ? await Promise.all(shareUserIds.map((id) => getUserById(id)))
+    : [];
+  const shareUserMap = new Map(
+    shareUsers.filter(Boolean).map((u) => [u!.id, u!.name])
+  );
 
   const backUrl = file.folderId
     ? `/browse?folderId=${file.folderId}`
@@ -87,12 +99,12 @@ export default async function FileDetailPage({
 
         {/* Sidebar */}
         <div className="space-y-6">
-          <Card>
+          <Card className="overflow-hidden">
             <CardHeader className="pb-3">
-              <div className="flex items-center gap-3">
-                <FileIcon mimeType={file.mimeType} className="size-8" />
+              <div className="flex items-start gap-3">
+                <FileIcon mimeType={file.mimeType} className="size-8 shrink-0 mt-0.5" />
                 <div className="min-w-0 flex-1">
-                  <CardTitle className="text-lg truncate">{file.name}</CardTitle>
+                  <CardTitle className="text-base leading-snug break-all">{file.name}</CardTitle>
                 </div>
               </div>
             </CardHeader>
@@ -138,33 +150,37 @@ export default async function FileDetailPage({
               </div>
 
               {/* Tags */}
-              {file.tags.length > 0 && (
-                <>
-                  <Separator />
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-sm font-medium">
-                      <Tag className="size-4" />
-                      Tags
-                    </div>
-                    <div className="flex flex-wrap gap-1">
-                      {file.tags.map((ft) => (
-                        <Badge
-                          key={ft.id}
-                          variant="outline"
-                          className="text-xs"
-                          style={
-                            ft.tag.color
-                              ? { borderColor: ft.tag.color, color: ft.tag.color }
-                              : undefined
-                          }
-                        >
-                          {ft.tag.name}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                </>
-              )}
+              <Separator />
+              <FileTagManager
+                fileId={file.id}
+                fileTags={file.tags.map((ft) => ({
+                  id: ft.id,
+                  tag: { id: ft.tag.id, name: ft.tag.name, color: ft.tag.color },
+                }))}
+              />
+
+              {/* Sharing */}
+              <Separator />
+              <FileShareManager
+                fileId={file.id}
+                currentUserId={user.id}
+                shares={file.shares.map((s) => ({
+                  id: s.id,
+                  sharedWithUserId: s.sharedWithUserId,
+                  sharedWithName: shareUserMap.get(s.sharedWithUserId),
+                  permission: s.permission,
+                  createdAt: s.createdAt.toISOString(),
+                }))}
+                shareLinks={file.shareLinks.map((l) => ({
+                  id: l.id,
+                  token: l.token,
+                  permission: l.permission,
+                  expiresAt: l.expiresAt?.toISOString() ?? null,
+                  maxDownloads: l.maxDownloads,
+                  downloadCount: l.downloadCount,
+                  isActive: l.isActive,
+                }))}
+              />
 
               {/* Version history */}
               {file.versions.length > 0 && (
@@ -283,7 +299,7 @@ function PreviewArea({
 
     default:
       return (
-        <div className="flex flex-col items-center justify-center gap-4 rounded-lg border bg-muted/30 p-16 text-center">
+        <div className="flex flex-col items-center justify-center gap-4 rounded-lg border bg-muted/30 p-8 sm:p-16 text-center">
           <File className="size-16 text-muted-foreground" />
           <div>
             <p className="text-lg font-medium">{fileName}</p>

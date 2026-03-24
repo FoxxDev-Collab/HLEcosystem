@@ -31,9 +31,9 @@ A multi-app family management ecosystem: 7 Next.js apps sharing a single Postgre
 | FamilyHub | `hle-familyhub/` | 8081 | `familyhub` | `fh_` | Active |
 | Family Finance | `hle-family_finance/` | 8082 | `family_finance` | `ff_` | Active |
 | Family Health | `hle-family_health/` | 8083 | `family_health` | `fh_` | Active |
-| Home Care | `hle-family_home_care/` | 8084 | `family_home_care` | — | Stub |
+| Home Care | `hle-family_home_care/` | 8084 | `family_home_care` | `hc_` | Active |
 | File Server | `hle-file_server/` | 8085 | `file_server` | — | Stub |
-| Grocery Planner | `hle-grocery_planner/` | 8086 | `grocery_planner` | — | Stub |
+| Meal Prep | `hle-meal_prep/` | 8086 | `meal_prep` | `mp_` | Active |
 
 ## Tech Stack
 

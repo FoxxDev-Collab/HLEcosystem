@@ -77,3 +77,23 @@ export function formatDurationSeconds(seconds: number): string {
   const s = seconds % 60;
   return s > 0 ? `${m}:${String(s).padStart(2, "0")}` : `${m}:00`;
 }
+
+export function formatUnit(unit: string): string {
+  const labels: Record<string, string> = {
+    EACH: "each",
+    LB: "lb",
+    OZ: "oz",
+    GALLON: "gal",
+    QUART: "qt",
+    LITER: "L",
+    COUNT: "ct",
+    PACK: "pack",
+    BAG: "bag",
+    BOX: "box",
+    CAN: "can",
+    BOTTLE: "btl",
+    BUNCH: "bunch",
+    DOZEN: "dz",
+  };
+  return labels[unit] || unit.toLowerCase();
+}

@@ -140,6 +140,22 @@ enum ImportMatchStatus {
   DUPLICATE
 }
 
+enum TripStatus {
+  PLANNING
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum TripExpenseType {
+  GAS
+  FOOD
+  LODGING
+  TRANSPORT
+  SUPPLIES
+  OTHER
+}
+
 // Households are managed by Family Manager (family_manager schema).
 // This app reads households via cross-schema queries in lib/household.ts.
 // Domain models keep householdId as a plain String for scoping.
@@ -212,6 +228,7 @@ model Transaction {
   linkedBillPayments   BillPayment[]
   matchedImports       ImportedTransaction[] @relation("MatchedTransaction")
   createdFromImports   ImportedTransaction[] @relation("CreatedTransaction")
+  tripExpense          TripExpense?
 
   @@index([householdId, date])
   @@index([accountId])
@@ -333,6 +350,7 @@ model BudgetPlannerProject {
   updatedAt   DateTime                   @updatedAt
 
   items     BudgetPlannerItem[]
+  trips     Trip[]
 }
 
 model BudgetPlannerItem {
@@ -648,4 +666,53 @@ model WishlistItem {
   wishlist Wishlist @relation(fields: [wishlistId], references: [id], onDelete: Cascade)
 
   @@index([wishlistId])
+}
+
+// ============================================================================
+// TRIP EXPENSE TRACKER
+// ============================================================================
+
+model Trip {
+  id                     String     @id @default(cuid())
+  householdId            String
+  name                   String
+  description            String?
+  destination            String?
+  startDate              DateTime   @db.Date
+  endDate                DateTime   @db.Date
+  status                 TripStatus @default(ACTIVE)
+  isTaxDeductible        Boolean    @default(false)
+  taxPurpose             String?
+  budgetPlannerProjectId String?
+  notes                  String?
+  createdAt              DateTime   @default(now())
+  updatedAt              DateTime   @updatedAt
+
+  budgetPlannerProject BudgetPlannerProject? @relation(fields: [budgetPlannerProjectId], references: [id])
+  expenses             TripExpense[]
+
+  @@index([householdId])
+}
+
+model TripExpense {
+  id                String          @id @default(cuid())
+  tripId            String
+  transactionId     String?         @unique
+  expenseType       TripExpenseType
+  date              DateTime        @db.Date
+  amount            Decimal         @db.Decimal(18, 2)
+  payee             String?
+  description       String?
+  receiptFileName   String?
+  receiptPath       String?
+  receiptFileSize   Int?
+  receiptHash       String?
+  receiptUploadedAt DateTime?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  trip        Trip         @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  transaction Transaction? @relation(fields: [transactionId], references: [id])
+
+  @@index([tripId, date])
 }

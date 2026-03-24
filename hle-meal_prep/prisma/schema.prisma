@@ -7,6 +7,190 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Users are managed by FamilyHub (familyhub schema).
+// Users are managed by Family Manager (family_manager schema).
 // This app reads users via cross-schema queries.
-// Add grocery planner-specific models below.
+
+// ============================================================================
+// ENUMS
+// ============================================================================
+
+enum ProductUnit {
+  EACH
+  LB
+  OZ
+  GALLON
+  QUART
+  LITER
+  COUNT
+  PACK
+  BAG
+  BOX
+  CAN
+  BOTTLE
+  BUNCH
+  DOZEN
+}
+
+enum ListStatus {
+  DRAFT
+  ACTIVE
+  COMPLETED
+}
+
+// ============================================================================
+// STORES
+// ============================================================================
+
+model Store {
+  id          String   @id @default(cuid())
+  householdId String
+  name        String
+  location    String?
+  notes       String?
+  color       String?
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  prices    StorePrice[]
+  listItems ShoppingListItem[]
+
+  @@unique([householdId, name])
+  @@index([householdId])
+}
+
+// ============================================================================
+// CATEGORIES
+// ============================================================================
+
+model Category {
+  id          String   @id @default(cuid())
+  householdId String
+  name        String
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  products Product[]
+
+  @@unique([householdId, name])
+  @@index([householdId])
+}
+
+// ============================================================================
+// PRODUCTS
+// ============================================================================
+
+model Product {
+  id          String      @id @default(cuid())
+  householdId String
+  categoryId  String?
+  name        String
+  brand       String?
+  defaultUnit ProductUnit @default(EACH)
+  notes       String?
+  isFavorite  Boolean     @default(false)
+  isActive    Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  category    Category?          @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  prices      StorePrice[]
+  listItems   ShoppingListItem[]
+  pantryItem  PantryItem?
+
+  @@index([householdId])
+  @@index([categoryId])
+}
+
+// ============================================================================
+// STORE PRICES (the heart of the app)
+// ============================================================================
+
+model StorePrice {
+  id         String       @id @default(cuid())
+  productId  String
+  storeId    String
+  price      Decimal      @db.Decimal(10, 2)
+  unitQty    Decimal?     @db.Decimal(10, 3)
+  unit       ProductUnit?
+  onSale     Boolean      @default(false)
+  observedAt DateTime     @default(now()) @db.Date
+  notes      String?
+  createdAt  DateTime     @default(now())
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  store   Store   @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@index([productId, storeId])
+  @@index([productId, observedAt])
+}
+
+// ============================================================================
+// SHOPPING LISTS
+// ============================================================================
+
+model ShoppingList {
+  id          String     @id @default(cuid())
+  householdId String
+  name        String
+  status      ListStatus @default(DRAFT)
+  notes       String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  items ShoppingListItem[]
+
+  @@index([householdId])
+}
+
+// ============================================================================
+// PANTRY — tracks what you have on hand
+// ============================================================================
+
+model PantryItem {
+  id          String       @id @default(cuid())
+  householdId String
+  productId   String       @unique
+  quantity    Decimal      @db.Decimal(10, 3)
+  unit        ProductUnit?
+  minQuantity Decimal?     @db.Decimal(10, 3) // alert threshold
+  updatedAt   DateTime     @updatedAt
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([householdId])
+}
+
+// ============================================================================
+// MEALIE INTEGRATION
+// ============================================================================
+
+model MealieConfig {
+  id          String   @id @default(cuid())
+  householdId String   @unique
+  apiUrl      String
+  apiToken    String
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model ShoppingListItem {
+  id        String       @id @default(cuid())
+  listId    String
+  productId String
+  storeId   String?
+  quantity  Decimal      @default(1) @db.Decimal(10, 3)
+  unit      ProductUnit?
+  notes     String?
+  isChecked Boolean      @default(false)
+  sortOrder Int          @default(0)
+
+  list    ShoppingList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  product Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
+  store   Store?       @relation(fields: [storeId], references: [id], onDelete: SetNull)
+
+  @@index([listId])
+  @@index([productId])
+}

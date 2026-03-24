@@ -9,7 +9,7 @@ import {
   CalendarDays,
   Lightbulb,
   Gift,
-  Link2,
+  Film,
   Settings,
   LogOut,
   ChevronDown,
@@ -53,8 +53,8 @@ const giftsNav = [
   { title: "Gift Tracker", href: "/gifts", icon: Gift },
 ];
 
-const networkNav = [
-  { title: "Linked Households", href: "/linked", icon: Link2 },
+const mediaNav = [
+  { title: "Media Requests", href: "/media-requests", icon: Film },
 ];
 
 const accountNav = [
@@ -148,7 +148,7 @@ export function AppSidebar({
         <NavGroup label="Family" items={familyNav} pathname={pathname} />
         <NavGroup label="Events" items={eventsNav} pathname={pathname} />
         <NavGroup label="Gifts" items={giftsNav} pathname={pathname} />
-        <NavGroup label="Network" items={networkNav} pathname={pathname} />
+        <NavGroup label="Media" items={mediaNav} pathname={pathname} />
         <NavGroup label="Account" items={accountNav} pathname={pathname} />
       </SidebarContent>
 

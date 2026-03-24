@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   Users,
   Home,
+  Shield,
   Settings,
   LogOut,
   ChevronDown,
@@ -41,6 +42,7 @@ const organizationNav = [
 ];
 
 const accountNav = [
+  { title: "Security", href: "/security", icon: Shield },
   { title: "Settings", href: "/settings", icon: Settings },
 ];
 

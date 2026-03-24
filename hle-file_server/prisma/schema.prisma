@@ -54,6 +54,7 @@ model Folder {
   @@index([householdId])
   @@index([parentFolderId])
   @@index([ownerId])
+  @@index([householdId, parentFolderId, ownerId, deletedAt])
 }
 
 // ============================================================================
@@ -92,6 +93,9 @@ model File {
   @@index([contentHash])
   @@index([ownerId])
   @@index([deletedAt])
+  @@index([householdId, folderId, status, deletedAt])
+  @@index([uploadedByUserId])
+  @@index([mimeType])
 }
 
 // ============================================================================
@@ -161,6 +165,7 @@ model FileShare {
 
   @@unique([fileId, sharedWithUserId])
   @@index([sharedWithUserId])
+  @@index([sharedByUserId])
 }
 
 // ============================================================================
@@ -199,6 +204,51 @@ model Favorite {
 
   @@unique([userId, fileId])
   @@index([userId])
+}
+
+// ============================================================================
+// AUDIT LOG
+// ============================================================================
+
+enum AuditAction {
+  FILE_UPLOAD
+  FILE_DOWNLOAD
+  FILE_RENAME
+  FILE_MOVE
+  FILE_COPY
+  FILE_DELETE
+  FILE_RESTORE
+  FILE_PERMANENT_DELETE
+  FILE_TAG_ADD
+  FILE_TAG_REMOVE
+  FILE_SHARE
+  FILE_UNSHARE
+  FILE_SHARE_LINK_CREATE
+  FILE_SHARE_LINK_REVOKE
+  FILE_FAVORITE
+  FILE_UNFAVORITE
+  FOLDER_CREATE
+  FOLDER_RENAME
+  FOLDER_MOVE
+  FOLDER_DELETE
+  FOLDER_RESTORE
+}
+
+model AuditLog {
+  id          String      @id @default(cuid())
+  householdId String
+  userId      String
+  action      AuditAction
+  fileId      String?
+  folderId    String?
+  details     String?     // JSON string with action-specific context
+  ipAddress   String?
+  createdAt   DateTime    @default(now())
+
+  @@index([householdId, createdAt])
+  @@index([userId])
+  @@index([fileId])
+  @@index([folderId])
 }
 
 // ============================================================================

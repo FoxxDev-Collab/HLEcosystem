@@ -8,8 +8,8 @@ PROJECT_DIR="/home/foxx-dev/HLEcosystem"
 cd "$PROJECT_DIR"
 
 # ── Parallelism ─────────────────────────────────────────────────
-# Max concurrent builds — tuned for 2 CPU / 13 GB RAM
-MAX_PARALLEL=2
+# Max concurrent builds — tuned for 8 vCPU / 20 GB RAM
+MAX_PARALLEL=3
 
 # ── Service registry ──────────────────────────────────────────────
 declare -A PORTS=(
@@ -19,7 +19,8 @@ declare -A PORTS=(
   [hle-family-health]=8083
   [hle-family-home-care]=8084
   [hle-file-server]=8085
-  [hle-grocery-planner]=8086
+  [hle-meal-prep]=8086
+  [hle-family-wiki]=8087
 )
 
 declare -A CONTAINERS=(
@@ -29,7 +30,8 @@ declare -A CONTAINERS=(
   [hle-family-health]=foxxlab-family-health
   [hle-family-home-care]=foxxlab-family-home-care
   [hle-file-server]=foxxlab-file-server
-  [hle-grocery-planner]=foxxlab-grocery-planner
+  [hle-meal-prep]=foxxlab-meal-prep
+  [hle-family-wiki]=foxxlab-family-wiki
 )
 
 SERVICES=(
@@ -39,7 +41,8 @@ SERVICES=(
   hle-family-health
   hle-family-home-care
   hle-file-server
-  hle-grocery-planner
+  hle-meal-prep
+  hle-family-wiki
 )
 
 # ── Colors ────────────────────────────────────────────────────────
@@ -49,6 +52,7 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 CYAN='\033[0;36m'
 BOLD='\033[1m'
+DIM='\033[2m'
 NC='\033[0m'
 
 # ── Helpers ───────────────────────────────────────────────────────
@@ -58,12 +62,22 @@ warn()    { echo -e "${YELLOW}!${NC} $*"; }
 error()   { echo -e "${RED}✗${NC} $*"; }
 header()  { echo -e "\n${BOLD}${CYAN}═══ $* ═══${NC}"; }
 
+timestamp() { date +"%H:%M:%S"; }
+
+elapsed() {
+  local start="$1"
+  local now
+  now=$(date +%s)
+  local diff=$(( now - start ))
+  printf "%dm%02ds" $(( diff / 60 )) $(( diff % 60 ))
+}
+
 validate_service() {
   local svc="$1"
   if [[ -z "${PORTS[$svc]+x}" ]]; then
     error "Unknown service: $svc"
     echo "Valid services:"
-    for s in "${SERVICES[@]}"; do echo "  $s"; done
+    for s in "${SERVICES[@]}"; do echo "  $s  :${PORTS[$s]}"; done
     exit 1
   fi
 }
@@ -97,6 +111,49 @@ health_check() {
   return 1
 }
 
+# ── Build tracking ────────────────────────────────────────────────
+# Track build status per service: pending, building, done, failed
+declare -A BUILD_STATUS
+declare -A BUILD_START
+
+print_build_dashboard() {
+  local targets=("$@")
+  local total=${#targets[@]}
+  local done=0
+  local fail=0
+  local building=0
+
+  for svc in "${targets[@]}"; do
+    case "${BUILD_STATUS[$svc]:-pending}" in
+      done)     (( done++ )) ;;
+      failed)   (( fail++ )); (( done++ )) ;;
+      building) (( building++ )) ;;
+    esac
+  done
+
+  echo ""
+  printf "  ${BOLD}%-28s %-12s %-12s${NC}\n" "SERVICE" "STATUS" "TIME"
+  echo "  ──────────────────────────────────────────────────────"
+
+  for svc in "${targets[@]}"; do
+    local status="${BUILD_STATUS[$svc]:-pending}"
+    local time_str="-"
+    if [[ -n "${BUILD_START[$svc]:-}" ]]; then
+      time_str=$(elapsed "${BUILD_START[$svc]}")
+    fi
+
+    case "$status" in
+      pending)  printf "  ${DIM}%-28s %-12s %-12s${NC}\n" "$svc" "pending" "-" ;;
+      building) printf "  ${YELLOW}%-28s %-12s %-12s${NC}\n" "$svc" "building" "$time_str" ;;
+      done)     printf "  ${GREEN}%-28s %-12s %-12s${NC}\n" "$svc" "done" "$time_str" ;;
+      failed)   printf "  ${RED}%-28s %-12s %-12s${NC}\n" "$svc" "FAILED" "$time_str" ;;
+    esac
+  done
+
+  echo ""
+  echo -e "  Progress: ${BOLD}${done}/${total}${NC} complete, ${building} building, ${fail} failed"
+}
+
 # ── Commands ──────────────────────────────────────────────────────
 
 rebuild_one() {
@@ -106,27 +163,23 @@ rebuild_one() {
   local ctr="${CONTAINERS[$svc]}"
 
   {
-    echo "=== Rebuilding $svc ==="
+    echo "[$(timestamp)] === Rebuilding $svc ==="
 
-    # Stop and remove container
-    echo "  Stopping $ctr..."
+    echo "[$(timestamp)] Stopping $ctr..."
     podman stop "$ctr" 2>/dev/null || true
     podman rm "$ctr" 2>/dev/null || true
 
-    # Remove old image
-    echo "  Removing old image..."
+    echo "[$(timestamp)] Removing old image..."
     podman rmi "localhost/hlecosystem_${svc}:latest" 2>/dev/null || true
 
-    # Build — use --jobs 0 to parallelize multi-stage Containerfile stages
+    echo "[$(timestamp)] Building..."
     if [[ "$no_cache" == "--no-cache" ]]; then
-      echo "  Building (no cache, parallel stages)..."
-      podman-compose build --build-arg BUILDAH_JOBS=0 --no-cache "$svc"
+      podman-compose build --no-cache "$svc"
     else
-      echo "  Building (parallel stages)..."
       podman-compose build "$svc"
     fi
 
-    echo "  DONE: $svc"
+    echo "[$(timestamp)] DONE: $svc"
   } > "$logfile" 2>&1
 
   return $?
@@ -144,12 +197,16 @@ cmd_rebuild() {
   sleep 3
 
   local count=${#targets[@]}
+  local overall_start
+  overall_start=$(date +%s)
 
-  # Single service — build sequentially, no parallelism needed
+  # Single service — inline build with live output
   if (( count == 1 )); then
     local svc="${targets[0]}"
     header "Rebuilding $svc"
     local ctr="${CONTAINERS[$svc]}"
+    local svc_start
+    svc_start=$(date +%s)
 
     info "Stopping $ctr..."
     podman stop "$ctr" 2>/dev/null || true
@@ -166,6 +223,8 @@ cmd_rebuild() {
       podman-compose build "$svc"
     fi
 
+    success "$svc built in $(elapsed "$svc_start")"
+
     info "Starting..."
     podman-compose up -d "$svc"
 
@@ -174,82 +233,123 @@ cmd_rebuild() {
     return
   fi
 
-  # Multiple services — parallel build phase
-  header "Parallel rebuild: ${count} services (max ${MAX_PARALLEL} concurrent)"
+  # Multiple services — sequential build with dashboard tracking
+  header "Rebuilding ${count} services (max ${MAX_PARALLEL} concurrent)"
+  echo -e "  ${DIM}Services: ${targets[*]}${NC}"
 
-  local pids=()
-  local svc_for_pid=()
+  # Initialize status
+  for svc in "${targets[@]}"; do
+    BUILD_STATUS[$svc]="pending"
+    BUILD_START[$svc]=""
+  done
+
+  # Show initial dashboard
+  print_build_dashboard "${targets[@]}"
+
+  local -a pids=()
+  local -a svc_for_pid=()
   local running=0
-  local failed=()
+  local -a failed=()
+  local -a succeeded=()
+
+  # Collect finished background jobs — called in throttle loop and final wait
+  collect_finished() {
+    local -a new_pids=()
+    local -a new_svcs=()
+    for i in "${!pids[@]}"; do
+      if kill -0 "${pids[$i]}" 2>/dev/null; then
+        new_pids+=("${pids[$i]}")
+        new_svcs+=("${svc_for_pid[$i]}")
+      else
+        local fsvc="${svc_for_pid[$i]}"
+        local rc=0
+        wait "${pids[$i]}" || rc=$?
+        if (( rc == 0 )); then
+          BUILD_STATUS[$fsvc]="done"
+          succeeded+=("$fsvc")
+          success "$fsvc built in $(elapsed "${BUILD_START[$fsvc]}")"
+        else
+          BUILD_STATUS[$fsvc]="failed"
+          failed+=("$fsvc")
+          error "$fsvc FAILED after $(elapsed "${BUILD_START[$fsvc]}") — see /tmp/hle-build-${fsvc}.log"
+        fi
+        running=$(( running - 1 ))
+      fi
+    done
+    pids=("${new_pids[@]+"${new_pids[@]}"}")
+    svc_for_pid=("${new_svcs[@]+"${new_svcs[@]}"}")
+  }
 
   for svc in "${targets[@]}"; do
-    # Throttle: wait for a slot if at max
+    # Throttle: wait for a slot
     while (( running >= MAX_PARALLEL )); do
-      # Wait for any child to finish
-      for i in "${!pids[@]}"; do
-        if ! kill -0 "${pids[$i]}" 2>/dev/null; then
-          wait "${pids[$i]}" || failed+=("${svc_for_pid[$i]}")
-          unset 'pids[i]' 'svc_for_pid[i]'
-          (( running-- ))
-        fi
-      done
-      # Re-index arrays
-      pids=("${pids[@]}")
-      svc_for_pid=("${svc_for_pid[@]}")
-      sleep 1
+      collect_finished
+      if (( running >= MAX_PARALLEL )); then
+        sleep 2
+      fi
     done
 
-    info "Starting build: $svc (log: /tmp/hle-build-${svc}.log)"
+    # Start build
+    BUILD_STATUS[$svc]="building"
+    BUILD_START[$svc]=$(date +%s)
+    info "[$(timestamp)] Building $svc..."
     rebuild_one "$svc" "$no_cache" &
     pids+=($!)
     svc_for_pid+=("$svc")
-    (( running++ ))
+    running=$(( running + 1 ))
   done
 
   # Wait for remaining builds
-  info "Waiting for all builds to finish..."
-  for i in "${!pids[@]}"; do
-    wait "${pids[$i]}" || failed+=("${svc_for_pid[$i]}")
-  done
-
-  # Report build results
-  echo ""
-  if (( ${#failed[@]} > 0 )); then
-    error "Build failed for: ${failed[*]}"
-    for svc in "${failed[@]}"; do
-      warn "Log: /tmp/hle-build-${svc}.log"
-    done
-  fi
-
-  # Print build logs in order
-  for svc in "${targets[@]}"; do
-    local logfile="/tmp/hle-build-${svc}.log"
-    if [[ -f "$logfile" ]]; then
-      local last_line
-      last_line=$(tail -1 "$logfile")
-      if [[ "$last_line" == *"DONE:"* ]]; then
-        success "$svc built"
-      else
-        error "$svc build failed — see /tmp/hle-build-${svc}.log"
-      fi
+  info "Waiting for remaining builds..."
+  while (( running > 0 )); do
+    collect_finished
+    if (( running > 0 )); then
+      sleep 2
     fi
   done
 
-  # Start all services at once
-  header "Starting services"
-  podman-compose up -d "${targets[@]}"
+  # Final dashboard
+  header "Build Summary"
+  print_build_dashboard "${targets[@]}"
+  echo -e "  Total time: ${BOLD}$(elapsed "$overall_start")${NC}"
 
-  # Health checks
-  header "Health checks"
-  sleep 5
-  for svc in "${targets[@]}"; do
-    health_check "$svc" || true
-  done
+  if (( ${#failed[@]} > 0 )); then
+    echo ""
+    error "Failed services:"
+    for svc in "${failed[@]}"; do
+      echo -e "    ${RED}$svc${NC} — /tmp/hle-build-${svc}.log"
+      echo -e "    ${DIM}$(tail -5 "/tmp/hle-build-${svc}.log" 2>/dev/null | head -3)${NC}"
+    done
+  fi
 
-  header "All services rebuilt"
-  cmd_status
+  # Start successful services
+  if (( ${#succeeded[@]} > 0 )); then
+    header "Starting ${#succeeded[@]} services"
+    podman-compose up -d "${succeeded[@]}"
 
-  # Cleanup log files on success
+    header "Health checks"
+    sleep 5
+    local healthy=0
+    local unhealthy=0
+    for svc in "${succeeded[@]}"; do
+      if health_check "$svc"; then
+        (( healthy++ ))
+      else
+        (( unhealthy++ ))
+      fi
+    done
+
+    echo ""
+    echo -e "  ${GREEN}${healthy} healthy${NC}"
+    if (( unhealthy > 0 )); then
+      echo -e "  ${RED}${unhealthy} unhealthy${NC}"
+    fi
+  fi
+
+  header "Done"
+  echo -e "  ${GREEN}${#succeeded[@]}${NC} built, ${RED}${#failed[@]}${NC} failed out of ${count} services"
+
+  # Cleanup logs on full success
   if (( ${#failed[@]} == 0 )); then
     rm -f /tmp/hle-build-*.log
   fi
@@ -260,10 +360,17 @@ cmd_up() {
   if [[ "$target" == "all" || -z "$target" ]]; then
     header "Starting all services"
     podman-compose up -d
+    sleep 5
+    header "Health checks"
+    for svc in "${SERVICES[@]}"; do
+      health_check "$svc" || true
+    done
   else
     validate_service "$target"
     header "Starting $target"
     podman-compose up -d postgres "$target"
+    sleep 3
+    health_check "$target" || true
   fi
 }
 
@@ -294,18 +401,20 @@ cmd_restart() {
 
 cmd_status() {
   header "Container Status"
-  printf "  ${BOLD}%-28s %-12s %-20s${NC}\n" "SERVICE" "STATE" "PORTS"
-  echo "  ────────────────────────────────────────────────────────────"
+  printf "  ${BOLD}%-28s %-12s %-10s %-12s${NC}\n" "SERVICE" "STATE" "PORT" "HEALTH"
+  echo "  ──────────────────────────────────────────────────────────────"
 
   # Postgres
   local pg_state
   pg_state=$(podman inspect --format '{{.State.Status}}' foxxlab-postgres 2>/dev/null || echo "not found")
-  local pg_health
-  pg_health=$(podman exec foxxlab-postgres pg_isready 2>/dev/null && echo "ready" || echo "down")
+  local pg_health="—"
   if [[ "$pg_state" == "running" ]]; then
-    success "$(printf '%-28s %-12s %-20s' 'postgres' "$pg_state" '127.0.0.1:5432')"
+    pg_health=$(podman exec foxxlab-postgres pg_isready -q 2>/dev/null && echo "ready" || echo "down")
+  fi
+  if [[ "$pg_state" == "running" ]]; then
+    printf "  ${GREEN}✓ %-27s %-12s %-10s %-12s${NC}\n" "postgres" "$pg_state" "5432" "$pg_health"
   else
-    error "$(printf '%-28s %-12s %-20s' 'postgres' "$pg_state" '-')"
+    printf "  ${RED}✗ %-27s %-12s %-10s %-12s${NC}\n" "postgres" "$pg_state" "-" "$pg_health"
   fi
 
   # App services
@@ -315,25 +424,36 @@ cmd_status() {
     local state
     state=$(podman inspect --format '{{.State.Status}}' "$ctr" 2>/dev/null || echo "not found")
 
+    local health="—"
     if [[ "$state" == "running" ]]; then
-      success "$(printf '%-28s %-12s %-20s' "$svc" "$state" "0.0.0.0:$port")"
+      local resp
+      resp=$(curl -sf --max-time 3 "http://localhost:$port/api/health" 2>/dev/null || echo "")
+      if [[ -n "$resp" ]]; then
+        health="healthy"
+      else
+        health="unreachable"
+      fi
+    fi
+
+    if [[ "$state" == "running" && "$health" == "healthy" ]]; then
+      printf "  ${GREEN}✓ %-27s %-12s %-10s %-12s${NC}\n" "$svc" "$state" ":$port" "$health"
+    elif [[ "$state" == "running" ]]; then
+      printf "  ${YELLOW}! %-27s %-12s %-10s %-12s${NC}\n" "$svc" "$state" ":$port" "$health"
     else
-      error "$(printf '%-28s %-12s %-20s' "$svc" "$state" '-')"
+      printf "  ${RED}✗ %-27s %-12s %-10s %-12s${NC}\n" "$svc" "$state" "-" "$health"
     fi
   done
 
   echo ""
-  header "Health Checks"
+  local total=${#SERVICES[@]}
+  local running=0
   for svc in "${SERVICES[@]}"; do
-    local port="${PORTS[$svc]}"
-    local response
-    response=$(curl -sf "http://localhost:$port/api/health" 2>/dev/null || echo "unreachable")
-    if [[ "$response" != "unreachable" ]]; then
-      success "$svc :$port — $response"
-    else
-      error "$svc :$port — unreachable"
-    fi
+    local ctr="${CONTAINERS[$svc]}"
+    local state
+    state=$(podman inspect --format '{{.State.Status}}' "$ctr" 2>/dev/null || echo "")
+    [[ "$state" == "running" ]] && (( running++ ))
   done
+  echo -e "  ${BOLD}${running}/${total}${NC} app services running"
 }
 
 cmd_logs() {
@@ -414,7 +534,7 @@ ${BOLD}USAGE${NC}
   hle <command> [service|all] [flags]
 
 ${BOLD}COMMANDS${NC}
-  ${GREEN}rebuild${NC}  [service|all] [--no-cache]   Build & restart (parallel when "all")
+  ${GREEN}rebuild${NC}  [service|all] [--no-cache]   Build & restart (${MAX_PARALLEL} concurrent when "all")
   ${GREEN}up${NC}       [service|all]                 Start services
   ${GREEN}down${NC}     [service|all]                 Stop services
   ${GREEN}restart${NC}  [service|all]                 Restart without rebuilding
@@ -424,20 +544,21 @@ ${BOLD}COMMANDS${NC}
   ${GREEN}clean${NC}                                  Remove stopped containers & dangling images
   ${GREEN}nuke${NC}                                   Full teardown (containers, images, volumes)
 
-${BOLD}SERVICES${NC}
-  hle-family-manager    :8080
-  hle-familyhub         :8081
-  hle-family-finance    :8082
-  hle-family-health     :8083
-  hle-family-home-care  :8084
-  hle-file-server       :8085
-  hle-grocery-planner   :8086
+${BOLD}SERVICES${NC} (${#SERVICES[@]} apps)
+  hle-family-manager    :8080   Family Manager (auth)
+  hle-familyhub         :8081   FamilyHub
+  hle-family-finance    :8082   Family Finance
+  hle-family-health     :8083   Family Health
+  hle-family-home-care  :8084   Home Care
+  hle-file-server       :8085   File Server
+  hle-meal-prep         :8086   Meal Prep
+  hle-family-wiki       :8087   Family Wiki
   postgres              (logs/shell only)
 
 ${BOLD}EXAMPLES${NC}
-  hle rebuild hle-familyhub           Rebuild single service (cached)
+  hle rebuild hle-familyhub           Rebuild single service
   hle rebuild hle-familyhub --no-cache Rebuild with no cache
-  hle rebuild all                     Rebuild everything
+  hle rebuild all                     Rebuild all ${#SERVICES[@]} services
   hle status                          Check all health endpoints
   hle logs hle-family-finance -f      Tail logs
   hle shell postgres                  Open psql session

@@ -44,17 +44,36 @@ enum FamilyRelationship {
 // ─── Users ───────────────────────────────────────────────
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String
-  password  String?
-  avatar    String?
-  role      Role     @default(MEMBER)
-  active    Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(cuid())
+  email       String   @unique
+  name        String
+  password    String?
+  avatar      String?
+  role        Role     @default(MEMBER)
+  active      Boolean  @default(true)
+  totpSecret  String?
+  totpEnabled Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   memberships HouseholdMember[]
+  sessions    Session[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  userAgent String?
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 // ─── Households ──────────────────────────────────────────

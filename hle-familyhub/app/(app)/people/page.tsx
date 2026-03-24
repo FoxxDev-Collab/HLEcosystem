@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
-import { getCurrentHouseholdId, getHouseholdMembersWithRelationships } from "@/lib/household";
+import { getCurrentHouseholdId, getHouseholdMembersWithRelationships, getHouseholdById } from "@/lib/household";
 import { formatRelationship } from "@/lib/relationships";
 import { getRelativeRelationships, getDisplayRelationship } from "@/lib/relative-relationships";
 import prisma from "@/lib/prisma";
@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
-import { UserPlus, Users, UserRoundPlus } from "lucide-react";
+import { UserPlus, Users, UserRoundPlus, Globe } from "lucide-react";
 import { createFamilyMemberAction, toggleActiveMemberAction, syncHouseholdMemberAction } from "./actions";
 
 const CONTACT_METHODS = ["NONE", "PHONE", "EMAIL", "TEXT"];
@@ -36,6 +36,7 @@ export default async function PeoplePage() {
   const householdId = (await getCurrentHouseholdId())!;
   const user = await getCurrentUser();
 
+  // Current household data
   const [members, householdMembers, relativeMap] = await Promise.all([
     prisma.familyMember.findMany({
       where: { householdId },
@@ -56,9 +57,51 @@ export default async function PeoplePage() {
   const linkedMembers = members.filter((m) => m.linkedUserId);
   const standaloneMembers = members.filter((m) => !m.linkedUserId);
 
-  const householdRelMap = new Map(
-    householdMembers.map((hm) => [hm.userId, hm.familyRelationship])
-  );
+  // Discover cross-household members via relationships
+  const currentRelations = await prisma.familyRelation.findMany({
+    where: { householdId },
+    select: { fromMemberId: true, toMemberId: true },
+  });
+
+  const currentMemberIds = new Set(members.map((m) => m.id));
+  const otherMemberIds = new Set<string>();
+  for (const r of currentRelations) {
+    if (!currentMemberIds.has(r.fromMemberId)) otherMemberIds.add(r.fromMemberId);
+    if (!currentMemberIds.has(r.toMemberId)) otherMemberIds.add(r.toMemberId);
+  }
+
+  // Fetch cross-household members and group by household
+  type CrossHouseholdGroup = {
+    householdName: string;
+    members: typeof members;
+  };
+  const crossHouseholdGroups: CrossHouseholdGroup[] = [];
+
+  if (otherMemberIds.size > 0) {
+    const otherMembers = await prisma.familyMember.findMany({
+      where: { id: { in: [...otherMemberIds] }, isActive: true },
+      orderBy: { firstName: "asc" },
+    });
+
+    // Group by household
+    const byHousehold = new Map<string, typeof otherMembers>();
+    for (const m of otherMembers) {
+      if (!byHousehold.has(m.householdId)) byHousehold.set(m.householdId, []);
+      byHousehold.get(m.householdId)!.push(m);
+    }
+
+    // Fetch household names
+    const otherHouseholdIds = [...byHousehold.keys()];
+    const households = await Promise.all(otherHouseholdIds.map((id) => getHouseholdById(id)));
+    for (const h of households) {
+      if (h && byHousehold.has(h.id)) {
+        crossHouseholdGroups.push({
+          householdName: h.name,
+          members: byHousehold.get(h.id)!,
+        });
+      }
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -161,7 +204,7 @@ export default async function PeoplePage() {
         {unlinkedHouseholdMembers.length === 0 && linkedMembers.length === 0 && (
           <p className="text-sm text-muted-foreground py-2">
             No other household members. Add members in{" "}
-            <a href="http://localhost:8080/households" className="text-blue-600 hover:underline">
+            <a href="http://localhost:8080/households" className="text-primary hover:underline">
               Family Manager
             </a>.
           </p>
@@ -323,6 +366,68 @@ export default async function PeoplePage() {
           </div>
         )}
       </div>
+
+      {/* Cross-Household Family Section */}
+      {crossHouseholdGroups.length > 0 && (
+        <>
+          <Separator />
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <Globe className="size-5 text-primary" />
+              <h2 className="text-lg font-semibold">Family from Other Households</h2>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              People from other households connected via your family tree.{" "}
+              <Link href="/family-tree/manage" className="text-primary hover:underline">
+                Manage connections
+              </Link>{" "}
+              to add more.
+            </p>
+
+            {crossHouseholdGroups.map((group) => (
+              <div key={group.householdName} className="space-y-3">
+                <h3 className="text-sm font-medium flex items-center gap-2">
+                  <Badge variant="secondary" className="text-purple-700 dark:text-purple-400">
+                    {group.householdName}
+                  </Badge>
+                </h3>
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {group.members.map((member) => (
+                    <Card key={member.id}>
+                      <CardContent className="pt-6">
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <Link href={`/people/${member.id}`} className="font-semibold hover:underline">
+                              {member.firstName} {member.lastName}
+                            </Link>
+                            {(() => {
+                              const rel = relativeMap.get(member.id);
+                              return rel ? (
+                                <Badge variant="outline">{formatRelationship(rel)}</Badge>
+                              ) : null;
+                            })()}
+                          </div>
+                          {member.birthday && (
+                            <p className="text-sm text-muted-foreground">
+                              {formatBirthday(member.birthday)}
+                              {formatAge(member.birthday) && ` (${formatAge(member.birthday)})`}
+                            </p>
+                          )}
+                          <div className="flex items-center gap-2 pt-2">
+                            <Button asChild variant="outline" size="sm">
+                              <Link href={`/people/${member.id}`}>Details</Link>
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }

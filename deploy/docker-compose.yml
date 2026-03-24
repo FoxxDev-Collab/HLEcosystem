@@ -1,0 +1,168 @@
+# HLEcosystem — Production Deployment
+#
+# Usage:
+#   1. Copy this directory to your server
+#   2. cp .env.example .env && edit .env
+#   3. docker compose up -d
+#   4. Visit http://localhost:8080 (Family Manager) to create your account
+
+x-nextjs-app: &nextjs-app
+  restart: unless-stopped
+  networks:
+    - hle-net
+  depends_on:
+    postgres:
+      condition: service_healthy
+  environment: &nextjs-env
+    NODE_ENV: production
+    NEXT_TELEMETRY_DISABLED: "1"
+    HOSTNAME: "0.0.0.0"
+    PORT: "3000"
+    AUTH_URL: ${AUTH_URL:-http://localhost:8080}
+    AUTH_DOMAIN: ${AUTH_DOMAIN:-}
+    SECURE_COOKIES: ${SECURE_COOKIES:-true}
+  deploy:
+    resources:
+      limits:
+        memory: 512M
+      reservations:
+        memory: 128M
+
+services:
+
+  # PostgreSQL 16
+  postgres:
+    image: postgres:16-alpine
+    container_name: foxxlab-postgres
+    restart: unless-stopped
+    networks:
+      - hle-net
+    ports:
+      - "127.0.0.1:5432:5432"
+    environment:
+      POSTGRES_DB: foxxlab
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./init-schemas.sql:/docker-entrypoint-initdb.d/01-init-schemas.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d foxxlab"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 256M
+
+  # Family Manager — Central auth & user management (start here)
+  hle-family-manager:
+    <<: *nextjs-app
+    image: ghcr.io/foxxdev-collab/hle-family-manager:latest
+    container_name: foxxlab-family-manager
+    ports:
+      - "${FM_PORT:-8080}:3000"
+    environment:
+      <<: *nextjs-env
+      DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/foxxlab?schema=family_manager"
+
+  # FamilyHub — Family relationships, events, gifts
+  hle-familyhub:
+    <<: *nextjs-app
+    image: ghcr.io/foxxdev-collab/hle-familyhub:latest
+    container_name: foxxlab-familyhub
+    ports:
+      - "${HUB_PORT:-8081}:3000"
+    environment:
+      <<: *nextjs-env
+      DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/foxxlab?schema=familyhub"
+      APP_URL: ${HUB_URL:-http://localhost:8081}
+
+  # Family Finance — Budgets, transactions, net worth
+  hle-family-finance:
+    <<: *nextjs-app
+    image: ghcr.io/foxxdev-collab/hle-family-finance:latest
+    container_name: foxxlab-family-finance
+    ports:
+      - "${FINANCE_PORT:-8082}:3000"
+    volumes:
+      - family-finance-uploads:/app/uploads
+    environment:
+      <<: *nextjs-env
+      DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/foxxlab?schema=family_finance"
+      APP_URL: ${FINANCE_URL:-http://localhost:8082}
+
+  # Family Health — Health profiles, appointments, medications
+  hle-family-health:
+    <<: *nextjs-app
+    image: ghcr.io/foxxdev-collab/hle-family-health:latest
+    container_name: foxxlab-family-health
+    ports:
+      - "${HEALTH_PORT:-8083}:3000"
+    environment:
+      <<: *nextjs-env
+      DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/foxxlab?schema=family_health"
+      APP_URL: ${HEALTH_URL:-http://localhost:8083}
+
+  # Home Care — Maintenance, vehicles, property
+  hle-family-home-care:
+    <<: *nextjs-app
+    image: ghcr.io/foxxdev-collab/hle-family-home-care:latest
+    container_name: foxxlab-family-home-care
+    ports:
+      - "${HOMECARE_PORT:-8084}:3000"
+    volumes:
+      - home-care-uploads:/app/uploads
+    environment:
+      <<: *nextjs-env
+      DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/foxxlab?schema=family_home_care"
+      APP_URL: ${HOMECARE_URL:-http://localhost:8084}
+      UPLOAD_DIR: "/app/uploads"
+      MAX_FILE_SIZE_MB: "50"
+
+  # File Server — File storage and document management
+  hle-file-server:
+    <<: *nextjs-app
+    image: ghcr.io/foxxdev-collab/hle-file-server:latest
+    container_name: foxxlab-file-server
+    ports:
+      - "${FILES_PORT:-8085}:3000"
+    volumes:
+      - file-server-uploads:/app/uploads
+    environment:
+      <<: *nextjs-env
+      DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/foxxlab?schema=file_server"
+      APP_URL: ${FILES_URL:-http://localhost:8085}
+      UPLOAD_DIR: "/app/uploads"
+      MAX_FILE_SIZE_MB: "500"
+
+  # Meal Prep — Meal planning and grocery lists
+  hle-meal-prep:
+    <<: *nextjs-app
+    image: ghcr.io/foxxdev-collab/hle-meal-prep:latest
+    container_name: foxxlab-meal-prep
+    ports:
+      - "${MEALS_PORT:-8086}:3000"
+    environment:
+      <<: *nextjs-env
+      DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/foxxlab?schema=meal_prep"
+      APP_URL: ${MEALS_URL:-http://localhost:8086}
+
+networks:
+  hle-net:
+    driver: bridge
+    name: hle-net
+
+volumes:
+  postgres-data:
+    name: hle-postgres-data
+  family-finance-uploads:
+    name: hle-family-finance-uploads
+  home-care-uploads:
+    name: hle-home-care-uploads
+  file-server-uploads:
+    name: hle-file-server-uploads

@@ -189,6 +189,140 @@ export async function deleteFilesAction(formData: FormData): Promise<void> {
   revalidateAll();
 }
 
+export async function bulkMoveFilesAction(formData: FormData): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) redirect("/setup");
+
+  const fileIdsJson = formData.get("fileIds") as string;
+  const folderIdsJson = formData.get("folderIds") as string;
+  const targetFolderId = (formData.get("targetFolderId") as string) || null;
+  const fileIds: string[] = JSON.parse(fileIdsJson || "[]");
+  const folderIds: string[] = JSON.parse(folderIdsJson || "[]");
+
+  if (fileIds.length > 0) {
+    await prisma.file.updateMany({
+      where: { id: { in: fileIds }, householdId },
+      data: { folderId: targetFolderId },
+    });
+  }
+
+  if (folderIds.length > 0) {
+    await prisma.folder.updateMany({
+      where: { id: { in: folderIds }, householdId },
+      data: { parentFolderId: targetFolderId },
+    });
+  }
+
+  revalidateAll();
+}
+
+export async function bulkFavoriteFilesAction(formData: FormData): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) redirect("/setup");
+
+  const fileIdsJson = formData.get("fileIds") as string;
+  const fileIds: string[] = JSON.parse(fileIdsJson || "[]");
+
+  for (const fileId of fileIds) {
+    const existing = await prisma.favorite.findUnique({
+      where: { userId_fileId: { userId: user.id, fileId } },
+    });
+    if (!existing) {
+      await prisma.favorite.create({ data: { userId: user.id, fileId } });
+    }
+  }
+
+  revalidateAll();
+}
+
+export async function bulkDeleteFoldersAction(formData: FormData): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) redirect("/setup");
+
+  const folderIdsJson = formData.get("folderIds") as string;
+  const folderIds: string[] = JSON.parse(folderIdsJson || "[]");
+  const now = new Date();
+
+  await prisma.folder.updateMany({
+    where: { id: { in: folderIds }, householdId },
+    data: { deletedAt: now },
+  });
+
+  await prisma.file.updateMany({
+    where: { folderId: { in: folderIds }, householdId },
+    data: { deletedAt: now, status: "DELETED" },
+  });
+
+  revalidateAll();
+}
+
+export async function copyFileAction(formData: FormData): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) redirect("/setup");
+
+  const fileId = formData.get("fileId") as string;
+  const targetFolderId = (formData.get("targetFolderId") as string) || null;
+
+  const file = await prisma.file.findFirst({
+    where: { id: fileId, householdId },
+    include: { tags: true },
+  });
+  if (!file) return;
+
+  // Create a copy — same storage path (content-addressed dedup), new DB record
+  const copy = await prisma.file.create({
+    data: {
+      householdId,
+      folderId: targetFolderId,
+      ownerId: file.ownerId,
+      name: `${file.name.replace(/(\.[^.]+)$/, "")} (copy)${file.name.match(/(\.[^.]+)$/)?.[1] ?? ""}`,
+      originalName: file.originalName,
+      mimeType: file.mimeType,
+      size: file.size,
+      storagePath: file.storagePath,
+      contentHash: file.contentHash,
+      thumbnailPath: file.thumbnailPath,
+      uploadedByUserId: user.id,
+    },
+  });
+
+  // Copy tags
+  if (file.tags.length > 0) {
+    await prisma.fileTag.createMany({
+      data: file.tags.map((t) => ({ fileId: copy.id, tagId: t.tagId })),
+    });
+  }
+
+  // Create version 1 for the copy
+  await prisma.fileVersion.create({
+    data: {
+      fileId: copy.id,
+      versionNumber: 1,
+      size: file.size,
+      storagePath: file.storagePath,
+      contentHash: file.contentHash,
+      uploadedByUserId: user.id,
+    },
+  });
+
+  // Update storage quota (logical copy still counts toward quota)
+  await prisma.storageQuota.upsert({
+    where: { householdId },
+    create: { householdId, usedStorageBytes: file.size },
+    update: { usedStorageBytes: { increment: file.size } },
+  });
+
+  revalidateAll();
+}
+
 export async function updateFileDescriptionAction(formData: FormData): Promise<void> {
   const user = await getCurrentUser();
   if (!user) redirect("/login");

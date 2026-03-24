@@ -4,11 +4,13 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
-  CalendarDays,
-  ChefHat,
   ShoppingCart,
+  BarChart3,
   Package,
-  Heart,
+  Store,
+  Tag,
+  ChefHat,
+  BookOpen,
   Settings,
   LogOut,
   ChevronDown,
@@ -36,17 +38,19 @@ import { ThemeToggle } from "@/components/theme-toggle";
 
 const overviewNav = [
   { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { title: "Meal Plan", href: "/mealie", icon: ChefHat },
+  { title: "Recipes", href: "/recipes", icon: BookOpen },
 ];
 
-const planningNav = [
-  { title: "Meal Plans", href: "/meal-plans", icon: CalendarDays },
-  { title: "Recipes", href: "/recipes", icon: ChefHat },
+const shoppingNav = [
   { title: "Shopping Lists", href: "/shopping-lists", icon: ShoppingCart },
+  { title: "Price Compare", href: "/price-compare", icon: BarChart3 },
+  { title: "Pantry", href: "/pantry", icon: Package },
 ];
 
-const pantryNav = [
-  { title: "Inventory", href: "/inventory", icon: Package },
-  { title: "Favorites", href: "/favorites", icon: Heart },
+const catalogNav = [
+  { title: "Products", href: "/products", icon: Tag },
+  { title: "Stores", href: "/stores", icon: Store },
 ];
 
 const accountNav = [
@@ -111,7 +115,7 @@ export function AppSidebar({
           <DropdownMenuTrigger className="flex w-full items-center justify-between rounded-md px-2 py-1.5 text-sm hover:bg-sidebar-accent">
             <div className="text-left">
               <div className="font-semibold">{household.name}</div>
-              <div className="text-xs text-muted-foreground">Grocery Planner</div>
+              <div className="text-xs text-muted-foreground">Meal Prep</div>
             </div>
             {households.length > 1 && <ChevronDown className="size-4 opacity-50" />}
           </DropdownMenuTrigger>
@@ -137,8 +141,8 @@ export function AppSidebar({
 
       <SidebarContent>
         <NavGroup label="Overview" items={overviewNav} pathname={pathname} />
-        <NavGroup label="Planning" items={planningNav} pathname={pathname} />
-        <NavGroup label="Pantry" items={pantryNav} pathname={pathname} />
+        <NavGroup label="Shopping" items={shoppingNav} pathname={pathname} />
+        <NavGroup label="Catalog" items={catalogNav} pathname={pathname} />
         <NavGroup label="Account" items={accountNav} pathname={pathname} />
       </SidebarContent>
 

@@ -16,17 +16,10 @@ export async function createRelationAction(formData: FormData) {
 
   if (!fromMemberId || !toMemberId || !relationType || fromMemberId === toMemberId) return;
 
-  // Build valid household set: current + linked
-  const linkedHouseholds = await prisma.linkedHousehold.findMany({
-    where: { householdId },
-    select: { linkedHouseholdId: true },
-  });
-  const validHouseholdIds = [householdId, ...linkedHouseholds.map((lh) => lh.linkedHouseholdId)];
-
-  // Verify both members belong to a valid household
+  // Verify both members exist
   const [fromMember, toMember] = await Promise.all([
-    prisma.familyMember.findFirst({ where: { id: fromMemberId, householdId: { in: validHouseholdIds } } }),
-    prisma.familyMember.findFirst({ where: { id: toMemberId, householdId: { in: validHouseholdIds } } }),
+    prisma.familyMember.findFirst({ where: { id: fromMemberId } }),
+    prisma.familyMember.findFirst({ where: { id: toMemberId } }),
   ]);
   if (!fromMember || !toMember) return;
 
@@ -49,6 +42,7 @@ export async function createRelationAction(formData: FormData) {
 
   revalidatePath("/family-tree");
   revalidatePath("/family-tree/manage");
+  revalidatePath("/people");
 }
 
 export async function deleteRelationAction(formData: FormData) {
@@ -77,4 +71,5 @@ export async function deleteRelationAction(formData: FormData) {
 
   revalidatePath("/family-tree");
   revalidatePath("/family-tree/manage");
+  revalidatePath("/people");
 }

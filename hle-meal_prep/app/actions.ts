@@ -1,27 +1,13 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { setCurrentUser, clearCurrentUser } from "@/lib/auth";
-import { setCurrentHousehold, getHouseholdsForUser } from "@/lib/household";
-
-export async function selectUserAction(formData: FormData): Promise<void> {
-  const userId = formData.get("userId") as string;
-  if (!userId) return;
-
-  await setCurrentUser(userId);
-
-  const households = await getHouseholdsForUser(userId);
-  if (households.length === 0) {
-    redirect("/setup");
-  }
-
-  await setCurrentHousehold(households[0].id);
-  redirect("/dashboard");
-}
+import { clearSession } from "@/lib/auth";
+import { setCurrentHousehold } from "@/lib/household";
 
 export async function logoutAction(): Promise<void> {
-  await clearCurrentUser();
-  redirect("/login");
+  await clearSession();
+  const authUrl = process.env.AUTH_URL || "http://localhost:8080";
+  redirect(`${authUrl}/login`);
 }
 
 export async function switchHouseholdAction(formData: FormData): Promise<void> {

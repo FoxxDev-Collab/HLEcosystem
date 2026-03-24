@@ -115,3 +115,21 @@ export async function removeTagFromFileAction(formData: FormData) {
   revalidatePath("/tags");
   revalidatePath("/browse");
 }
+
+export async function removeTagByIdsAction(formData: FormData) {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) redirect("/setup");
+
+  const fileId = formData.get("fileId") as string;
+  const tagId = formData.get("tagId") as string;
+  if (!fileId || !tagId) return;
+
+  await prisma.fileTag.deleteMany({
+    where: { fileId, tagId, file: { householdId } },
+  });
+
+  revalidatePath("/tags");
+  revalidatePath("/browse");
+}
