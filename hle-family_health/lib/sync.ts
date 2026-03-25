@@ -4,17 +4,36 @@ import { getHouseholdMembersWithRelationships } from "./household";
 
 export async function syncHouseholdMembers(householdId: string): Promise<void> {
   const householdMembers = await getHouseholdMembersWithRelationships(householdId);
-  if (householdMembers.length === 0) return;
+  const activeUserIds = new Set(householdMembers.map((hm) => hm.userId));
 
-  const existingLinks = await prisma.familyMember.findMany({
+  // Get all local members linked to a user
+  const linkedMembers = await prisma.familyMember.findMany({
     where: { householdId, linkedUserId: { not: null } },
-    select: { linkedUserId: true },
+    select: { id: true, linkedUserId: true, isActive: true },
   });
-  const linkedUserIds = new Set(existingLinks.map((m) => m.linkedUserId!));
 
+  const linkedUserIds = new Set(linkedMembers.map((m) => m.linkedUserId!));
+
+  // Deactivate members whose linkedUserId is no longer in the household
+  // Reactivate members who have returned
+  for (const member of linkedMembers) {
+    const stillInHousehold = activeUserIds.has(member.linkedUserId!);
+
+    if (!stillInHousehold && member.isActive) {
+      await prisma.familyMember.update({
+        where: { id: member.id },
+        data: { isActive: false },
+      });
+    } else if (stillInHousehold && !member.isActive) {
+      await prisma.familyMember.update({
+        where: { id: member.id },
+        data: { isActive: true },
+      });
+    }
+  }
+
+  // Create new local members for users not yet linked
   const unlinked = householdMembers.filter((hm) => !linkedUserIds.has(hm.userId));
-  if (unlinked.length === 0) return;
-
   for (const hm of unlinked) {
     const parts = hm.displayName.trim().split(" ");
     const firstName = parts[0] || hm.displayName;
@@ -31,7 +50,6 @@ export async function syncHouseholdMembers(householdId: string): Promise<void> {
         },
       });
     } catch (e: unknown) {
-      // P2002 = unique constraint violation — another request already created this member
       if (
         e instanceof Prisma.PrismaClientKnownRequestError &&
         e.code === "P2002"

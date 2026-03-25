@@ -53,7 +53,7 @@ export default async function PeoplePage() {
     (hm) => !linkedUserIds.has(hm.userId)
   );
 
-  const linkedMembers = members.filter((m) => m.linkedUserId);
+  const linkedMembers = members.filter((m) => m.linkedUserId && m.isActive);
   const standaloneMembers = members.filter((m) => !m.linkedUserId);
 
   const currentRelations = await prisma.familyRelation.findMany({

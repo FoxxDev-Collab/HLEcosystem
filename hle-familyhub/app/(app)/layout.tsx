@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { getCurrentHouseholdId, getHouseholdById, getHouseholdsForUser } from "@/lib/household";
+import { syncFamilyMembers } from "@/lib/sync";
 import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { Separator } from "@/components/ui/separator";
@@ -22,6 +23,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   ]);
 
   if (!household) redirect("/setup");
+
+  // Deactivate FamilyMember records for users removed from the household
+  await syncFamilyMembers(householdId);
 
   const appUrls: Record<string, string> = {};
   const urlMap: Record<string, string | undefined> = {
