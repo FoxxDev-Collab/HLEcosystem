@@ -44,6 +44,9 @@ jobs:
           - app_dir: hle-family_wiki
             image_name: hle-family-wiki
             app_name: "HLE Family Wiki"
+          - app_dir: hle-claude_api
+            image_name: hle-claude-api
+            app_name: "HLE Claude API"
 
     steps:
       - name: Checkout
