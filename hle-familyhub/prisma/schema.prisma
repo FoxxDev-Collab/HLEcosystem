@@ -16,10 +16,8 @@ enum MediaType {
 }
 
 enum RequestStatus {
-  PENDING
-  APPROVED
-  FULFILLED
-  DENIED
+  REQUESTED
+  COMPLETED
 }
 
 enum Relationship {
@@ -292,10 +290,8 @@ model MediaRequest {
   title       String
   artist      String?
   year        Int?
-  status      RequestStatus @default(PENDING)
+  status      RequestStatus @default(REQUESTED)
   notes       String?
-  adminNote   String?
-  fulfilledAt DateTime?
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 

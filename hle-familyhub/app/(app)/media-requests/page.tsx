@@ -23,10 +23,8 @@ const MEDIA_TYPE_LABELS: Record<string, string> = {
 };
 
 const STATUS_COLORS: Record<string, string> = {
-  PENDING: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400",
-  APPROVED: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
-  FULFILLED: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
-  DENIED: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
+  REQUESTED: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400",
+  COMPLETED: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
 };
 
 const TYPE_COLORS: Record<string, string> = {
@@ -49,8 +47,6 @@ export default async function MediaRequestsPage() {
   const user = await getCurrentUser();
   if (!user) return null;
 
-  const isAdmin = user.role === "ADMIN";
-
   const requests = await prisma.mediaRequest.findMany({
     include: { comments: { orderBy: { createdAt: "asc" } } },
     orderBy: { createdAt: "desc" },
@@ -63,19 +59,16 @@ export default async function MediaRequestsPage() {
   const allUserIds = [...new Set([...requesterIds, ...commentUserIds])];
   const nameMap = await getRequesterNames(allUserIds);
 
-  const pending = requests.filter((r) => r.status === "PENDING");
-  const active = requests.filter((r) => r.status === "APPROVED");
-  const completed = requests.filter(
-    (r) => r.status === "FULFILLED" || r.status === "DENIED"
-  );
+  const requested = requests.filter((r) => r.status === "REQUESTED");
+  const completed = requests.filter((r) => r.status === "COMPLETED");
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Media Requests</h1>
         <div className="flex items-center gap-2">
-          <Badge variant="outline">{pending.length} pending</Badge>
-          <Badge variant="outline">{active.length} approved</Badge>
+          <Badge variant="outline">{requested.length} requested</Badge>
+          <Badge variant="outline">{completed.length} completed</Badge>
         </div>
       </div>
 
@@ -123,28 +116,19 @@ export default async function MediaRequestsPage() {
       </Card>
 
       {/* Request Lists */}
-      <Tabs defaultValue="pending">
+      <Tabs defaultValue="requested">
         <TabsList>
-          <TabsTrigger value="pending">Pending ({pending.length})</TabsTrigger>
-          <TabsTrigger value="approved">Approved ({active.length})</TabsTrigger>
+          <TabsTrigger value="requested">Requested ({requested.length})</TabsTrigger>
           <TabsTrigger value="completed">Completed ({completed.length})</TabsTrigger>
           <TabsTrigger value="all">All ({requests.length})</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="pending" className="space-y-3 mt-4">
+        <TabsContent value="requested" className="space-y-3 mt-4">
           <RequestList
-            requests={pending}
+            requests={requested}
             nameMap={nameMap}
             currentUserId={user.id}
-            isAdmin={isAdmin}
-          />
-        </TabsContent>
-        <TabsContent value="approved" className="space-y-3 mt-4">
-          <RequestList
-            requests={active}
-            nameMap={nameMap}
-            currentUserId={user.id}
-            isAdmin={isAdmin}
+            isAdmin={user.role === "ADMIN"}
           />
         </TabsContent>
         <TabsContent value="completed" className="space-y-3 mt-4">
@@ -152,7 +136,7 @@ export default async function MediaRequestsPage() {
             requests={completed}
             nameMap={nameMap}
             currentUserId={user.id}
-            isAdmin={isAdmin}
+            isAdmin={user.role === "ADMIN"}
           />
         </TabsContent>
         <TabsContent value="all" className="space-y-3 mt-4">
@@ -160,7 +144,7 @@ export default async function MediaRequestsPage() {
             requests={requests}
             nameMap={nameMap}
             currentUserId={user.id}
-            isAdmin={isAdmin}
+            isAdmin={user.role === "ADMIN"}
           />
         </TabsContent>
       </Tabs>
@@ -221,48 +205,29 @@ function RequestList({
                   {request.notes && (
                     <p className="text-sm text-muted-foreground">{request.notes}</p>
                   )}
-                  {request.adminNote && (
-                    <p className="text-sm text-blue-600 dark:text-blue-400">
-                      Admin: {request.adminNote}
-                    </p>
-                  )}
-                  {request.fulfilledAt && (
-                    <p className="text-xs text-green-600 dark:text-green-400">
-                      Fulfilled {formatDate(request.fulfilledAt)}
-                    </p>
-                  )}
                 </div>
 
                 {/* Action buttons */}
                 <div className="flex items-center gap-2 shrink-0">
-                  {isAdmin && request.status === "PENDING" && (
-                    <>
-                      <form action={updateRequestStatusAction}>
-                        <input type="hidden" name="id" value={request.id} />
-                        <input type="hidden" name="status" value="APPROVED" />
-                        <Button type="submit" variant="outline" size="sm">
-                          Approve
-                        </Button>
-                      </form>
-                      <form action={updateRequestStatusAction}>
-                        <input type="hidden" name="id" value={request.id} />
-                        <input type="hidden" name="status" value="DENIED" />
-                        <Button type="submit" variant="outline" size="sm" className="text-red-600">
-                          Deny
-                        </Button>
-                      </form>
-                    </>
-                  )}
-                  {isAdmin && request.status === "APPROVED" && (
+                  {request.status === "REQUESTED" && (
                     <form action={updateRequestStatusAction}>
                       <input type="hidden" name="id" value={request.id} />
-                      <input type="hidden" name="status" value="FULFILLED" />
+                      <input type="hidden" name="status" value="COMPLETED" />
                       <Button type="submit" variant="outline" size="sm">
-                        Mark Fulfilled
+                        Mark Completed
                       </Button>
                     </form>
                   )}
-                  {(isOwner || isAdmin) && request.status === "PENDING" && (
+                  {request.status === "COMPLETED" && (
+                    <form action={updateRequestStatusAction}>
+                      <input type="hidden" name="id" value={request.id} />
+                      <input type="hidden" name="status" value="REQUESTED" />
+                      <Button type="submit" variant="outline" size="sm">
+                        Reopen
+                      </Button>
+                    </form>
+                  )}
+                  {(isOwner || isAdmin) && (
                     <form action={deleteMediaRequestAction}>
                       <input type="hidden" name="id" value={request.id} />
                       <Button type="submit" variant="ghost" size="sm" className="text-red-600">
@@ -291,7 +256,7 @@ function RequestList({
               )}
 
               {/* Add comment */}
-              {request.status !== "FULFILLED" && request.status !== "DENIED" && (
+              {request.status === "REQUESTED" && (
                 <form action={addCommentAction} className="flex gap-2 pt-1">
                   <input type="hidden" name="requestId" value={request.id} />
                   <Input

@@ -65,7 +65,7 @@ export default async function DashboardPage() {
       take: 5,
     }),
     prisma.todoList.count({ where: { householdId } }),
-    prisma.mediaRequest.count({ where: { status: "PENDING" } }),
+    prisma.mediaRequest.count({ where: { status: "REQUESTED" } }),
   ]);
 
   const upcomingEvents = importantDates

@@ -6,7 +6,7 @@ import prisma from "@/lib/prisma";
 import type { MediaType, RequestStatus } from "@prisma/client";
 
 const VALID_MEDIA_TYPES: MediaType[] = ["MOVIE", "TV_SHOW", "MUSIC"];
-const VALID_STATUSES: RequestStatus[] = ["PENDING", "APPROVED", "FULFILLED", "DENIED"];
+const VALID_STATUSES: RequestStatus[] = ["REQUESTED", "COMPLETED"];
 
 export async function createMediaRequestAction(formData: FormData) {
   const user = await getCurrentUser();
@@ -37,21 +37,15 @@ export async function createMediaRequestAction(formData: FormData) {
 
 export async function updateRequestStatusAction(formData: FormData) {
   const user = await getCurrentUser();
-  if (!user || user.role !== "ADMIN") return;
+  if (!user) return;
 
   const id = formData.get("id") as string;
   const status = formData.get("status") as RequestStatus;
   if (!id || !VALID_STATUSES.includes(status)) return;
 
-  const adminNote = (formData.get("adminNote") as string)?.trim() || null;
-
   await prisma.mediaRequest.update({
     where: { id },
-    data: {
-      status,
-      adminNote,
-      fulfilledAt: status === "FULFILLED" ? new Date() : undefined,
-    },
+    data: { status },
   });
 
   revalidatePath("/media-requests");
@@ -83,7 +77,6 @@ export async function deleteMediaRequestAction(formData: FormData) {
   const id = formData.get("id") as string;
   if (!id) return;
 
-  // Users can delete their own requests; admins can delete any
   const request = await prisma.mediaRequest.findUnique({ where: { id } });
   if (!request) return;
   if (request.requesterId !== user.id && user.role !== "ADMIN") return;
