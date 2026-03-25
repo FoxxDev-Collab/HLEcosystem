@@ -4,9 +4,8 @@ import { getCurrentHouseholdId } from "@/lib/household";
 import prisma from "@/lib/prisma";
 import { getUsersByIds } from "@/lib/users";
 import { formatDateRelative } from "@/lib/format";
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { FileText, Share2 } from "lucide-react";
+import { FileText, Share2, ChevronRight, Eye, Pencil } from "lucide-react";
 
 export default async function SharedPage() {
   const user = await getCurrentUser();
@@ -15,31 +14,49 @@ export default async function SharedPage() {
 
   const shares = await prisma.pageShare.findMany({
     where: { householdId },
-    include: { page: { select: { id: true, title: true, updatedAt: true, updatedBy: true, archived: true, parentId: true } } },
+    include: { page: { select: { id: true, title: true, updatedAt: true, updatedBy: true, archived: true, parentId: true, contentText: true } } },
   });
 
   const pages = shares.map((s) => ({ ...s.page, permission: s.permission })).filter((p) => !p.archived && !p.parentId);
   const userMap = await getUsersByIds([...new Set(pages.map((p) => p.updatedBy))] as string[]);
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2"><Share2 className="size-5 text-muted-foreground" /><h1 className="text-2xl font-bold">Shared with Me</h1></div>
-        <Badge variant="outline">{pages.length} pages</Badge>
+    <div className="space-y-6 max-w-[800px]">
+      <div>
+        <div className="flex items-center gap-2">
+          <Share2 className="size-4 text-muted-foreground" />
+          <h1 className="wiki-title text-3xl text-foreground">Shared with Me</h1>
+        </div>
+        <p className="text-sm text-muted-foreground mt-1">{pages.length} pages shared to your household</p>
       </div>
+
       {pages.length === 0 ? (
-        <p className="text-sm text-muted-foreground text-center py-8">No pages have been shared with your household yet.</p>
+        <div className="text-center py-12 space-y-2">
+          <Share2 className="size-8 text-muted-foreground/40 mx-auto" />
+          <p className="text-sm text-muted-foreground">No pages have been shared with your household yet.</p>
+        </div>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="space-y-2">
           {pages.map((page) => (
             <Link key={page.id} href={`/wiki/${page.id}`}>
-              <Card className="hover:bg-muted/50 transition-colors cursor-pointer h-full">
-                <CardContent className="pt-6 space-y-2">
-                  <div className="flex items-center gap-2"><FileText className="size-4 text-muted-foreground" /><p className="font-medium truncate">{page.title}</p></div>
-                  <Badge variant="outline" className="text-xs">{page.permission === "EDIT" ? "Can Edit" : "View Only"}</Badge>
-                  <p className="text-xs text-muted-foreground">{userMap.get(page.updatedBy)?.name ?? "Unknown"} &middot; {formatDateRelative(page.updatedAt)}</p>
-                </CardContent>
-              </Card>
+              <div className="flex items-center gap-4 p-3 rounded-lg border border-border/40 bg-card hover:border-primary/30 hover:shadow-sm transition-all cursor-pointer group">
+                <FileText className="size-4 shrink-0 text-muted-foreground group-hover:text-primary transition-colors" />
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-sm truncate">{page.title}</p>
+                  {page.contentText && (
+                    <p className="text-xs text-muted-foreground truncate mt-0.5">{page.contentText.substring(0, 100)}</p>
+                  )}
+                </div>
+                <Badge variant="outline" className="text-[10px] shrink-0 gap-1">
+                  {page.permission === "EDIT" ? <Pencil className="size-2.5" /> : <Eye className="size-2.5" />}
+                  {page.permission === "EDIT" ? "Can Edit" : "View Only"}
+                </Badge>
+                <div className="text-[11px] text-muted-foreground text-right shrink-0">
+                  <div>{userMap.get(page.updatedBy)?.name ?? "Unknown"}</div>
+                  <div>{formatDateRelative(page.updatedAt)}</div>
+                </div>
+                <ChevronRight className="size-3.5 text-muted-foreground/30 group-hover:text-muted-foreground transition-colors shrink-0" />
+              </div>
             </Link>
           ))}
         </div>

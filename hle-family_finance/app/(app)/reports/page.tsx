@@ -63,33 +63,33 @@ export default async function ReportsPage({
       </div>
 
       {/* Summary Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Total Income</CardTitle></CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{formatCurrency(data.totalIncome)}</div>
-            <p className="text-xs text-muted-foreground">Avg {formatCurrency(data.averageMonthlyIncome)}/mo</p>
+      <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+        <Card className="stat-card-accent" style={{ "--stat-color": "oklch(0.55 0.16 145)" } as React.CSSProperties}>
+          <CardContent className="pt-4 pb-3 px-4 pl-5">
+            <span className="text-xs font-medium text-muted-foreground">Total Income</span>
+            <div className="text-xl font-bold tabular-nums tx-income mt-1">{formatCurrency(data.totalIncome)}</div>
+            <p className="text-[10px] text-muted-foreground">Avg {formatCurrency(data.averageMonthlyIncome)}/mo</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Total Expenses</CardTitle></CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">{formatCurrency(data.totalExpenses)}</div>
-            <p className="text-xs text-muted-foreground">Avg {formatCurrency(data.averageMonthlyExpense)}/mo</p>
+        <Card className="stat-card-accent" style={{ "--stat-color": "oklch(0.55 0.2 25)" } as React.CSSProperties}>
+          <CardContent className="pt-4 pb-3 px-4 pl-5">
+            <span className="text-xs font-medium text-muted-foreground">Total Expenses</span>
+            <div className="text-xl font-bold tabular-nums tx-expense mt-1">{formatCurrency(data.totalExpenses)}</div>
+            <p className="text-[10px] text-muted-foreground">Avg {formatCurrency(data.averageMonthlyExpense)}/mo</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Net Savings</CardTitle></CardHeader>
-          <CardContent>
-            <div className={`text-2xl font-bold ${data.netSavings >= 0 ? "text-green-600" : "text-red-600"}`}>
+        <Card className="stat-card-accent" style={{ "--stat-color": data.netSavings >= 0 ? "oklch(0.55 0.16 145)" : "oklch(0.55 0.2 25)" } as React.CSSProperties}>
+          <CardContent className="pt-4 pb-3 px-4 pl-5">
+            <span className="text-xs font-medium text-muted-foreground">Net Savings</span>
+            <div className={`text-xl font-bold tabular-nums mt-1 ${data.netSavings >= 0 ? "tx-income" : "tx-expense"}`}>
               {formatCurrency(data.netSavings)}
             </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Savings Rate</CardTitle></CardHeader>
-          <CardContent>
-            <div className={`text-2xl font-bold ${data.savingsRate >= 0 ? "text-green-600" : "text-red-600"}`}>
+        <Card className="stat-card-accent" style={{ "--stat-color": "var(--primary)" } as React.CSSProperties}>
+          <CardContent className="pt-4 pb-3 px-4 pl-5">
+            <span className="text-xs font-medium text-muted-foreground">Savings Rate</span>
+            <div className={`text-xl font-bold tabular-nums mt-1 ${data.savingsRate >= 0 ? "tx-income" : "tx-expense"}`}>
               {formatPercent(data.savingsRate)}
             </div>
             <p className="text-xs text-muted-foreground">of income saved</p>

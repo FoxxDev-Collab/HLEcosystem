@@ -251,12 +251,12 @@ function PreviewArea({
   switch (category) {
     case "image":
       return (
-        <div className="flex items-center justify-center rounded-lg border bg-muted/30 p-4">
+        <div className="flex items-center justify-center rounded-xl border bg-black/5 dark:bg-black/40 p-2 sm:p-4">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={`/api/files/serve/${fileId}`}
             alt={fileName}
-            className="max-w-full max-h-[70vh] object-contain rounded-lg"
+            className="max-w-full max-h-[70vh] object-contain rounded-lg shadow-lg"
           />
         </div>
       );

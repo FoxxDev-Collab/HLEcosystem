@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { AppSwitcher } from "@/components/app-switcher";
 import {
   LayoutDashboard,
   Users,
@@ -42,7 +43,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 
 const overviewNav = [
   { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { title: "Family Members", href: "/family", icon: Users },
+  { title: "Family Tracking", href: "/family", icon: Users },
   { title: "Health Profiles", href: "/profiles", icon: HeartPulse },
 ];
 
@@ -139,6 +140,14 @@ export function AppSidebar({
         <NavGroup label="Medical" items={medicalNav} pathname={pathname} />
         <NavGroup label="Directory" items={directoryNav} pathname={pathname} />
         <NavGroup label="Wellness" items={wellnessNav} pathname={pathname} />
+        <SidebarGroup>
+          <SidebarGroupLabel className="text-[10px] uppercase tracking-[0.08em] font-semibold text-muted-foreground/70">
+            Apps
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <AppSwitcher currentApp="HEALTH" />
+          </SidebarGroupContent>
+        </SidebarGroup>
       </SidebarContent>
 
       <SidebarFooter className="border-t p-4">

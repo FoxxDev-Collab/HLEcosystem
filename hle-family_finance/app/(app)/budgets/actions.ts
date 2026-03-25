@@ -1,17 +1,35 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
 import { getCurrentHouseholdId } from "@/lib/household";
 import prisma from "@/lib/prisma";
+
+const setBudgetSchema = z.object({
+  categoryId: z.string().min(1),
+  year: z.coerce.number().int().min(2000).max(2100),
+  month: z.coerce.number().int().min(1).max(12),
+  amount: z.coerce.number(),
+});
+
+const copyBudgetSchema = z.object({
+  year: z.coerce.number().int().min(2000).max(2100),
+  month: z.coerce.number().int().min(1).max(12),
+});
 
 export async function setBudgetAction(formData: FormData): Promise<void> {
   const householdId = await getCurrentHouseholdId();
   if (!householdId) return;
 
-  const categoryId = formData.get("categoryId") as string;
-  const year = parseInt(formData.get("year") as string);
-  const month = parseInt(formData.get("month") as string);
-  const amount = parseFloat(formData.get("amount") as string);
+  const parsed = setBudgetSchema.safeParse({
+    categoryId: formData.get("categoryId"),
+    year: formData.get("year"),
+    month: formData.get("month"),
+    amount: formData.get("amount"),
+  });
+  if (!parsed.success) return;
+
+  const { categoryId, year, month, amount } = parsed.data;
 
   if (amount <= 0) {
     // Delete budget if zero
@@ -35,8 +53,13 @@ export async function copyBudgetFromPreviousMonth(formData: FormData): Promise<v
   const householdId = await getCurrentHouseholdId();
   if (!householdId) return;
 
-  const year = parseInt(formData.get("year") as string);
-  const month = parseInt(formData.get("month") as string);
+  const parsed = copyBudgetSchema.safeParse({
+    year: formData.get("year"),
+    month: formData.get("month"),
+  });
+  if (!parsed.success) return;
+
+  const { year, month } = parsed.data;
 
   // Calculate previous month
   const prevMonth = month === 1 ? 12 : month - 1;

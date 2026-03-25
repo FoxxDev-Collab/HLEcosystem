@@ -49,8 +49,15 @@ export async function createMileageEntryAction(formData: FormData): Promise<void
 export async function deleteMileageEntryAction(formData: FormData): Promise<void> {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) redirect("/setup");
 
   const id = formData.get("id") as string;
+
+  const entry = await prisma.mileageEntry.findFirst({
+    where: { id, vehicle: { householdId } },
+  });
+  if (!entry) return;
 
   await prisma.mileageEntry.delete({ where: { id } });
 

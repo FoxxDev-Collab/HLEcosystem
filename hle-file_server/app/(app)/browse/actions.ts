@@ -51,6 +51,12 @@ export async function renameFolderAction(formData: FormData): Promise<void> {
   const folderId = formData.get("folderId") as string;
   const name = formData.get("name") as string;
 
+  const folder = await prisma.folder.findFirst({
+    where: { id: folderId, householdId },
+    select: { isSystem: true },
+  });
+  if (folder?.isSystem) return; // system folders cannot be renamed
+
   await prisma.folder.update({
     where: { id: folderId, householdId },
     data: { name },
@@ -72,6 +78,7 @@ export async function deleteFolderAction(formData: FormData): Promise<void> {
   });
 
   if (!folder) return;
+  if (folder.isSystem) return; // system folders cannot be deleted
 
   const now = new Date();
 
@@ -96,6 +103,12 @@ export async function moveFolderAction(formData: FormData): Promise<void> {
 
   const folderId = formData.get("folderId") as string;
   const targetParentFolderId = formData.get("targetParentFolderId") as string;
+
+  const folder = await prisma.folder.findFirst({
+    where: { id: folderId, householdId },
+    select: { isSystem: true },
+  });
+  if (folder?.isSystem) return; // system folders stay at root
 
   await prisma.folder.update({
     where: { id: folderId, householdId },
@@ -209,8 +222,9 @@ export async function bulkMoveFilesAction(formData: FormData): Promise<void> {
   }
 
   if (folderIds.length > 0) {
+    // Exclude system folders from being moved
     await prisma.folder.updateMany({
-      where: { id: { in: folderIds }, householdId },
+      where: { id: { in: folderIds }, householdId, isSystem: false },
       data: { parentFolderId: targetFolderId },
     });
   }
@@ -249,8 +263,9 @@ export async function bulkDeleteFoldersAction(formData: FormData): Promise<void>
   const folderIds: string[] = JSON.parse(folderIdsJson || "[]");
   const now = new Date();
 
+  // Exclude system folders from deletion
   await prisma.folder.updateMany({
-    where: { id: { in: folderIds }, householdId },
+    where: { id: { in: folderIds }, householdId, isSystem: false },
     data: { deletedAt: now },
   });
 

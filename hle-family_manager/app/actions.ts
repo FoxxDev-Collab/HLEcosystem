@@ -8,6 +8,34 @@ import { setCurrentHousehold } from "@/lib/household";
 import { getUserByEmail, verifyPassword } from "@/lib/users";
 import { createSession, deleteExpiredSessions } from "@/lib/session";
 
+const ALLOWED_ORIGINS = [
+  process.env.AUTH_URL,
+  process.env.HUB_URL,
+  process.env.FINANCE_URL,
+  process.env.HEALTH_URL,
+  process.env.HOMECARE_URL,
+  process.env.FILES_URL,
+  process.env.MEALS_URL,
+  process.env.WIKI_URL,
+].filter(Boolean) as string[];
+
+function isAllowedRedirect(url: string): boolean {
+  // Allow relative paths
+  if (url.startsWith("/")) return true;
+  try {
+    const parsed = new URL(url);
+    return ALLOWED_ORIGINS.some((origin) => {
+      try {
+        return new URL(origin).origin === parsed.origin;
+      } catch {
+        return false;
+      }
+    });
+  } catch {
+    return false;
+  }
+}
+
 export async function loginAction(formData: FormData): Promise<void> {
   const email = formData.get("email") as string;
   const password = formData.get("password") as string | null;
@@ -57,7 +85,8 @@ export async function loginAction(formData: FormData): Promise<void> {
   deleteExpiredSessions().catch(() => {});
 
   // Redirect back to the originating app, or to FM dashboard
-  if (redirectTo) {
+  // Validate redirect URL to prevent open redirect attacks
+  if (redirectTo && isAllowedRedirect(redirectTo)) {
     redirect(redirectTo);
   }
   redirect("/dashboard");

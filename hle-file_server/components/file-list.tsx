@@ -215,8 +215,9 @@ export function FileList({
     <ContextMenu>
       <ContextMenuTrigger asChild>
         <div
-          draggable
+          draggable={!folder.isSystem}
           onDragStart={(e) => {
+            if (folder.isSystem) { e.preventDefault(); return; }
             e.dataTransfer.setData("application/x-folder-id", folder.id);
             e.dataTransfer.effectAllowed = "move";
           }}
@@ -234,10 +235,10 @@ export function FileList({
               />
             </div>
           )}
-          <div className="flex-1 min-w-0 w-[40%]">
+          <div className="flex-1 min-w-0 overflow-hidden">
             {renamingFolderId === folder.id ? (
-              <div className="flex items-center gap-2">
-                <FileIcon isFolder folderColor={folder.color ?? undefined} />
+              <div className="flex items-center gap-2 min-w-0">
+                <FileIcon isFolder folderColor={folder.color ?? undefined} className="shrink-0" />
                 <InlineRename
                   name={folder.name}
                   onRename={(n) => handleRenameFolder(folder.id, n)}
@@ -247,10 +248,10 @@ export function FileList({
             ) : (
               <Link
                 href={`${baseUrl}?folderId=${folder.id}`}
-                className="flex items-center gap-2 hover:underline font-medium"
+                className="flex items-center gap-2 hover:underline font-medium min-w-0"
               >
-                <FileIcon isFolder folderColor={folder.color ?? undefined} />
-                <span className="truncate">{folder.name}</span>
+                <FileIcon isFolder folderColor={folder.color ?? undefined} className="shrink-0" />
+                <span className="truncate block">{folder.name}</span>
               </Link>
             )}
           </div>
@@ -273,52 +274,60 @@ export function FileList({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => setRenamingFolderId(folder.id)}>
-                  <Pencil className="size-4 mr-2" />
-                  Rename
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() =>
-                    setMoveTarget({ id: folder.id, type: "folder", name: folder.name })
-                  }
-                >
-                  <FolderInput className="size-4 mr-2" />
-                  Move to...
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  className="text-destructive"
-                  onClick={() => handleDeleteFolder(folder.id)}
-                >
-                  <Trash2 className="size-4 mr-2" />
-                  Delete
-                </DropdownMenuItem>
+                {!folder.isSystem && (
+                  <>
+                    <DropdownMenuItem onClick={() => setRenamingFolderId(folder.id)}>
+                      <Pencil className="size-4 mr-2" />
+                      Rename
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() =>
+                        setMoveTarget({ id: folder.id, type: "folder", name: folder.name })
+                      }
+                    >
+                      <FolderInput className="size-4 mr-2" />
+                      Move to...
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      className="text-destructive"
+                      onClick={() => handleDeleteFolder(folder.id)}
+                    >
+                      <Trash2 className="size-4 mr-2" />
+                      Delete
+                    </DropdownMenuItem>
+                  </>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
         </div>
       </ContextMenuTrigger>
       <ContextMenuContent>
-        <ContextMenuItem onClick={() => setRenamingFolderId(folder.id)}>
-          <Pencil className="size-4 mr-2" />
-          Rename
-        </ContextMenuItem>
-        <ContextMenuItem
-          onClick={() =>
-            setMoveTarget({ id: folder.id, type: "folder", name: folder.name })
-          }
-        >
-          <FolderInput className="size-4 mr-2" />
-          Move to...
-        </ContextMenuItem>
-        <ContextMenuSeparator />
-        <ContextMenuItem
-          className="text-destructive"
-          onClick={() => handleDeleteFolder(folder.id)}
-        >
-          <Trash2 className="size-4 mr-2" />
-          Delete
-        </ContextMenuItem>
+        {!folder.isSystem && (
+          <>
+            <ContextMenuItem onClick={() => setRenamingFolderId(folder.id)}>
+              <Pencil className="size-4 mr-2" />
+              Rename
+            </ContextMenuItem>
+            <ContextMenuItem
+              onClick={() =>
+                setMoveTarget({ id: folder.id, type: "folder", name: folder.name })
+              }
+            >
+              <FolderInput className="size-4 mr-2" />
+              Move to...
+            </ContextMenuItem>
+            <ContextMenuSeparator />
+            <ContextMenuItem
+              className="text-destructive"
+              onClick={() => handleDeleteFolder(folder.id)}
+            >
+              <Trash2 className="size-4 mr-2" />
+              Delete
+            </ContextMenuItem>
+          </>
+        )}
       </ContextMenuContent>
     </ContextMenu>
   );
@@ -343,10 +352,10 @@ export function FileList({
               />
             </div>
           )}
-          <div className="flex-1 min-w-0 w-[40%]">
+          <div className="flex-1 min-w-0 overflow-hidden">
             {renamingFileId === file.id ? (
-              <div className="flex items-center gap-2">
-                <FileIcon mimeType={file.mimeType} />
+              <div className="flex items-center gap-2 min-w-0">
+                <FileIcon mimeType={file.mimeType} className="shrink-0" />
                 <InlineRename
                   name={file.name}
                   onRename={(n) => handleRenameFile(file.id, n)}
@@ -356,10 +365,10 @@ export function FileList({
             ) : (
               <Link
                 href={`${baseUrl}/${file.id}`}
-                className="flex items-center gap-2 hover:underline font-medium"
+                className="flex items-center gap-2 hover:underline font-medium min-w-0"
               >
-                <FileIcon mimeType={file.mimeType} />
-                <span className="truncate">{file.name}</span>
+                <FileIcon mimeType={file.mimeType} className="shrink-0" />
+                <span className="truncate block">{file.name}</span>
               </Link>
             )}
           </div>
@@ -491,7 +500,7 @@ export function FileList({
               />
             </div>
           )}
-          <div className="flex-1 min-w-0 w-[40%]">Name</div>
+          <div className="flex-1 min-w-0 overflow-hidden">Name</div>
           <div className="hidden md:block w-24">Type</div>
           <div className="hidden sm:block w-24">Size</div>
           <div className="hidden lg:block w-32">Tags</div>

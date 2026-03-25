@@ -11,8 +11,13 @@ function slugify(title: string): string {
   return title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").substring(0, 100);
 }
 
-function canEdit(page: { createdBy: string }, userId: string, role: string): boolean {
-  return role === "ADMIN" || page.createdBy === userId;
+function canEdit(page: { createdBy: string; ownerId: string; visibility?: string }, userId: string, role: string, currentHouseholdId: string): boolean {
+  const ownerMatch = page.visibility === "PRIVATE" ? page.ownerId === userId : page.ownerId === currentHouseholdId;
+  return ownerMatch && (role === "ADMIN" || page.createdBy === userId);
+}
+
+function countWords(text: string): number {
+  return text.trim().split(/\s+/).filter(Boolean).length;
 }
 
 export async function createPageAction(formData: FormData) {
@@ -41,7 +46,7 @@ export async function createPageAction(formData: FormData) {
   if (existing) slug = `${slug}-${Date.now().toString(36)}`;
 
   const page = await prisma.wikiPage.create({
-    data: { ownerId, visibility, parentId, title, slug, content: {}, contentText: "", createdBy: user.id, updatedBy: user.id },
+    data: { ownerId, visibility, parentId, title, slug, content: {}, contentText: "", wordCount: 0, createdBy: user.id, updatedBy: user.id },
   });
 
   redirect(`/wiki/${page.id}/edit`);
@@ -50,6 +55,8 @@ export async function createPageAction(formData: FormData) {
 export async function updatePageAction(formData: FormData) {
   const user = await getCurrentUser();
   if (!user) return;
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) return;
   const id = formData.get("id") as string;
   const title = (formData.get("title") as string)?.trim();
   const contentJson = formData.get("content") as string;
@@ -60,9 +67,28 @@ export async function updatePageAction(formData: FormData) {
   try { content = JSON.parse(contentJson); } catch { return; }
 
   const page = await prisma.wikiPage.findUnique({ where: { id } });
-  if (!page || !canEdit(page, user.id, user.role)) return;
+  if (!page || !canEdit(page, user.id, user.role, householdId)) return;
 
-  await prisma.wikiPage.update({ where: { id }, data: { title, content, contentText, updatedBy: user.id } });
+  const wordCount = countWords(contentText);
+
+  // Create a version snapshot of the current state before updating
+  const versionCount = await prisma.pageVersion.count({ where: { pageId: id } });
+  await prisma.pageVersion.create({
+    data: {
+      pageId: id,
+      version: versionCount + 1,
+      title: page.title,
+      content: page.content as object,
+      editedBy: page.updatedBy,
+      wordCount: page.wordCount,
+    },
+  });
+
+  await prisma.wikiPage.update({
+    where: { id },
+    data: { title, content, contentText, wordCount, updatedBy: user.id },
+  });
+
   revalidatePath(`/wiki/${id}`);
   revalidatePath("/wiki");
 }
@@ -70,10 +96,12 @@ export async function updatePageAction(formData: FormData) {
 export async function deletePageAction(formData: FormData) {
   const user = await getCurrentUser();
   if (!user) return;
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) return;
   const id = formData.get("id") as string;
   if (!id) return;
   const page = await prisma.wikiPage.findUnique({ where: { id } });
-  if (!page || !canEdit(page, user.id, user.role)) return;
+  if (!page || !canEdit(page, user.id, user.role, householdId)) return;
   await prisma.wikiPage.delete({ where: { id } });
   revalidatePath("/wiki");
   redirect("/wiki");
@@ -82,10 +110,12 @@ export async function deletePageAction(formData: FormData) {
 export async function togglePinAction(formData: FormData) {
   const user = await getCurrentUser();
   if (!user) return;
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) return;
   const id = formData.get("id") as string;
   if (!id) return;
   const page = await prisma.wikiPage.findUnique({ where: { id } });
-  if (!page || !canEdit(page, user.id, user.role)) return;
+  if (!page || !canEdit(page, user.id, user.role, householdId)) return;
   await prisma.wikiPage.update({ where: { id }, data: { pinned: !page.pinned } });
   revalidatePath(`/wiki/${id}`);
   revalidatePath("/wiki");
@@ -94,10 +124,12 @@ export async function togglePinAction(formData: FormData) {
 export async function toggleArchiveAction(formData: FormData) {
   const user = await getCurrentUser();
   if (!user) return;
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) return;
   const id = formData.get("id") as string;
   if (!id) return;
   const page = await prisma.wikiPage.findUnique({ where: { id } });
-  if (!page || !canEdit(page, user.id, user.role)) return;
+  if (!page || !canEdit(page, user.id, user.role, householdId)) return;
   await prisma.wikiPage.update({ where: { id }, data: { archived: !page.archived } });
   revalidatePath(`/wiki/${id}`);
   revalidatePath("/wiki");
@@ -135,8 +167,10 @@ export async function sharePageAction(formData: FormData) {
   const permission = (formData.get("permission") as "VIEW" | "EDIT") || "VIEW";
   if (!pageId || !householdId) return;
 
+  const currentHouseholdId = await getCurrentHouseholdId();
+  if (!currentHouseholdId) return;
   const page = await prisma.wikiPage.findUnique({ where: { id: pageId } });
-  if (!page || !canEdit(page, user.id, user.role)) return;
+  if (!page || !canEdit(page, user.id, user.role, currentHouseholdId)) return;
 
   await prisma.pageShare.upsert({
     where: { pageId_householdId: { pageId, householdId } },
@@ -163,12 +197,14 @@ export async function removeShareAction(formData: FormData) {
 export async function addTagAction(formData: FormData) {
   const user = await getCurrentUser();
   if (!user) return;
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) return;
   const pageId = formData.get("pageId") as string;
   const tag = (formData.get("tag") as string)?.trim().toLowerCase();
   if (!pageId || !tag) return;
 
   const page = await prisma.wikiPage.findUnique({ where: { id: pageId } });
-  if (!page || !canEdit(page, user.id, user.role)) return;
+  if (!page || !canEdit(page, user.id, user.role, householdId)) return;
 
   await prisma.pageTag.upsert({
     where: { pageId_tag: { pageId, tag } },
@@ -181,12 +217,14 @@ export async function addTagAction(formData: FormData) {
 export async function removeTagAction(formData: FormData) {
   const user = await getCurrentUser();
   if (!user) return;
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) return;
   const pageId = formData.get("pageId") as string;
   const tag = formData.get("tag") as string;
   if (!pageId || !tag) return;
 
   const page = await prisma.wikiPage.findUnique({ where: { id: pageId } });
-  if (!page || !canEdit(page, user.id, user.role)) return;
+  if (!page || !canEdit(page, user.id, user.role, householdId)) return;
 
   await prisma.pageTag.delete({ where: { pageId_tag: { pageId, tag } } }).catch(() => {});
   revalidatePath(`/wiki/${pageId}`);

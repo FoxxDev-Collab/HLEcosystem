@@ -15,9 +15,9 @@ import { createTransactionAction, deleteTransactionAction } from "./actions";
 import type { Prisma } from "@prisma/client";
 
 const TYPE_COLORS: Record<string, string> = {
-  INCOME: "text-green-600",
-  EXPENSE: "text-red-600",
-  TRANSFER: "text-blue-600",
+  INCOME: "tx-income",
+  EXPENSE: "tx-expense",
+  TRANSFER: "tx-transfer",
 };
 
 export default async function TransactionsPage({

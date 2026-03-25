@@ -59,14 +59,12 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 
-# Copy any native modules needed at runtime (sharp, etc.)
-# Uses a shell command to avoid failing when modules don't exist
-RUN --mount=from=builder,source=/app/node_modules,target=/tmp/node_modules \
-    for pkg in sharp @img; do \
-      if [ -d "/tmp/node_modules/$pkg" ]; then \
-        cp -r "/tmp/node_modules/$pkg" "./node_modules/$pkg"; \
-      fi; \
-    done
+# Prisma schema + migrations for entrypoint migrate deploy
+COPY --from=builder /app/prisma ./prisma/
+
+# Full node_modules from builder — needed for prisma migrate deploy + seed scripts
+# The standalone output only includes server deps; we need the CLI + its transitive deps
+COPY --from=builder /app/node_modules ./node_modules
 
 COPY --from=builder --chown=nextjs:nodejs /app/entrypoint.sh ./entrypoint.sh
 RUN chmod +x entrypoint.sh

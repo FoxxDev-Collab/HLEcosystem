@@ -7,11 +7,6 @@ import { prisma } from "@/lib/prisma";
 
 export type ActionState = { error: string } | null;
 
-async function getCurrentUserId(): Promise<string | null> {
-  const cookieStore = await cookies();
-  return cookieStore.get("hub_user_id")?.value ?? null;
-}
-
 export async function createHouseholdAction(
   _prevState: ActionState,
   formData: FormData,
@@ -20,28 +15,44 @@ export async function createHouseholdAction(
   if (!name?.trim()) return { error: "Household name is required" };
 
   const cookieStore = await cookies();
-  const allCookies = cookieStore.getAll();
-  console.log("[createHousehold] cookies present:", allCookies.map(c => c.name));
-
   const userId = cookieStore.get("hub_user_id")?.value ?? null;
-  console.log("[createHousehold] userId:", userId ? `${userId.substring(0, 8)}...` : "null");
-
   if (!userId) return { error: "Not authenticated — please log in again" };
 
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) return { error: "User account not found" };
 
+  const spouseUserId = (formData.get("spouseUserId") as string) || null;
+
   try {
+    const membersToCreate: Array<{
+      userId: string;
+      displayName: string;
+      role: "ADMIN";
+      familyRelationship: "Spouse";
+    }> = [
+      {
+        userId,
+        displayName: user.name,
+        role: "ADMIN",
+        familyRelationship: "Spouse",
+      },
+    ];
+
+    if (spouseUserId && spouseUserId !== userId) {
+      const spouse = await prisma.user.findUnique({ where: { id: spouseUserId } });
+      if (!spouse) return { error: "Selected spouse account not found" };
+      membersToCreate.push({
+        userId: spouseUserId,
+        displayName: spouse.name,
+        role: "ADMIN",
+        familyRelationship: "Spouse",
+      });
+    }
+
     await prisma.household.create({
       data: {
         name: name.trim(),
-        members: {
-          create: {
-            userId,
-            displayName: user.name,
-            role: "ADMIN",
-          },
-        },
+        members: { create: membersToCreate },
       },
     });
   } catch (e) {
@@ -85,22 +96,32 @@ export async function deleteHouseholdAction(formData: FormData): Promise<void> {
 export async function addMemberAction(formData: FormData): Promise<void> {
   const householdId = formData.get("householdId") as string;
   const userId = formData.get("userId") as string;
-  const role = formData.get("role") as string;
   const displayName = formData.get("displayName") as string;
-  const familyRelationship = (formData.get("familyRelationship") as string) || null;
+  const familyRelationship = (formData.get("familyRelationship") as string) || "Child";
 
-  if (!householdId || !userId || !role || !displayName?.trim()) return;
+  if (!householdId || !userId || !displayName?.trim()) return;
 
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) return;
+
+  // Enforce max 2 spouses per household
+  if (familyRelationship === "Spouse") {
+    const spouseCount = await prisma.householdMember.count({
+      where: { householdId, familyRelationship: "Spouse" },
+    });
+    if (spouseCount >= 2) return;
+  }
+
+  // Spouses are always ADMIN, children default to MEMBER
+  const role = familyRelationship === "Spouse" ? "ADMIN" : "MEMBER";
 
   await prisma.householdMember.create({
     data: {
       householdId,
       userId,
       displayName: displayName.trim(),
-      role: role as "ADMIN" | "MEMBER" | "VIEWER",
-      ...(familyRelationship ? { familyRelationship: familyRelationship as never } : {}),
+      role,
+      familyRelationship: familyRelationship as "Spouse" | "Child",
     },
   });
 
@@ -115,6 +136,11 @@ export async function updateMemberRoleAction(formData: FormData): Promise<void> 
 
   if (!memberId || !role) return;
 
+  // Spouses must remain ADMIN — only children can have their role changed
+  const member = await prisma.householdMember.findUnique({ where: { id: memberId } });
+  if (!member) return;
+  if (member.familyRelationship === "Spouse" && role !== "ADMIN") return;
+
   await prisma.householdMember.update({
     where: { id: memberId },
     data: { role: role as "ADMIN" | "MEMBER" | "VIEWER" },
@@ -124,16 +150,32 @@ export async function updateMemberRoleAction(formData: FormData): Promise<void> 
   revalidatePath("/households");
 }
 
-export async function updateMemberRelationshipAction(formData: FormData): Promise<void> {
+export async function setMemberRelationshipAction(formData: FormData): Promise<void> {
   const memberId = formData.get("memberId") as string;
-  const familyRelationship = (formData.get("familyRelationship") as string) || null;
+  const familyRelationship = formData.get("familyRelationship") as string;
   const householdId = formData.get("householdId") as string;
 
-  if (!memberId) return;
+  if (!memberId || !familyRelationship || !householdId) return;
+
+  const member = await prisma.householdMember.findUnique({ where: { id: memberId } });
+  if (!member) return;
+
+  // Enforce max 2 spouses
+  if (familyRelationship === "Spouse") {
+    const spouseCount = await prisma.householdMember.count({
+      where: { householdId, familyRelationship: "Spouse" },
+    });
+    if (spouseCount >= 2) return;
+  }
+
+  const role = familyRelationship === "Spouse" ? "ADMIN" : member.role;
 
   await prisma.householdMember.update({
     where: { id: memberId },
-    data: { familyRelationship: familyRelationship as never },
+    data: {
+      familyRelationship: familyRelationship as "Spouse" | "Child",
+      role,
+    },
   });
 
   revalidatePath(`/households/${householdId}`);

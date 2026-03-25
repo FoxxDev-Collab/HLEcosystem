@@ -21,6 +21,7 @@ declare -A PORTS=(
   [hle-file-server]=8085
   [hle-meal-prep]=8086
   [hle-family-wiki]=8087
+  [hle-claude-api]=8088
 )
 
 declare -A CONTAINERS=(
@@ -32,6 +33,7 @@ declare -A CONTAINERS=(
   [hle-file-server]=foxxlab-file-server
   [hle-meal-prep]=foxxlab-meal-prep
   [hle-family-wiki]=foxxlab-family-wiki
+  [hle-claude-api]=foxxlab-claude-api
 )
 
 SERVICES=(
@@ -43,6 +45,7 @@ SERVICES=(
   hle-file-server
   hle-meal-prep
   hle-family-wiki
+  hle-claude-api
 )
 
 # ── Colors ────────────────────────────────────────────────────────
@@ -193,8 +196,17 @@ cmd_rebuild() {
 
   # Ensure postgres is up
   info "Ensuring postgres is running..."
-  podman-compose up -d postgres
-  sleep 3
+  local pg_status
+  pg_status=$(podman inspect --format '{{.State.Status}}' foxxlab-postgres 2>/dev/null || echo "missing")
+  if [[ "$pg_status" == "running" ]]; then
+    success "postgres already running"
+  elif [[ "$pg_status" == "exited" || "$pg_status" == "stopped" || "$pg_status" == "created" ]]; then
+    podman start foxxlab-postgres
+    sleep 3
+  else
+    podman-compose up -d postgres
+    sleep 3
+  fi
 
   local count=${#targets[@]}
   local overall_start
@@ -508,6 +520,209 @@ cmd_clean() {
   success "Cleanup complete"
 }
 
+# ── Backup / Restore ─────────────────────────────────────────────
+BACKUP_DIR="${PROJECT_DIR}/backups"
+
+# Upload volume → container name mapping
+declare -A UPLOAD_VOLUMES=(
+  [family-finance-uploads]=foxxlab-family-finance
+  [home-care-uploads]=foxxlab-family-home-care
+  [file-server-uploads]=foxxlab-file-server
+)
+
+cmd_backup() {
+  local tag
+  tag=$(date +"%Y%m%d_%H%M%S")
+  local dest="${BACKUP_DIR}/${tag}"
+  mkdir -p "$dest"
+
+  header "Full Backup → ${dest}"
+
+  # ── 1. Database dump (all schemas, single file) ──
+  info "Dumping PostgreSQL database (all schemas)..."
+  local pg_state
+  pg_state=$(podman inspect --format '{{.State.Status}}' foxxlab-postgres 2>/dev/null || echo "missing")
+  if [[ "$pg_state" != "running" ]]; then
+    error "PostgreSQL is not running. Start it first: hle up all"
+    exit 1
+  fi
+
+  local db_file="${dest}/foxxlab.sql.gz"
+  podman exec foxxlab-postgres pg_dump \
+    -U "${POSTGRES_USER:-foxxlab_admin}" \
+    -d foxxlab \
+    --no-owner \
+    --no-privileges \
+    --clean \
+    --if-exists \
+    --create \
+    | gzip > "$db_file"
+
+  local db_size
+  db_size=$(du -h "$db_file" | cut -f1)
+  success "Database dump: ${db_file} (${db_size})"
+
+  # ── 2. Upload volumes (tar each volume from its container) ──
+  local vol_count=0
+  for vol in "${!UPLOAD_VOLUMES[@]}"; do
+    local ctr="${UPLOAD_VOLUMES[$vol]}"
+    local ctr_state
+    ctr_state=$(podman inspect --format '{{.State.Status}}' "$ctr" 2>/dev/null || echo "missing")
+
+    if [[ "$ctr_state" != "running" ]]; then
+      warn "Skipping ${vol} — container ${ctr} not running"
+      continue
+    fi
+
+    info "Backing up ${vol}..."
+    local vol_file="${dest}/${vol}.tar.gz"
+    podman exec "$ctr" tar czf - -C /app/uploads . > "$vol_file"
+    local vol_size
+    vol_size=$(du -h "$vol_file" | cut -f1)
+    success "${vol}: ${vol_file} (${vol_size})"
+    (( vol_count++ ))
+  done
+
+  # ── 3. Manifest ──
+  cat > "${dest}/manifest.txt" <<MANIFEST
+HLEcosystem Backup
+Created: $(date -Iseconds)
+Host: $(hostname)
+
+Database:
+  foxxlab.sql.gz — full pg_dump of foxxlab DB (all schemas)
+
+Upload Volumes (${vol_count}):
+$(for vol in "${!UPLOAD_VOLUMES[@]}"; do
+  [[ -f "${dest}/${vol}.tar.gz" ]] && echo "  ${vol}.tar.gz"
+done)
+
+Restore with:
+  ./hle restore ${tag}
+MANIFEST
+
+  # ── Summary ──
+  header "Backup Complete"
+  local total_size
+  total_size=$(du -sh "$dest" | cut -f1)
+  echo -e "  Location:  ${BOLD}${dest}${NC}"
+  echo -e "  Total size: ${BOLD}${total_size}${NC}"
+  echo -e "  Database:   foxxlab.sql.gz"
+  echo -e "  Volumes:    ${vol_count} upload volumes"
+  echo ""
+  echo -e "  Restore with: ${CYAN}./hle restore ${tag}${NC}"
+}
+
+cmd_restore() {
+  local tag="${1:-}"
+
+  # If no tag, list available backups
+  if [[ -z "$tag" ]]; then
+    header "Available Backups"
+    if [[ ! -d "$BACKUP_DIR" ]] || [[ -z "$(ls -A "$BACKUP_DIR" 2>/dev/null)" ]]; then
+      warn "No backups found in ${BACKUP_DIR}"
+      exit 1
+    fi
+    for d in "${BACKUP_DIR}"/*/; do
+      local name
+      name=$(basename "$d")
+      local size
+      size=$(du -sh "$d" | cut -f1)
+      local has_db="no"
+      [[ -f "${d}foxxlab.sql.gz" ]] && has_db="yes"
+      local vol_files
+      vol_files=$(find "$d" -name '*.tar.gz' | wc -l)
+      printf "  ${BOLD}%-20s${NC}  %6s  db:%s  volumes:%d\n" "$name" "$size" "$has_db" "$vol_files"
+    done
+    echo ""
+    echo -e "  Usage: ${CYAN}./hle restore <tag>${NC}"
+    return
+  fi
+
+  local src="${BACKUP_DIR}/${tag}"
+  if [[ ! -d "$src" ]]; then
+    error "Backup not found: ${src}"
+    echo "Run './hle restore' to list available backups."
+    exit 1
+  fi
+
+  header "Restore from ${src}"
+  warn "This will OVERWRITE the current database and upload files."
+  read -rp "Are you sure? (y/N) " confirm
+  if [[ "$confirm" != "y" && "$confirm" != "Y" ]]; then
+    info "Aborted."
+    exit 0
+  fi
+
+  # ── 1. Ensure postgres is running ──
+  local pg_state
+  pg_state=$(podman inspect --format '{{.State.Status}}' foxxlab-postgres 2>/dev/null || echo "missing")
+  if [[ "$pg_state" != "running" ]]; then
+    error "PostgreSQL is not running. Start it first: hle up all"
+    exit 1
+  fi
+
+  # ── 2. Restore database ──
+  local db_file="${src}/foxxlab.sql.gz"
+  if [[ -f "$db_file" ]]; then
+    info "Restoring database from ${db_file}..."
+
+    # Drop active connections
+    podman exec foxxlab-postgres psql \
+      -U "${POSTGRES_USER:-foxxlab_admin}" \
+      -d postgres \
+      -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = 'foxxlab' AND pid <> pg_backend_pid();" \
+      > /dev/null 2>&1 || true
+
+    gunzip -c "$db_file" | podman exec -i foxxlab-postgres psql \
+      -U "${POSTGRES_USER:-foxxlab_admin}" \
+      -d postgres \
+      --set ON_ERROR_STOP=off \
+      > /dev/null 2>&1
+
+    success "Database restored"
+  else
+    warn "No database dump found — skipping"
+  fi
+
+  # ── 3. Restore upload volumes ──
+  for vol in "${!UPLOAD_VOLUMES[@]}"; do
+    local vol_file="${src}/${vol}.tar.gz"
+    if [[ ! -f "$vol_file" ]]; then
+      continue
+    fi
+
+    local ctr="${UPLOAD_VOLUMES[$vol]}"
+    local ctr_state
+    ctr_state=$(podman inspect --format '{{.State.Status}}' "$ctr" 2>/dev/null || echo "missing")
+
+    if [[ "$ctr_state" != "running" ]]; then
+      warn "Skipping ${vol} — container ${ctr} not running"
+      continue
+    fi
+
+    info "Restoring ${vol}..."
+    cat "$vol_file" | podman exec -i "$ctr" tar xzf - -C /app/uploads
+    success "${vol} restored"
+  done
+
+  # ── 4. Run migrations to ensure schema is current ──
+  info "Running migrations on all apps..."
+  for svc in "${SERVICES[@]}"; do
+    local ctr="${CONTAINERS[$svc]}"
+    local ctr_state
+    ctr_state=$(podman inspect --format '{{.State.Status}}' "$ctr" 2>/dev/null || echo "missing")
+    if [[ "$ctr_state" == "running" ]]; then
+      podman exec "$ctr" npx prisma migrate deploy 2>/dev/null || true
+    fi
+  done
+  success "Migrations applied"
+
+  header "Restore Complete"
+  echo -e "  Restart apps to pick up restored data:"
+  echo -e "  ${CYAN}./hle restart all${NC}"
+}
+
 cmd_nuke() {
   header "Full teardown"
   warn "This will stop all containers, remove images, and delete volumes."
@@ -541,6 +756,8 @@ ${BOLD}COMMANDS${NC}
   ${GREEN}status${NC}                                 Show status & health checks
   ${GREEN}logs${NC}     <service> [--follow]          View container logs
   ${GREEN}shell${NC}    <service|postgres>            Open shell in container
+  ${GREEN}backup${NC}                                 Full backup: database + upload volumes
+  ${GREEN}restore${NC}  [tag]                          Restore from backup (list if no tag given)
   ${GREEN}clean${NC}                                  Remove stopped containers & dangling images
   ${GREEN}nuke${NC}                                   Full teardown (containers, images, volumes)
 
@@ -562,6 +779,9 @@ ${BOLD}EXAMPLES${NC}
   hle status                          Check all health endpoints
   hle logs hle-family-finance -f      Tail logs
   hle shell postgres                  Open psql session
+  hle backup                           Snapshot DB + all uploads
+  hle restore                          List available backups
+  hle restore 20260324_120000          Restore specific backup
 EOF
 }
 
@@ -574,6 +794,8 @@ case "${1:-}" in
   status)   cmd_status ;;
   logs)     cmd_logs "${2:-}" "${3:-}" ;;
   shell)    cmd_shell "${2:-}" ;;
+  backup)   cmd_backup ;;
+  restore)  cmd_restore "${2:-}" ;;
   clean)    cmd_clean ;;
   nuke)     cmd_nuke ;;
   *)        usage ;;

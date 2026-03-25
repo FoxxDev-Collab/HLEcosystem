@@ -35,11 +35,12 @@ model Folder {
   id              String    @id @default(cuid())
   householdId     String
   parentFolderId  String?
-  ownerId         String?   // null = household shared, set = personal to user
+  ownerId         String? // null = household shared, set = personal to user
   name            String
   description     String?
   color           String?
   icon            String?
+  isSystem        Boolean   @default(false) // true = default folder (Documents, Photos, etc.), cannot be renamed/deleted/moved
   sortOrder       Int       @default(0)
   createdByUserId String
   deletedAt       DateTime? // soft delete for trash
@@ -65,27 +66,29 @@ model File {
   id               String     @id @default(cuid())
   householdId      String
   folderId         String?
-  ownerId          String?    // null = household shared, set = personal to user
+  ownerId          String? // null = household shared, set = personal to user
   name             String
   originalName     String
   mimeType         String
   size             BigInt
   storagePath      String
   contentHash      String?
-  thumbnailPath    String?    // generated thumbnail location
+  thumbnailPath    String? // generated thumbnail location
   status           FileStatus @default(ACTIVE)
   description      String?
   uploadedByUserId String
-  deletedAt        DateTime?  // soft delete for trash
+  deletedAt        DateTime? // soft delete for trash
   createdAt        DateTime   @default(now())
   updatedAt        DateTime   @updatedAt
 
-  folder     Folder?       @relation(fields: [folderId], references: [id])
-  tags       FileTag[]
-  shares     FileShare[]
-  versions   FileVersion[]
-  favorites  Favorite[]
-  shareLinks ShareLink[]
+  folder        Folder?        @relation(fields: [folderId], references: [id])
+  tags          FileTag[]
+  shares        FileShare[]
+  versions      FileVersion[]
+  favorites     Favorite[]
+  shareLinks    ShareLink[]
+  photoMetadata PhotoMetadata?
+  albumFiles    AlbumFile[]
 
   @@index([householdId])
   @@index([folderId])
@@ -232,6 +235,11 @@ enum AuditAction {
   FOLDER_MOVE
   FOLDER_DELETE
   FOLDER_RESTORE
+  ALBUM_CREATE
+  ALBUM_UPDATE
+  ALBUM_DELETE
+  ALBUM_ADD_FILE
+  ALBUM_REMOVE_FILE
 }
 
 model AuditLog {
@@ -241,7 +249,7 @@ model AuditLog {
   action      AuditAction
   fileId      String?
   folderId    String?
-  details     String?     // JSON string with action-specific context
+  details     String? // JSON string with action-specific context
   ipAddress   String?
   createdAt   DateTime    @default(now())
 
@@ -249,6 +257,107 @@ model AuditLog {
   @@index([userId])
   @@index([fileId])
   @@index([folderId])
+}
+
+// ============================================================================
+// ALBUMS (photo library)
+// ============================================================================
+
+model Album {
+  id              String   @id @default(cuid())
+  householdId     String
+  name            String
+  description     String?
+  coverFileId     String? // file ID used as album cover
+  createdByUserId String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  files AlbumFile[]
+
+  @@unique([householdId, name])
+  @@index([householdId])
+  @@index([createdByUserId])
+}
+
+model AlbumFile {
+  id        String   @id @default(cuid())
+  albumId   String
+  fileId    String
+  sortOrder Int      @default(0)
+  addedAt   DateTime @default(now())
+
+  album Album @relation(fields: [albumId], references: [id], onDelete: Cascade)
+  file  File  @relation(fields: [fileId], references: [id], onDelete: Cascade)
+
+  @@unique([albumId, fileId])
+  @@index([albumId])
+  @@index([fileId])
+}
+
+// ============================================================================
+// PHOTO METADATA (EXIF data for images)
+// ============================================================================
+
+model PhotoMetadata {
+  id           String    @id @default(cuid())
+  fileId       String    @unique
+  width        Int?
+  height       Int?
+  dateTaken    DateTime? // EXIF DateTimeOriginal
+  cameraMake   String?
+  cameraModel  String?
+  focalLength  String?
+  aperture     String?
+  shutterSpeed String?
+  iso          Int?
+  latitude     Float?
+  longitude    Float?
+  orientation  Int? // EXIF orientation (1-8)
+  colorSpace   String?
+  hasExif      Boolean   @default(false)
+  processedAt  DateTime  @default(now())
+
+  file File @relation(fields: [fileId], references: [id], onDelete: Cascade)
+
+  @@index([dateTaken])
+  @@index([fileId])
+}
+
+// ============================================================================
+// PEOPLE (face recognition - future)
+// ============================================================================
+
+model Person {
+  id              String   @id @default(cuid())
+  householdId     String
+  name            String
+  avatarFileId    String? // cropped face image
+  createdByUserId String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  faces FaceTag[]
+
+  @@unique([householdId, name])
+  @@index([householdId])
+}
+
+model FaceTag {
+  id         String   @id @default(cuid())
+  fileId     String
+  personId   String
+  x          Float // bounding box (0-1 normalized)
+  y          Float
+  width      Float
+  height     Float
+  confidence Float?
+  createdAt  DateTime @default(now())
+
+  person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@index([fileId])
+  @@index([personId])
 }
 
 // ============================================================================

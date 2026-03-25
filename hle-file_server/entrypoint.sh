@@ -1,9 +1,9 @@
 #!/bin/sh
 set -e
 
-echo "=== HLE File Server ==="
+echo "Running database migrations..."
+node node_modules/prisma/build/index.js migrate deploy
 
-# Ensure upload directories exist and are writable
 echo "Ensuring upload directories..."
 mkdir -p /app/uploads
 

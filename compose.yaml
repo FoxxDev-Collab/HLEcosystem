@@ -16,6 +16,25 @@ x-nextjs-app: &nextjs-app
     AUTH_URL: ${AUTH_URL:-http://localhost:8080}
     AUTH_DOMAIN: ${AUTH_DOMAIN:-}
     SECURE_COOKIES: ${SECURE_COOKIES:-}
+    NEXT_PUBLIC_APP_URL_MANAGER: ${AUTH_URL:-http://localhost:8080}
+    NEXT_PUBLIC_APP_URL_HUB: ${HUB_URL:-http://localhost:8081}
+    NEXT_PUBLIC_APP_URL_FINANCE: ${FINANCE_URL:-http://localhost:8082}
+    NEXT_PUBLIC_APP_URL_HEALTH: ${HEALTH_URL:-http://localhost:8083}
+    NEXT_PUBLIC_APP_URL_HOME: ${HOMECARE_URL:-http://localhost:8084}
+    NEXT_PUBLIC_APP_URL_FILES: ${FILES_URL:-http://localhost:8085}
+    NEXT_PUBLIC_APP_URL_MEALS: ${MEALS_URL:-http://localhost:8086}
+    NEXT_PUBLIC_APP_URL_WIKI: ${WIKI_URL:-http://localhost:8087}
+  healthcheck:
+    test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1"]
+    interval: 30s
+    timeout: 5s
+    retries: 3
+    start_period: 20s
+  logging:
+    driver: "json-file"
+    options:
+      max-size: "100m"
+      max-file: "10"
   deploy:
     resources:
       limits:
@@ -69,6 +88,17 @@ services:
     environment:
       <<: *nextjs-env
       DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/foxxlab?schema=family_manager"
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      ADMIN_NAME: ${ADMIN_NAME:-Admin}
+      HOUSEHOLD_NAME: ${HOUSEHOLD_NAME:-My Household}
+      HUB_URL: ${HUB_URL:-http://localhost:8081}
+      FINANCE_URL: ${FINANCE_URL:-http://localhost:8082}
+      HEALTH_URL: ${HEALTH_URL:-http://localhost:8083}
+      HOMECARE_URL: ${HOMECARE_URL:-http://localhost:8084}
+      FILES_URL: ${FILES_URL:-http://localhost:8085}
+      MEALS_URL: ${MEALS_URL:-http://localhost:8086}
+      WIKI_URL: ${WIKI_URL:-http://localhost:8087}
 
   # FamilyHub — Family relationships, dates, gifts
   hle-familyhub:
@@ -105,6 +135,8 @@ services:
       <<: *nextjs-env
       DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/foxxlab?schema=family_finance"
       APP_URL: ${FINANCE_URL:-http://localhost:8082}
+      CLAUDE_API_URL: "http://hle-claude-api:3000"
+      CLAUDE_API_SERVICE_SECRET: ${CLAUDE_API_SERVICE_SECRET}
 
   # Family Health
   hle-family-health:
@@ -164,6 +196,8 @@ services:
       APP_URL: ${FILES_URL:-http://localhost:8085}
       UPLOAD_DIR: "/app/uploads"
       MAX_FILE_SIZE_MB: "500"
+      CLAUDE_API_URL: "http://hle-claude-api:3000"
+      CLAUDE_API_SERVICE_SECRET: ${CLAUDE_API_SERVICE_SECRET}
 
   # Meal Prep
   hle-meal-prep:
@@ -181,6 +215,8 @@ services:
       <<: *nextjs-env
       DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/foxxlab?schema=meal_prep"
       APP_URL: ${MEALS_URL:-http://localhost:8086}
+      CLAUDE_API_URL: ${CLAUDE_API_URL:-http://hle-claude-api:3000}
+      CLAUDE_API_SERVICE_SECRET: ${CLAUDE_API_SERVICE_SECRET:-}
 
   # Family Wiki
   hle-family-wiki:
@@ -198,6 +234,25 @@ services:
       <<: *nextjs-env
       DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/foxxlab?schema=family_wiki"
       APP_URL: ${WIKI_URL:-http://localhost:8087}
+
+  # Claude API Gateway — Centralized AI service for ecosystem apps
+  hle-claude-api:
+    <<: *nextjs-app
+    container_name: foxxlab-claude-api
+    build:
+      context: .
+      dockerfile: Containerfile.nextjs
+      args:
+        APP_DIR: hle-claude_api
+        NEXT_PUBLIC_APP_NAME: "HLE Claude API"
+    ports:
+      - "${CLAUDE_API_PORT:-8088}:3000"
+    environment:
+      <<: *nextjs-env
+      DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/foxxlab?schema=claude_api"
+      APP_URL: ${CLAUDE_API_URL:-http://localhost:8088}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      CLAUDE_API_SERVICE_SECRET: ${CLAUDE_API_SERVICE_SECRET}
 
 networks:
   hle-net:

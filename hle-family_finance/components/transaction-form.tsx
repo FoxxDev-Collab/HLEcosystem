@@ -1,11 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Sparkles, Loader2 } from "lucide-react";
+import { suggestCategoryAction } from "@/app/(app)/transactions/actions";
+import type { SuggestCategoryResult } from "@/app/(app)/transactions/actions";
 
 type Account = { id: string; name: string; type: string };
 type Category = { id: string; name: string; type: string; color: string | null };
@@ -19,11 +22,50 @@ type Props = {
 
 export function TransactionForm({ action, accounts, categories, defaultAccountId }: Props) {
   const [txType, setTxType] = useState<string>("EXPENSE");
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>(
+    categories.filter((c) => c.type === "EXPENSE")[0]?.id ?? ""
+  );
+  const [payee, setPayee] = useState("");
+  const [description, setDescription] = useState("");
+  const [amount, setAmount] = useState("");
+  const [suggesting, startSuggest] = useTransition();
+  const [suggestion, setSuggestion] = useState<SuggestCategoryResult>(null);
   const today = new Date().toISOString().split("T")[0];
 
   const filteredCategories = categories.filter(
     (c) => c.type === txType || (txType === "TRANSFER" && c.type === "TRANSFER")
   );
+
+  const canSuggest = txType !== "TRANSFER" && (payee.trim() || description.trim());
+
+  const handleSuggest = () => {
+    const categoryNames = filteredCategories.map((c) => c.name);
+    startSuggest(async () => {
+      const result = await suggestCategoryAction(
+        payee,
+        description,
+        amount ? parseFloat(amount) : undefined,
+        categoryNames
+      );
+      setSuggestion(result);
+      if (result && "categoryName" in result) {
+        const match = filteredCategories.find(
+          (c) => c.name.toLowerCase() === result.categoryName.toLowerCase()
+        );
+        if (match) setSelectedCategoryId(match.id);
+      }
+    });
+  };
+
+  const handleTypeChange = (newType: string) => {
+    setTxType(newType);
+    setSuggestion(null);
+    const first = categories.filter((c) => c.type === newType)[0];
+    if (first) setSelectedCategoryId(first.id);
+  };
+
+  const confidenceColor = (c: number) =>
+    c >= 0.85 ? "text-green-600 dark:text-green-400" : c >= 0.6 ? "text-yellow-600 dark:text-yellow-400" : "text-muted-foreground";
 
   return (
     <form action={action} className="space-y-4">
@@ -37,7 +79,7 @@ export function TransactionForm({ action, accounts, categories, defaultAccountId
           <button
             key={t.value}
             type="button"
-            onClick={() => setTxType(t.value)}
+            onClick={() => handleTypeChange(t.value)}
             className={`flex-1 py-2 px-3 text-sm font-medium rounded-md transition-colors ${
               txType === t.value ? `bg-background shadow-sm ${t.color}` : "text-muted-foreground hover:text-foreground"
             }`}
@@ -61,6 +103,8 @@ export function TransactionForm({ action, accounts, categories, defaultAccountId
             required
             autoFocus
             className="text-lg"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
           />
         </div>
         <div className="space-y-2">
@@ -100,8 +144,33 @@ export function TransactionForm({ action, accounts, categories, defaultAccountId
           </div>
         ) : (
           <div className="space-y-2">
-            <Label htmlFor="categoryId">Category</Label>
-            <Select name="categoryId" defaultValue={filteredCategories[0]?.id}>
+            <Label htmlFor="categoryId" className="flex items-center gap-2">
+              Category
+              {canSuggest && (
+                <button
+                  type="button"
+                  onClick={handleSuggest}
+                  disabled={suggesting}
+                  className="inline-flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition-colors disabled:opacity-50"
+                  title="AI suggest category"
+                >
+                  {suggesting ? (
+                    <Loader2 className="size-3 animate-spin" />
+                  ) : (
+                    <Sparkles className="size-3" />
+                  )}
+                  Suggest
+                </button>
+              )}
+            </Label>
+            <Select
+              name="categoryId"
+              value={selectedCategoryId}
+              onValueChange={(v) => {
+                setSelectedCategoryId(v);
+                setSuggestion(null);
+              }}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Select category" />
               </SelectTrigger>
@@ -116,18 +185,47 @@ export function TransactionForm({ action, accounts, categories, defaultAccountId
                 ))}
               </SelectContent>
             </Select>
+            {suggestion && "categoryName" in suggestion && (
+              <div className="flex items-center gap-1.5 text-xs">
+                <Sparkles className="size-3 text-primary" />
+                <span className="text-muted-foreground">
+                  <strong>{suggestion.categoryName}</strong>
+                </span>
+                <span className={confidenceColor(suggestion.confidence)}>
+                  {Math.round(suggestion.confidence * 100)}%
+                </span>
+                {suggestion.reasoning && (
+                  <span className="text-muted-foreground hidden sm:inline truncate max-w-[200px]">
+                    &mdash; {suggestion.reasoning}
+                  </span>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>
 
       <div className="space-y-2">
         <Label htmlFor="payee">Payee</Label>
-        <Input id="payee" name="payee" placeholder="e.g. Walmart, Shell, etc." />
+        <Input
+          id="payee"
+          name="payee"
+          placeholder="e.g. Walmart, Shell, etc."
+          value={payee}
+          onChange={(e) => setPayee(e.target.value)}
+        />
       </div>
 
       <div className="space-y-2">
         <Label htmlFor="description">Notes</Label>
-        <Textarea id="description" name="description" placeholder="Optional description" rows={2} />
+        <Textarea
+          id="description"
+          name="description"
+          placeholder="Optional description"
+          rows={2}
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+        />
       </div>
 
       <Button type="submit" className="w-full sm:w-auto">

@@ -83,32 +83,31 @@ export default async function AccountsPage() {
       ) : (
         Object.entries(grouped).map(([type, typeAccounts]) => (
           <div key={type} className="space-y-3">
-            <h2 className="text-lg font-semibold">{ACCOUNT_TYPE_LABELS[type] || type}</h2>
+            <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">{ACCOUNT_TYPE_LABELS[type] || type}</h2>
             <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
               {typeAccounts.map((account) => (
                 <Link key={account.id} href={`/accounts/${account.id}`}>
-                  <Card className="hover:bg-accent/50 transition-colors cursor-pointer">
-                    <CardHeader className="flex flex-row items-center gap-3 pb-2">
-                      <div
-                        className="w-3 h-3 rounded-full shrink-0"
-                        style={{ backgroundColor: account.color || "#6366f1" }}
-                      />
-                      <div className="min-w-0 flex-1">
-                        <CardTitle className="text-base truncate">{account.name}</CardTitle>
-                        {account.institution && (
-                          <p className="text-xs text-muted-foreground truncate">{account.institution}</p>
-                        )}
+                  <div
+                    className="account-card rounded-lg border p-4 cursor-pointer"
+                    style={{ "--account-color": account.color || "#6366f1" } as React.CSSProperties}
+                  >
+                    <div className="pl-2">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold truncate">{account.name}</p>
+                          {account.institution && (
+                            <p className="text-[10px] text-muted-foreground truncate">{account.institution}</p>
+                          )}
+                        </div>
                       </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className={`text-xl font-bold ${Number(account.currentBalance) < 0 ? "text-red-600" : ""}`}>
+                      <div className={`text-lg font-bold tabular-nums ${Number(account.currentBalance) < 0 ? "tx-expense" : ""}`}>
                         {formatCurrency(account.currentBalance)}
                       </div>
-                      <p className="text-xs text-muted-foreground mt-1">
+                      <p className="text-[10px] text-muted-foreground mt-1">
                         {account._count.transactions} transaction{account._count.transactions !== 1 ? "s" : ""}
                       </p>
-                    </CardContent>
-                  </Card>
+                    </div>
+                  </div>
                 </Link>
               ))}
             </div>

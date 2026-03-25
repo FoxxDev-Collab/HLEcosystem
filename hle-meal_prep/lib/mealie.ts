@@ -181,6 +181,58 @@ export function getRecipeImageUrl(apiUrl: string, recipeId: string): string {
   return `${apiUrl}/api/media/recipes/${recipeId}/images/min-original.webp`;
 }
 
+// ── Shopping Lists ──────────────────────────────────────────────
+
+export type MealieShoppingList = {
+  id: string;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type MealieShoppingListItem = {
+  id: string;
+  shoppingListId: string;
+  quantity: number;
+  unit: { id: string; name: string } | null;
+  food: { id: string; name: string } | null;
+  note: string;
+  display: string;
+  checked: boolean;
+  position: number;
+  label: { id: string; name: string } | null;
+};
+
+export type MealieShoppingListDetail = MealieShoppingList & {
+  listItems: MealieShoppingListItem[];
+};
+
+export async function getMealieShoppingLists(
+  householdId: string
+): Promise<MealieShoppingList[]> {
+  const config = await getMealieConfig(householdId);
+  if (!config) return [];
+
+  const data = await mealieFetch<{ items: MealieShoppingList[] }>(
+    config,
+    "/api/households/shopping/lists?perPage=100&orderBy=updated_at&orderDirection=desc"
+  );
+  return data.items;
+}
+
+export async function getMealieShoppingList(
+  householdId: string,
+  listId: string
+): Promise<MealieShoppingListDetail | null> {
+  const config = await getMealieConfig(householdId);
+  if (!config) return null;
+
+  return mealieFetch<MealieShoppingListDetail>(
+    config,
+    `/api/households/shopping/lists/${listId}`
+  );
+}
+
 // ── Helpers ─────────────────────────────────────────────────────
 
 export function getWeekRange(date: Date = new Date()): { startDate: string; endDate: string } {

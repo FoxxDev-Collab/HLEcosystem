@@ -179,6 +179,104 @@ export async function deleteFamilyMemberAction(formData: FormData) {
   redirect("/people");
 }
 
+// ─── Address Actions ────────────────────────────────────
+
+export async function addAddressAction(formData: FormData) {
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) return;
+
+  const familyMemberId = formData.get("familyMemberId") as string;
+  const addressLine1 = formData.get("addressLine1") as string;
+  const city = formData.get("city") as string;
+  if (!familyMemberId || !addressLine1 || !city) return;
+
+  const isCurrent = formData.get("isCurrent") === "on";
+
+  // If marking as current, unset any existing current address
+  if (isCurrent) {
+    await prisma.address.updateMany({
+      where: { familyMemberId, isCurrent: true },
+      data: { isCurrent: false, moveOutDate: new Date() },
+    });
+  }
+
+  await prisma.address.create({
+    data: {
+      familyMemberId,
+      label: (formData.get("label") as string) || null,
+      addressLine1,
+      addressLine2: (formData.get("addressLine2") as string) || null,
+      city,
+      state: (formData.get("state") as string) || null,
+      zipCode: (formData.get("zipCode") as string) || null,
+      country: (formData.get("country") as string) || null,
+      isCurrent,
+      moveInDate: formData.get("moveInDate") ? new Date(formData.get("moveInDate") as string) : null,
+      moveOutDate: formData.get("moveOutDate") ? new Date(formData.get("moveOutDate") as string) : null,
+      notes: (formData.get("notes") as string) || null,
+    },
+  });
+
+  revalidatePath(`/people/${familyMemberId}`);
+}
+
+export async function deleteAddressAction(formData: FormData) {
+  const id = formData.get("id") as string;
+  const familyMemberId = formData.get("familyMemberId") as string;
+  if (!id) return;
+
+  await prisma.address.delete({ where: { id } });
+  revalidatePath(`/people/${familyMemberId}`);
+}
+
+// ─── Career Actions ─────────────────────────────────────
+
+export async function addCareerEntryAction(formData: FormData) {
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) return;
+
+  const familyMemberId = formData.get("familyMemberId") as string;
+  const employer = formData.get("employer") as string;
+  if (!familyMemberId || !employer) return;
+
+  const isCurrent = formData.get("isCurrent") === "on";
+
+  // If marking as current, unset existing current entries
+  if (isCurrent) {
+    await prisma.careerEntry.updateMany({
+      where: { familyMemberId, isCurrent: true },
+      data: { isCurrent: false, endDate: new Date() },
+    });
+  }
+
+  await prisma.careerEntry.create({
+    data: {
+      familyMemberId,
+      employer,
+      title: (formData.get("title") as string) || null,
+      department: (formData.get("department") as string) || null,
+      startDate: formData.get("startDate") ? new Date(formData.get("startDate") as string) : null,
+      endDate: formData.get("endDate") ? new Date(formData.get("endDate") as string) : null,
+      isCurrent,
+      location: (formData.get("location") as string) || null,
+      notes: (formData.get("notes") as string) || null,
+    },
+  });
+
+  revalidatePath(`/people/${familyMemberId}`);
+}
+
+export async function deleteCareerEntryAction(formData: FormData) {
+  const id = formData.get("id") as string;
+  const familyMemberId = formData.get("familyMemberId") as string;
+  if (!id) return;
+
+  await prisma.careerEntry.delete({ where: { id } });
+  revalidatePath(`/people/${familyMemberId}`);
+}
+
+// ─── Sync ───────────────────────────────────────────────
+
 export async function syncHouseholdMemberAction(formData: FormData) {
   const householdId = await getCurrentHouseholdId();
   if (!householdId) return;

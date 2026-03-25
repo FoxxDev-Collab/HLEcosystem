@@ -4,6 +4,7 @@ import { getCurrentHouseholdId, getHouseholdById, getHouseholdsForUser } from "@
 import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { Separator } from "@/components/ui/separator";
+import { QueryProvider } from "@/components/query-provider";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await getCurrentUser();
@@ -35,7 +36,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <SidebarTrigger className="-ml-1" />
           <Separator orientation="vertical" className="mr-2 data-[orientation=vertical]:h-4" />
         </header>
-        <main className="flex-1 overflow-auto p-4 md:p-6">{children}</main>
+        <main className="flex-1 overflow-auto p-4 md:p-6">
+            <QueryProvider>{children}</QueryProvider>
+          </main>
       </SidebarInset>
     </SidebarProvider>
   );

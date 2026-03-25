@@ -109,19 +109,23 @@ export default async function BudgetsPage({
       </div>
 
       {/* Summary */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Total Budgeted</CardTitle></CardHeader>
-          <CardContent><div className="text-2xl font-bold">{formatCurrency(totalBudgeted)}</div></CardContent>
+      <div className="grid gap-3 md:grid-cols-3">
+        <Card className="stat-card-accent" style={{ "--stat-color": "var(--primary)" } as React.CSSProperties}>
+          <CardContent className="pt-4 pb-3 px-4 pl-5">
+            <span className="text-xs font-medium text-muted-foreground">Total Budgeted</span>
+            <div className="text-xl font-bold tabular-nums mt-1">{formatCurrency(totalBudgeted)}</div>
+          </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Total Spent</CardTitle></CardHeader>
-          <CardContent><div className="text-2xl font-bold text-red-600">{formatCurrency(totalSpent)}</div></CardContent>
+        <Card className="stat-card-accent" style={{ "--stat-color": "oklch(0.55 0.2 25)" } as React.CSSProperties}>
+          <CardContent className="pt-4 pb-3 px-4 pl-5">
+            <span className="text-xs font-medium text-muted-foreground">Total Spent</span>
+            <div className="text-xl font-bold tabular-nums tx-expense mt-1">{formatCurrency(totalSpent)}</div>
+          </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Remaining</CardTitle></CardHeader>
-          <CardContent>
-            <div className={`text-2xl font-bold ${totalBudgeted - totalSpent >= 0 ? "text-green-600" : "text-red-600"}`}>
+        <Card className="stat-card-accent" style={{ "--stat-color": totalBudgeted - totalSpent >= 0 ? "oklch(0.55 0.16 145)" : "oklch(0.55 0.2 25)" } as React.CSSProperties}>
+          <CardContent className="pt-4 pb-3 px-4 pl-5">
+            <span className="text-xs font-medium text-muted-foreground">Remaining</span>
+            <div className={`text-xl font-bold tabular-nums mt-1 ${totalBudgeted - totalSpent >= 0 ? "tx-income" : "tx-expense"}`}>
               {formatCurrency(totalBudgeted - totalSpent)}
             </div>
           </CardContent>

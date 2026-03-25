@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { AppSwitcher } from "@/components/app-switcher";
 import {
   LayoutDashboard,
   ShoppingCart,
@@ -11,9 +12,13 @@ import {
   Tag,
   ChefHat,
   BookOpen,
+  ListChecks,
   Settings,
   LogOut,
   ChevronDown,
+  UtensilsCrossed,
+  ScanLine,
+  Sparkles,
 } from "lucide-react";
 import {
   Sidebar,
@@ -40,10 +45,13 @@ const overviewNav = [
   { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { title: "Meal Plan", href: "/mealie", icon: ChefHat },
   { title: "Recipes", href: "/recipes", icon: BookOpen },
+  { title: "Mealie Lists", href: "/mealie/shopping-lists", icon: ListChecks },
 ];
 
 const shoppingNav = [
   { title: "Shopping Lists", href: "/shopping-lists", icon: ShoppingCart },
+  { title: "Smart List", href: "/shopping-lists/generate", icon: Sparkles },
+  { title: "Receipts", href: "/receipts", icon: ScanLine },
   { title: "Price Compare", href: "/price-compare", icon: BarChart3 },
   { title: "Pantry", href: "/pantry", icon: Package },
 ];
@@ -57,15 +65,8 @@ const accountNav = [
   { title: "Settings", href: "/settings", icon: Settings },
 ];
 
-type Household = {
-  id: string;
-  name: string;
-};
-
-type UserInfo = {
-  name: string;
-  email: string;
-};
+type Household = { id: string; name: string };
+type UserInfo = { name: string; email: string };
 
 function NavGroup({
   label,
@@ -78,12 +79,17 @@ function NavGroup({
 }) {
   return (
     <SidebarGroup>
-      <SidebarGroupLabel>{label}</SidebarGroupLabel>
+      <SidebarGroupLabel className="text-[10px] uppercase tracking-[0.08em] font-semibold text-muted-foreground/70">
+        {label}
+      </SidebarGroupLabel>
       <SidebarGroupContent>
         <SidebarMenu>
           {items.map((item) => (
             <SidebarMenuItem key={item.href}>
-              <SidebarMenuButton asChild isActive={pathname === item.href}>
+              <SidebarMenuButton
+                asChild
+                isActive={pathname === item.href || pathname.startsWith(item.href + "/")}
+              >
                 <Link href={item.href}>
                   <item.icon className="size-4" />
                   <span>{item.title}</span>
@@ -113,9 +119,14 @@ export function AppSidebar({
       <SidebarHeader className="border-b px-4 py-3">
         <DropdownMenu>
           <DropdownMenuTrigger className="flex w-full items-center justify-between rounded-md px-2 py-1.5 text-sm hover:bg-sidebar-accent">
-            <div className="text-left">
-              <div className="font-semibold">{household.name}</div>
-              <div className="text-xs text-muted-foreground">Meal Prep</div>
+            <div className="flex items-center gap-2.5">
+              <div className="flex size-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <UtensilsCrossed className="size-3.5" />
+              </div>
+              <div className="text-left">
+                <div className="font-semibold text-sm leading-none">{household.name}</div>
+                <div className="text-[11px] text-muted-foreground mt-0.5">Meal Prep</div>
+              </div>
             </div>
             {households.length > 1 && <ChevronDown className="size-4 opacity-50" />}
           </DropdownMenuTrigger>
@@ -140,10 +151,18 @@ export function AppSidebar({
       </SidebarHeader>
 
       <SidebarContent>
-        <NavGroup label="Overview" items={overviewNav} pathname={pathname} />
+        <NavGroup label="Meals" items={overviewNav} pathname={pathname} />
         <NavGroup label="Shopping" items={shoppingNav} pathname={pathname} />
         <NavGroup label="Catalog" items={catalogNav} pathname={pathname} />
-        <NavGroup label="Account" items={accountNav} pathname={pathname} />
+        <NavGroup label="System" items={accountNav} pathname={pathname} />
+        <SidebarGroup>
+          <SidebarGroupLabel className="text-[10px] uppercase tracking-[0.08em] font-semibold text-muted-foreground/70">
+            Apps
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <AppSwitcher currentApp="MEALS" />
+          </SidebarGroupContent>
+        </SidebarGroup>
       </SidebarContent>
 
       <SidebarFooter className="border-t p-4">
@@ -152,7 +171,7 @@ export function AppSidebar({
           <ThemeToggle />
         </div>
         <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-medium">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-medium text-primary">
             {user.name.charAt(0).toUpperCase()}
           </div>
           <div className="flex-1 min-w-0">

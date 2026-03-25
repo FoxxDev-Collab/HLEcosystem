@@ -21,6 +21,8 @@ export async function addToPantryAction(formData: FormData) {
 
   const unit = (formData.get("unit") as ProductUnit) || null;
   const minQuantity = parseFloat(formData.get("minQuantity") as string);
+  const expiresAtStr = formData.get("expiresAt") as string;
+  const expiresAt = expiresAtStr ? new Date(expiresAtStr) : null;
 
   // Verify product belongs to household
   const product = await prisma.product.findFirst({
@@ -41,6 +43,7 @@ export async function addToPantryAction(formData: FormData) {
       quantity,
       unit: unit || product.defaultUnit,
       minQuantity: isNaN(minQuantity) ? null : minQuantity,
+      expiresAt,
     },
   });
 
@@ -111,6 +114,26 @@ export async function setPantryMinAction(formData: FormData) {
   await prisma.pantryItem.updateMany({
     where: { id, householdId },
     data: { minQuantity },
+  });
+
+  revalidatePath("/pantry");
+}
+
+export async function setExpirationAction(formData: FormData) {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) redirect("/setup");
+
+  const id = formData.get("id") as string;
+  if (!id) return;
+
+  const expiresAtStr = formData.get("expiresAt") as string;
+  const expiresAt = expiresAtStr ? new Date(expiresAtStr) : null;
+
+  await prisma.pantryItem.updateMany({
+    where: { id, householdId },
+    data: { expiresAt },
   });
 
   revalidatePath("/pantry");

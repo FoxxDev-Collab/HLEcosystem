@@ -155,11 +155,13 @@ model PantryItem {
   quantity    Decimal      @db.Decimal(10, 3)
   unit        ProductUnit?
   minQuantity Decimal?     @db.Decimal(10, 3) // alert threshold
+  expiresAt   DateTime?    @db.Date           // expiration date
   updatedAt   DateTime     @updatedAt
 
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@index([householdId])
+  @@index([expiresAt])
 }
 
 // ============================================================================

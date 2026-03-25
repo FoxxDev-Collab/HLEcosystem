@@ -3,6 +3,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { getCurrentHouseholdId } from "@/lib/household";
 import prisma from "@/lib/prisma";
 import { formatDate, formatCurrency } from "@/lib/format";
+import { getFinanceAccounts, getFinanceExpenseCategories } from "@/lib/finance-bridge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -32,13 +33,15 @@ export default async function ExpensesPage({
   const startOfYear = new Date(year, 0, 1);
   const endOfYear = new Date(year, 11, 31);
 
-  const [members, expenses] = await Promise.all([
+  const [members, expenses, financeAccounts, financeCategories] = await Promise.all([
     prisma.familyMember.findMany({ where: { householdId, isActive: true }, orderBy: { firstName: "asc" } }),
     prisma.medicalExpense.findMany({
       where: { familyMember: { householdId }, expenseDate: { gte: startOfYear, lte: endOfYear } },
       include: { familyMember: true },
       orderBy: { expenseDate: "desc" },
     }),
+    getFinanceAccounts(householdId).catch(() => []),
+    getFinanceExpenseCategories(householdId).catch(() => []),
   ]);
 
   const totalExpenses = expenses.reduce((s, e) => s + Number(e.amount), 0);
@@ -108,6 +111,36 @@ export default async function ExpensesPage({
               <input type="checkbox" name="paidFromHsa" id="paidFromHsa" className="size-4" />
               <Label htmlFor="paidFromHsa">Paid from HSA</Label>
             </div>
+            {financeAccounts.length > 0 && (
+              <>
+                <div className="sm:col-span-2 lg:col-span-4 border-t pt-4 mt-2">
+                  <p className="text-sm font-medium text-muted-foreground">Sync to Family Finance (optional)</p>
+                </div>
+                <div className="space-y-1">
+                  <Label>Finance Account</Label>
+                  <Select name="financeAccountId">
+                    <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
+                    <SelectContent>
+                      {financeAccounts.map((a) => (
+                        <SelectItem key={a.id} value={a.id}>{a.name} ({a.type})</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <Label>Finance Category</Label>
+                  <Select name="financeCategoryId">
+                    <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
+                    <SelectContent>
+                      {financeCategories.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <input type="hidden" name="addToFinance" value="true" />
+              </>
+            )}
             <Button type="submit"><Plus className="size-4 mr-2" />Add Expense</Button>
           </form>
         </CardContent>

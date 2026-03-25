@@ -3,9 +3,10 @@ import { getCurrentUser } from "@/lib/auth";
 import { getCurrentHouseholdId } from "@/lib/household";
 import prisma from "@/lib/prisma";
 import { validateUpload } from "@/lib/file-validation";
-import { saveFile } from "@/lib/file-storage";
+import { saveFileStreaming, generateThumbnail } from "@/lib/file-storage";
 
-// Single-file upload (one file per request for individual progress tracking)
+// Single-file streaming upload — no memory buffering.
+// For files over ~100MB, prefer the chunked upload API instead.
 export async function POST(request: NextRequest) {
   const user = await getCurrentUser();
   if (!user) {
@@ -31,14 +32,12 @@ export async function POST(request: NextRequest) {
 
   const folderId = (formData.get("folderId") as string) || null;
   const isPersonal = formData.get("isPersonal") === "true";
-  const resumeHash = formData.get("contentHash") as string | null;
 
-  const buffer = Buffer.from(await file.arrayBuffer());
-
+  // Validate name and extension (doesn't need the full buffer)
   const validation = validateUpload({
     name: file.name,
     size: file.size,
-    buffer,
+    buffer: Buffer.alloc(0), // validation only checks name/size, not content for streaming
     type: file.type,
   });
 
@@ -50,6 +49,15 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    // Stream file to disk — no memory buffering
+    const fileStream = file.stream();
+    const { storagePath, contentHash, size } = await saveFileStreaming(
+      householdId,
+      fileStream,
+      validation.sanitizedName
+    );
+
+    // Create DB records in a transaction
     const created = await prisma.$transaction(async (tx) => {
       // Check storage quota
       let quota = await tx.storageQuota.findUnique({
@@ -62,33 +70,9 @@ export async function POST(request: NextRequest) {
         });
       }
 
-      if (quota.usedStorageBytes + BigInt(file.size) > quota.maxStorageBytes) {
+      if (quota.usedStorageBytes + BigInt(size) > quota.maxStorageBytes) {
         throw new Error("Storage quota exceeded");
       }
-
-      // If resuming, check if this exact file already exists (dedup by hash)
-      if (resumeHash) {
-        const existing = await tx.file.findFirst({
-          where: {
-            householdId,
-            contentHash: resumeHash,
-            folderId,
-            ownerId: isPersonal ? user.id : null,
-            status: "ACTIVE",
-            deletedAt: null,
-          },
-        });
-        if (existing) {
-          return existing; // Already uploaded — idempotent
-        }
-      }
-
-      // Save file to disk (content-addressed — dedup handled)
-      const { storagePath, contentHash, size } = await saveFile(
-        householdId,
-        buffer,
-        validation.sanitizedName
-      );
 
       // Create file record
       const fileRecord = await tx.file.create({
@@ -127,6 +111,21 @@ export async function POST(request: NextRequest) {
       });
 
       return fileRecord;
+    });
+
+    // Generate thumbnail in background (non-blocking)
+    generateThumbnail(
+      householdId,
+      created.id,
+      storagePath,
+      validation.detectedMime
+    ).then(async (thumbnailPath) => {
+      if (thumbnailPath) {
+        await prisma.file.update({
+          where: { id: created.id },
+          data: { thumbnailPath },
+        });
+      }
     });
 
     return NextResponse.json(

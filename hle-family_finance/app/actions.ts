@@ -6,8 +6,7 @@ import { setCurrentHousehold } from "@/lib/household";
 
 export async function logoutAction(): Promise<void> {
   await clearSession();
-  const authUrl = process.env.AUTH_URL || "http://localhost:8080";
-  redirect(`${authUrl}/login`);
+  redirect("/login");
 }
 
 export async function switchHouseholdAction(formData: FormData): Promise<void> {

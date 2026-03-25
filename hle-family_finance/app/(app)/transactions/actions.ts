@@ -2,10 +2,33 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { z } from "zod";
 import { getCurrentUser } from "@/lib/auth";
 import { getCurrentHouseholdId } from "@/lib/household";
+import { categorizeTransaction } from "@/lib/claude-api";
 import prisma from "@/lib/prisma";
-import type { TransactionType } from "@prisma/client";
+
+const createTransactionSchema = z.object({
+  type: z.enum(["INCOME", "EXPENSE", "TRANSFER"]),
+  accountId: z.string().min(1),
+  categoryId: z.string().min(1).nullable(),
+  amount: z.coerce.number().positive(),
+  date: z.coerce.date(),
+  payee: z.string().min(1).nullable(),
+  description: z.string().min(1).nullable(),
+  transferToAccountId: z.string().min(1).nullable(),
+});
+
+const updateTransactionSchema = z.object({
+  id: z.string().min(1),
+  categoryId: z.string().min(1).nullable(),
+  payee: z.string().min(1).nullable(),
+  description: z.string().min(1).nullable(),
+});
+
+const deleteTransactionSchema = z.object({
+  id: z.string().min(1),
+});
 
 export async function createTransactionAction(formData: FormData): Promise<void> {
   const user = await getCurrentUser();
@@ -13,14 +36,21 @@ export async function createTransactionAction(formData: FormData): Promise<void>
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/setup");
 
-  const type = formData.get("type") as TransactionType;
-  const accountId = formData.get("accountId") as string;
-  const categoryId = formData.get("categoryId") as string || null;
-  const amount = Math.abs(parseFloat(formData.get("amount") as string));
-  const date = new Date(formData.get("date") as string);
-  const payee = formData.get("payee") as string || null;
-  const description = formData.get("description") as string || null;
-  const transferToAccountId = type === "TRANSFER" ? (formData.get("transferToAccountId") as string || null) : null;
+  const parsed = createTransactionSchema.safeParse({
+    type: formData.get("type"),
+    accountId: formData.get("accountId"),
+    categoryId: formData.get("categoryId") || null,
+    amount: formData.get("amount"),
+    date: formData.get("date"),
+    payee: formData.get("payee") || null,
+    description: formData.get("description") || null,
+    transferToAccountId: formData.get("transferToAccountId") || null,
+  });
+  if (!parsed.success) return;
+
+  const { type, accountId, categoryId, date, payee, description } = parsed.data;
+  const amount = Math.abs(parsed.data.amount);
+  const transferToAccountId = type === "TRANSFER" ? parsed.data.transferToAccountId : null;
 
   const transaction = await prisma.transaction.create({
     data: {
@@ -72,10 +102,15 @@ export async function updateTransactionAction(formData: FormData): Promise<void>
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/setup");
 
-  const id = formData.get("id") as string;
-  const categoryId = formData.get("categoryId") as string || null;
-  const payee = formData.get("payee") as string || null;
-  const description = formData.get("description") as string || null;
+  const parsed = updateTransactionSchema.safeParse({
+    id: formData.get("id"),
+    categoryId: formData.get("categoryId") || null,
+    payee: formData.get("payee") || null,
+    description: formData.get("description") || null,
+  });
+  if (!parsed.success) return;
+
+  const { id, categoryId, payee, description } = parsed.data;
 
   await prisma.transaction.update({
     where: { id, householdId },
@@ -90,7 +125,12 @@ export async function deleteTransactionAction(formData: FormData): Promise<void>
   const householdId = await getCurrentHouseholdId();
   if (!householdId) return;
 
-  const id = formData.get("id") as string;
+  const parsed = deleteTransactionSchema.safeParse({
+    id: formData.get("id"),
+  });
+  if (!parsed.success) return;
+
+  const { id } = parsed.data;
 
   // Get transaction to reverse balance
   const tx = await prisma.transaction.findUnique({ where: { id, householdId } });
@@ -125,4 +165,35 @@ export async function deleteTransactionAction(formData: FormData): Promise<void>
   revalidatePath("/transactions");
   revalidatePath("/dashboard");
   revalidatePath("/accounts");
+}
+
+export type SuggestCategoryResult = {
+  categoryName: string;
+  confidence: number;
+  reasoning: string;
+} | { error: string } | null;
+
+export async function suggestCategoryAction(
+  payee: string,
+  description: string,
+  amount: number | undefined,
+  categoryNames: string[]
+): Promise<SuggestCategoryResult> {
+  const user = await getCurrentUser();
+  if (!user) return null;
+
+  const text = [payee, description].filter(Boolean).join(" — ");
+  if (!text.trim()) return null;
+
+  const result = await categorizeTransaction(text, payee || undefined, amount, categoryNames);
+
+  if (!result.success || !result.data) {
+    return { error: result.error ?? "Failed to get suggestion" };
+  }
+
+  return {
+    categoryName: result.data.category,
+    confidence: result.data.confidence,
+    reasoning: result.data.reasoning,
+  };
 }

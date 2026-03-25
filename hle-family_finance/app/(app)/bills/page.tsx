@@ -29,6 +29,7 @@ export default async function BillsPage() {
       payments: { orderBy: { dueDate: "desc" }, take: 1 },
     },
     orderBy: [{ isActive: "desc" }, { dueDayOfMonth: "asc" }],
+    take: 100,
   });
 
   const activeBills = bills.filter((b) => b.isActive);

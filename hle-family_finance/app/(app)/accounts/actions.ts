@@ -2,10 +2,40 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { z } from "zod";
 import { getCurrentUser } from "@/lib/auth";
 import { getCurrentHouseholdId } from "@/lib/household";
 import prisma from "@/lib/prisma";
-import type { AccountType } from "@prisma/client";
+
+const createAccountSchema = z.object({
+  name: z.string().min(1).max(100),
+  type: z.enum(["CHECKING", "SAVINGS", "CREDIT_CARD", "CASH", "INVESTMENT", "LOAN", "HSA", "OTHER"]),
+  institution: z.string().min(1).nullable(),
+  initialBalance: z.coerce.number().default(0),
+  color: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional().default("#6366f1"),
+});
+
+const updateAccountSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1).max(100),
+  type: z.enum(["CHECKING", "SAVINGS", "CREDIT_CARD", "CASH", "INVESTMENT", "LOAN", "HSA", "OTHER"]),
+  institution: z.string().min(1).nullable(),
+  color: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional().default("#6366f1"),
+});
+
+const adjustBalanceSchema = z.object({
+  accountId: z.string().min(1),
+  targetBalance: z.coerce.number(),
+});
+
+const archiveAccountSchema = z.object({
+  id: z.string().min(1),
+  isArchived: z.string(),
+});
+
+const deleteAccountSchema = z.object({
+  id: z.string().min(1),
+});
 
 export async function createAccountAction(formData: FormData): Promise<void> {
   const user = await getCurrentUser();
@@ -13,11 +43,16 @@ export async function createAccountAction(formData: FormData): Promise<void> {
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/setup");
 
-  const name = formData.get("name") as string;
-  const type = formData.get("type") as AccountType;
-  const institution = formData.get("institution") as string || null;
-  const initialBalance = parseFloat(formData.get("initialBalance") as string || "0");
-  const color = formData.get("color") as string || "#6366f1";
+  const parsed = createAccountSchema.safeParse({
+    name: formData.get("name"),
+    type: formData.get("type"),
+    institution: formData.get("institution") || null,
+    initialBalance: formData.get("initialBalance") || "0",
+    color: formData.get("color") || "#6366f1",
+  });
+  if (!parsed.success) return;
+
+  const { name, type, institution, initialBalance, color } = parsed.data;
 
   await prisma.account.create({
     data: {
@@ -42,11 +77,16 @@ export async function updateAccountAction(formData: FormData): Promise<void> {
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/setup");
 
-  const id = formData.get("id") as string;
-  const name = formData.get("name") as string;
-  const type = formData.get("type") as AccountType;
-  const institution = formData.get("institution") as string || null;
-  const color = formData.get("color") as string || "#6366f1";
+  const parsed = updateAccountSchema.safeParse({
+    id: formData.get("id"),
+    name: formData.get("name"),
+    type: formData.get("type"),
+    institution: formData.get("institution") || null,
+    color: formData.get("color") || "#6366f1",
+  });
+  if (!parsed.success) return;
+
+  const { id, name, type, institution, color } = parsed.data;
 
   await prisma.account.update({
     where: { id, householdId },
@@ -64,10 +104,13 @@ export async function adjustBalanceAction(formData: FormData): Promise<void> {
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/setup");
 
-  const accountId = formData.get("accountId") as string;
-  const targetBalance = parseFloat(formData.get("targetBalance") as string);
+  const parsed = adjustBalanceSchema.safeParse({
+    accountId: formData.get("accountId"),
+    targetBalance: formData.get("targetBalance"),
+  });
+  if (!parsed.success) return;
 
-  if (!accountId || isNaN(targetBalance)) return;
+  const { accountId, targetBalance } = parsed.data;
 
   const account = await prisma.account.findUnique({
     where: { id: accountId, householdId },
@@ -140,8 +183,14 @@ export async function archiveAccountAction(formData: FormData): Promise<void> {
   const householdId = await getCurrentHouseholdId();
   if (!householdId) return;
 
-  const id = formData.get("id") as string;
-  const isArchived = formData.get("isArchived") === "true";
+  const parsed = archiveAccountSchema.safeParse({
+    id: formData.get("id"),
+    isArchived: formData.get("isArchived"),
+  });
+  if (!parsed.success) return;
+
+  const { id } = parsed.data;
+  const isArchived = parsed.data.isArchived === "true";
 
   await prisma.account.update({
     where: { id, householdId },
@@ -158,7 +207,12 @@ export async function deleteAccountAction(formData: FormData): Promise<void> {
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/setup");
 
-  const id = formData.get("id") as string;
+  const parsed = deleteAccountSchema.safeParse({
+    id: formData.get("id"),
+  });
+  if (!parsed.success) return;
+
+  const { id } = parsed.data;
 
   // Verify the account belongs to this household
   const account = await prisma.account.findUnique({

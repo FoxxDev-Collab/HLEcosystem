@@ -26,7 +26,7 @@ export default async function SetupPage() {
           {households.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center">
               You are not a member of any household yet. Ask your admin to add you in{" "}
-              <a href="http://localhost:8080" className="underline font-medium">
+              <a href={process.env.AUTH_URL || "http://localhost:8080"} className="underline font-medium">
                 Family Manager
               </a>.
             </p>

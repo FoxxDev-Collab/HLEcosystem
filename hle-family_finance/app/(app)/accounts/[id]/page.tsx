@@ -7,7 +7,8 @@ import { formatCurrency, formatDate } from "@/lib/format";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Pencil, Archive, Trash2 } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import { ArrowLeft, Pencil, Archive, Trash2, Calendar, Hash, Wallet } from "lucide-react";
 import { archiveAccountAction, deleteAccountAction } from "../actions";
 import { AdjustBalanceForm } from "@/components/adjust-balance-form";
 
@@ -25,6 +26,7 @@ export default async function AccountDetailPage({ params }: { params: Promise<{ 
 
   const account = await prisma.account.findUnique({
     where: { id, householdId },
+    include: { _count: { select: { transactions: true } } },
   });
   if (!account) notFound();
 
@@ -36,26 +38,34 @@ export default async function AccountDetailPage({ params }: { params: Promise<{ 
   });
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" asChild>
-            <Link href="/accounts"><ArrowLeft className="size-4" /></Link>
-          </Button>
-          <div className="flex items-center gap-3">
-            <div className="w-4 h-4 rounded-full" style={{ backgroundColor: account.color || "#6366f1" }} />
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight">{account.name}</h1>
-              <p className="text-muted-foreground">
-                {ACCOUNT_TYPE_LABELS[account.type]} {account.institution && `at ${account.institution}`}
-              </p>
-            </div>
+    <div className="space-y-6 max-w-[1200px]">
+      {/* Back link */}
+      <Link
+        href="/accounts"
+        className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+      >
+        <ArrowLeft className="size-4" />
+        Accounts
+      </Link>
+
+      {/* Header */}
+      <div className="flex items-start justify-between">
+        <div className="flex items-center gap-3">
+          <div
+            className="size-5 rounded-full shrink-0"
+            style={{ backgroundColor: account.color || "#6366f1" }}
+          />
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">{account.name}</h1>
+            <p className="text-sm text-muted-foreground">
+              {ACCOUNT_TYPE_LABELS[account.type]}{account.institution ? ` at ${account.institution}` : ""}
+            </p>
           </div>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" asChild>
             <Link href={`/accounts/${id}/edit`}>
-              <Pencil className="size-4 mr-2" />
+              <Pencil className="size-4 mr-1.5" />
               Edit
             </Link>
           </Button>
@@ -63,71 +73,113 @@ export default async function AccountDetailPage({ params }: { params: Promise<{ 
             <input type="hidden" name="id" value={id} />
             <input type="hidden" name="isArchived" value={String(account.isArchived)} />
             <Button type="submit" variant="outline" size="sm">
-              <Archive className="size-4 mr-2" />
+              <Archive className="size-4 mr-1.5" />
               {account.isArchived ? "Restore" : "Archive"}
             </Button>
           </form>
           <form action={deleteAccountAction}>
             <input type="hidden" name="id" value={id} />
             <Button type="submit" variant="destructive" size="sm">
-              <Trash2 className="size-4 mr-2" />
+              <Trash2 className="size-4 mr-1.5" />
               Delete
             </Button>
           </form>
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Current Balance</CardTitle></CardHeader>
-          <CardContent className="space-y-3">
-            <div className={`text-2xl font-bold ${Number(account.currentBalance) < 0 ? "text-red-600" : ""}`}>
-              {formatCurrency(account.currentBalance)}
-            </div>
-            <AdjustBalanceForm accountId={account.id} currentBalance={Number(account.currentBalance)} />
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Starting Balance</CardTitle></CardHeader>
-          <CardContent><div className="text-2xl font-bold">{formatCurrency(account.initialBalance)}</div></CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Status</CardTitle></CardHeader>
-          <CardContent>
-            <Badge variant={account.isArchived ? "secondary" : "default"}>
-              {account.isArchived ? "Archived" : "Active"}
-            </Badge>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent Transactions</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {recentTransactions.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-4 text-center">No transactions yet</p>
-          ) : (
-            <div className="space-y-2">
-              {recentTransactions.map((tx) => (
-                <Link key={tx.id} href={`/transactions?id=${tx.id}`} className="flex items-center justify-between py-2 px-2 rounded hover:bg-accent/50 transition-colors">
-                  <div>
-                    <div className="text-sm font-medium">{tx.payee || tx.description || "Transaction"}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {formatDate(tx.date)} &middot; {tx.category?.name || "Uncategorized"}
+      {/* 2-column layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-6">
+        {/* Left — transactions */}
+        <div className="space-y-4 min-w-0">
+          <Card className="overflow-hidden">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-semibold">
+                Transactions ({account._count.transactions})
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              {recentTransactions.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-8 text-center">No transactions yet</p>
+              ) : (
+                <div className="divide-y">
+                  {recentTransactions.map((tx) => (
+                    <div
+                      key={tx.id}
+                      className="flex items-center justify-between px-4 py-2.5 hover:bg-accent/30 transition-colors"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium truncate">
+                          {tx.payee || tx.description || "Transaction"}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground">
+                          {formatDate(tx.date)} &middot; {tx.category?.name || "Uncategorized"}
+                        </p>
+                      </div>
+                      <span
+                        className={`text-sm font-semibold tabular-nums shrink-0 ml-3 ${
+                          tx.type === "INCOME" ? "tx-income" : tx.type === "EXPENSE" ? "tx-expense" : "tx-transfer"
+                        }`}
+                      >
+                        {tx.type === "INCOME" ? "+" : tx.type === "EXPENSE" ? "-" : ""}
+                        {formatCurrency(tx.amount)}
+                      </span>
                     </div>
-                  </div>
-                  <div className={`text-sm font-medium ${tx.type === "INCOME" ? "text-green-600" : tx.type === "EXPENSE" ? "text-red-600" : ""}`}>
-                    {tx.type === "INCOME" ? "+" : tx.type === "EXPENSE" ? "-" : ""}
-                    {formatCurrency(tx.amount)}
-                  </div>
-                </Link>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Right — metadata sidebar */}
+        <div className="space-y-4">
+          {/* Balance card */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                <Wallet className="size-4" />
+                Balance
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className={`text-2xl font-bold tabular-nums ${Number(account.currentBalance) < 0 ? "tx-expense" : ""}`}>
+                {formatCurrency(account.currentBalance)}
+              </div>
+              <AdjustBalanceForm accountId={account.id} currentBalance={Number(account.currentBalance)} />
+            </CardContent>
+          </Card>
+
+          {/* Details card */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-semibold">Details</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Wallet className="size-3.5 shrink-0" />
+                <span>Starting balance: {formatCurrency(account.initialBalance)}</span>
+              </div>
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Hash className="size-3.5 shrink-0" />
+                <span>{account._count.transactions} transactions</span>
+              </div>
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Calendar className="size-3.5 shrink-0" />
+                <span>Created {formatDate(account.createdAt)}</span>
+              </div>
+
+              <Separator />
+
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">Status</span>
+                <Badge variant={account.isArchived ? "secondary" : "default"} className="ml-auto">
+                  {account.isArchived ? "Archived" : "Active"}
+                </Badge>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 }

@@ -13,6 +13,7 @@ const DATE_TYPE_COLORS: Record<string, string> = {
   MEMORIAL: "bg-gray-500",
   HOLIDAY: "bg-green-500",
   CUSTOM: "bg-orange-500",
+  TODO: "bg-yellow-500",
 };
 
 const MONTH_NAMES = [
@@ -38,10 +39,20 @@ export default async function CalendarPage({
   const nextMonth = month === 11 ? 0 : month + 1;
   const nextYear = month === 11 ? year + 1 : year;
 
-  const dates = await prisma.importantDate.findMany({
-    where: { householdId },
-    include: { familyMember: true },
-  });
+  const [dates, todoItems] = await Promise.all([
+    prisma.importantDate.findMany({
+      where: { householdId },
+      include: { familyMember: true },
+    }),
+    prisma.todoItem.findMany({
+      where: {
+        list: { householdId },
+        dueDate: { not: null },
+        status: { not: "DONE" },
+      },
+      include: { list: { select: { name: true, color: true } } },
+    }),
+  ]);
 
   // Build calendar grid
   const firstDay = new Date(year, month, 1);
@@ -49,24 +60,35 @@ export default async function CalendarPage({
   const startPad = firstDay.getDay();
   const totalDays = lastDay.getDate();
 
-  // Map dates to day numbers for this month
-  const dayEvents: Map<number, typeof dates> = new Map();
+  // Map events to day numbers for this month
+  type CalendarEvent = { id: string; label: string; type: string };
+  const dayEvents: Map<number, CalendarEvent[]> = new Map();
+
   for (const d of dates) {
     const dateObj = new Date(d.date);
-    // For ANNUAL recurrence, check if the month/day matches
     if (d.recurrenceType === "ANNUAL") {
       if (dateObj.getMonth() === month) {
         const day = dateObj.getDate();
         if (!dayEvents.has(day)) dayEvents.set(day, []);
-        dayEvents.get(day)!.push(d);
+        dayEvents.get(day)!.push({ id: d.id, label: d.label, type: d.type });
       }
     } else {
-      // ONCE — check exact month/year
       if (dateObj.getMonth() === month && dateObj.getFullYear() === year) {
         const day = dateObj.getDate();
         if (!dayEvents.has(day)) dayEvents.set(day, []);
-        dayEvents.get(day)!.push(d);
+        dayEvents.get(day)!.push({ id: d.id, label: d.label, type: d.type });
       }
+    }
+  }
+
+  // Merge todo items with due dates into the calendar
+  for (const item of todoItems) {
+    if (!item.dueDate) continue;
+    const dateObj = new Date(item.dueDate);
+    if (dateObj.getMonth() === month && dateObj.getFullYear() === year) {
+      const day = dateObj.getDate();
+      if (!dayEvents.has(day)) dayEvents.set(day, []);
+      dayEvents.get(day)!.push({ id: item.id, label: item.title, type: "TODO" });
     }
   }
 

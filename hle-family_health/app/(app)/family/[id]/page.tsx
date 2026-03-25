@@ -4,14 +4,11 @@ import { getCurrentUser } from "@/lib/auth";
 import { getCurrentHouseholdId } from "@/lib/household";
 import prisma from "@/lib/prisma";
 import { formatAge, formatDate, formatCurrency } from "@/lib/format";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft } from "lucide-react";
-import { updateFamilyMemberAction, toggleFamilyMemberActiveAction } from "../actions";
+import { ArrowLeft, RefreshCw } from "lucide-react";
+import { syncMemberFromHubAction } from "../actions";
 
 export default async function FamilyMemberDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -33,8 +30,6 @@ export default async function FamilyMemberDetailPage({ params }: { params: Promi
   });
   if (!member) notFound();
 
-  const dobStr = member.dateOfBirth?.toISOString().split("T")[0] ?? "";
-
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
@@ -48,53 +43,18 @@ export default async function FamilyMemberDetailPage({ params }: { params: Promi
             {member.dateOfBirth
               ? `${formatAge(member.dateOfBirth)} years old · Born ${formatDate(member.dateOfBirth)}`
               : "Date of birth not set"}
+            {member.gender && ` · ${member.gender}`}
           </p>
         </div>
-        <form action={toggleFamilyMemberActiveAction}>
-          <input type="hidden" name="id" value={id} />
-          <input type="hidden" name="isActive" value={String(member.isActive)} />
-          <Button type="submit" variant="outline" size="sm">
-            {member.isActive ? "Deactivate" : "Reactivate"}
-          </Button>
-        </form>
-      </div>
-
-      {/* Edit Form */}
-      <Card>
-        <CardHeader><CardTitle>Edit Details</CardTitle></CardHeader>
-        <CardContent>
-          <form action={updateFamilyMemberAction} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5 items-end">
+        {member.familyhubMemberId && (
+          <form action={syncMemberFromHubAction}>
             <input type="hidden" name="id" value={id} />
-            <div className="space-y-1">
-              <Label>First Name</Label>
-              <Input name="firstName" defaultValue={member.firstName} required />
-            </div>
-            <div className="space-y-1">
-              <Label>Last Name</Label>
-              <Input name="lastName" defaultValue={member.lastName} required />
-            </div>
-            <div className="space-y-1">
-              <Label>Date of Birth</Label>
-              <Input name="dateOfBirth" type="date" defaultValue={dobStr} />
-            </div>
-            <div className="space-y-1">
-              <Label>Relationship</Label>
-              <Select name="relationship" defaultValue={member.relationship || ""}>
-                <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Self">Self</SelectItem>
-                  <SelectItem value="Spouse">Spouse</SelectItem>
-                  <SelectItem value="Child">Child</SelectItem>
-                  <SelectItem value="Parent">Parent</SelectItem>
-                  <SelectItem value="Sibling">Sibling</SelectItem>
-                  <SelectItem value="Other">Other</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <Button type="submit">Save Changes</Button>
+            <Button type="submit" variant="outline" size="sm" title="Sync from FamilyHub">
+              <RefreshCw className="size-4 mr-2" />Sync
+            </Button>
           </form>
-        </CardContent>
-      </Card>
+        )}
+      </div>
 
       {/* Health Profile */}
       <Card>
@@ -118,9 +78,9 @@ export default async function FamilyMemberDetailPage({ params }: { params: Promi
               <div>
                 <div className="text-xs text-muted-foreground">Height / Weight</div>
                 <div className="text-sm font-medium">
-                  {member.healthProfile.heightCm ? `${Number(member.healthProfile.heightCm)} cm` : "—"}
+                  {member.healthProfile.heightCm ? `${Number(member.healthProfile.heightCm)} cm` : "\u2014"}
                   {" / "}
-                  {member.healthProfile.weightKg ? `${Number(member.healthProfile.weightKg)} kg` : "—"}
+                  {member.healthProfile.weightKg ? `${Number(member.healthProfile.weightKg)} kg` : "\u2014"}
                 </div>
               </div>
               <div>

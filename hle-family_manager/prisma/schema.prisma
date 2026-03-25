@@ -22,23 +22,7 @@ enum HouseholdRole {
 
 enum FamilyRelationship {
   Spouse
-  Partner
   Child
-  Parent
-  Sibling
-  Grandparent
-  Grandchild
-  AuntUncle
-  NieceNephew
-  Cousin
-  InLaw
-  StepParent
-  StepChild
-  StepSibling
-  Godparent
-  Godchild
-  Friend
-  Other
 }
 
 // ─── Users ───────────────────────────────────────────────

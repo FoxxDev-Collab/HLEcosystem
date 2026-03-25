@@ -10,8 +10,15 @@ import type { SetType } from "@prisma/client";
 export async function createWorkoutAction(formData: FormData): Promise<void> {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) redirect("/setup");
 
   const familyMemberId = formData.get("familyMemberId") as string;
+
+  // Verify familyMember belongs to household
+  const member = await prisma.familyMember.findFirst({ where: { id: familyMemberId, householdId } });
+  if (!member) return;
+
   const title = formData.get("title") as string;
   const date = formData.get("date") as string;
   const startTime = formData.get("startTime") as string || "08:00";
@@ -33,16 +40,38 @@ export async function createWorkoutAction(formData: FormData): Promise<void> {
 }
 
 export async function deleteWorkoutAction(formData: FormData): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) redirect("/setup");
+
   const id = formData.get("id") as string;
+
+  const record = await prisma.workout.findFirst({
+    where: { id, familyMember: { householdId } },
+  });
+  if (!record) return;
+
   await prisma.workout.delete({ where: { id } });
   revalidatePath("/workouts");
   redirect("/workouts");
 }
 
 export async function addExerciseAction(formData: FormData): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) redirect("/setup");
+
   const workoutId = formData.get("workoutId") as string;
   const exerciseName = formData.get("exerciseName") as string;
   const notes = formData.get("notes") as string || null;
+
+  // Verify workout belongs to household
+  const workout = await prisma.workout.findFirst({
+    where: { id: workoutId, familyMember: { householdId } },
+  });
+  if (!workout) return;
 
   const lastExercise = await prisma.workoutExercise.findFirst({
     where: { workoutId },
@@ -62,8 +91,16 @@ export async function addExerciseAction(formData: FormData): Promise<void> {
 }
 
 export async function deleteExerciseAction(formData: FormData): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) redirect("/setup");
+
   const id = formData.get("id") as string;
-  const exercise = await prisma.workoutExercise.findUnique({ where: { id } });
+
+  const exercise = await prisma.workoutExercise.findFirst({
+    where: { id, workout: { familyMember: { householdId } } },
+  });
   if (!exercise) return;
 
   await prisma.workoutExercise.delete({ where: { id } });
@@ -71,6 +108,11 @@ export async function deleteExerciseAction(formData: FormData): Promise<void> {
 }
 
 export async function addSetAction(formData: FormData): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) redirect("/setup");
+
   const workoutExerciseId = formData.get("workoutExerciseId") as string;
   const setType = formData.get("setType") as SetType || "NORMAL";
   const weightLbs = formData.get("weightLbs") ? parseFloat(formData.get("weightLbs") as string) : null;
@@ -79,12 +121,16 @@ export async function addSetAction(formData: FormData): Promise<void> {
   const durationSeconds = formData.get("durationSeconds") ? parseInt(formData.get("durationSeconds") as string) : null;
   const rpe = formData.get("rpe") ? parseFloat(formData.get("rpe") as string) : null;
 
+  // Verify exercise belongs to household
+  const exercise = await prisma.workoutExercise.findFirst({
+    where: { id: workoutExerciseId, workout: { familyMember: { householdId } } },
+  });
+  if (!exercise) return;
+
   const lastSet = await prisma.exerciseSet.findFirst({
     where: { workoutExerciseId },
     orderBy: { setIndex: "desc" },
   });
-
-  const exercise = await prisma.workoutExercise.findUnique({ where: { id: workoutExerciseId } });
 
   await prisma.exerciseSet.create({
     data: {
@@ -99,13 +145,19 @@ export async function addSetAction(formData: FormData): Promise<void> {
     },
   });
 
-  if (exercise) revalidatePath(`/workouts/${exercise.workoutId}`);
+  revalidatePath(`/workouts/${exercise.workoutId}`);
 }
 
 export async function deleteSetAction(formData: FormData): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) redirect("/setup");
+
   const id = formData.get("id") as string;
-  const set = await prisma.exerciseSet.findUnique({
-    where: { id },
+
+  const set = await prisma.exerciseSet.findFirst({
+    where: { id, workoutExercise: { workout: { familyMember: { householdId } } } },
     include: { workoutExercise: true },
   });
   if (!set) return;

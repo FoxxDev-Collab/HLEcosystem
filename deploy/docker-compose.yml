@@ -21,6 +21,17 @@ x-nextjs-app: &nextjs-app
     AUTH_URL: ${AUTH_URL:-http://localhost:8080}
     AUTH_DOMAIN: ${AUTH_DOMAIN:-}
     SECURE_COOKIES: ${SECURE_COOKIES:-true}
+  healthcheck:
+    test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1"]
+    interval: 30s
+    timeout: 5s
+    retries: 3
+    start_period: 20s
+  logging:
+    driver: "json-file"
+    options:
+      max-size: "100m"
+      max-file: "10"
   deploy:
     resources:
       limits:
@@ -45,7 +56,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - postgres-data:/var/lib/postgresql/data
-      - ./init-schemas.sql:/docker-entrypoint-initdb.d/01-init-schemas.sql:ro
+      - ./init-schemas.sql:/docker-entrypoint-initdb.d/01-init-schemas.sql:ro,z
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d foxxlab"]
       interval: 10s
@@ -95,6 +106,8 @@ services:
       <<: *nextjs-env
       DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/foxxlab?schema=family_finance"
       APP_URL: ${FINANCE_URL:-http://localhost:8082}
+      CLAUDE_API_URL: "http://hle-claude-api:3000"
+      CLAUDE_API_SERVICE_SECRET: ${CLAUDE_API_SERVICE_SECRET}
 
   # Family Health — Health profiles, appointments, medications
   hle-family-health:
@@ -139,6 +152,8 @@ services:
       APP_URL: ${FILES_URL:-http://localhost:8085}
       UPLOAD_DIR: "/app/uploads"
       MAX_FILE_SIZE_MB: "500"
+      CLAUDE_API_URL: "http://hle-claude-api:3000"
+      CLAUDE_API_SERVICE_SECRET: ${CLAUDE_API_SERVICE_SECRET}
 
   # Meal Prep — Meal planning and grocery lists
   hle-meal-prep:
@@ -163,6 +178,20 @@ services:
       <<: *nextjs-env
       DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/foxxlab?schema=family_wiki"
       APP_URL: ${WIKI_URL:-http://localhost:8087}
+
+  # Claude API Gateway — Centralized AI service for ecosystem apps
+  hle-claude-api:
+    <<: *nextjs-app
+    image: ghcr.io/foxxdev-collab/hle-claude-api:latest
+    container_name: foxxlab-claude-api
+    ports:
+      - "${CLAUDE_API_PORT:-8088}:3000"
+    environment:
+      <<: *nextjs-env
+      DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/foxxlab?schema=claude_api"
+      APP_URL: ${CLAUDE_API_URL:-http://localhost:8088}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      CLAUDE_API_SERVICE_SECRET: ${CLAUDE_API_SERVICE_SECRET}
 
 networks:
   hle-net:

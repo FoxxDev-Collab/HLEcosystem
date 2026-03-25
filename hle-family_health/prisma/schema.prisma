@@ -106,17 +106,18 @@ enum ExpenseCategory {
 // ============================================================================
 
 model FamilyMember {
-  id           String    @id @default(cuid())
-  householdId  String
-  linkedUserId String?
-  firstName    String
-  lastName     String
-  dateOfBirth  DateTime? @db.Date
-  relationship String?
-  gender       String?
-  isActive     Boolean   @default(true)
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  id                String    @id @default(cuid())
+  householdId       String
+  familyhubMemberId String?
+  linkedUserId      String?
+  firstName         String
+  lastName          String
+  dateOfBirth       DateTime? @db.Date
+  relationship      String?
+  gender            String?
+  isActive          Boolean   @default(true)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
   healthProfile     HealthProfile?
   appointments      Appointment[]
@@ -128,7 +129,11 @@ model FamilyMember {
   visitSummaries    VisitSummary[]
   workouts          Workout[]
 
+  @@unique([householdId, familyhubMemberId])
   @@unique([householdId, linkedUserId])
+  @@index([householdId])
+  @@index([linkedUserId])
+  @@index([familyhubMemberId])
 }
 
 model HealthProfile {
@@ -173,6 +178,8 @@ model Appointment {
   familyMember FamilyMember  @relation(fields: [familyMemberId], references: [id], onDelete: Cascade)
   provider     Provider?     @relation(fields: [providerId], references: [id], onDelete: SetNull)
   visitSummary VisitSummary?
+
+  @@index([familyMemberId])
 }
 
 // ============================================================================
@@ -203,6 +210,8 @@ model Medication {
   updatedAt        DateTime  @updatedAt
 
   familyMember FamilyMember @relation(fields: [familyMemberId], references: [id], onDelete: Cascade)
+
+  @@index([familyMemberId])
 }
 
 // ============================================================================
@@ -223,6 +232,8 @@ model Vaccination {
   updatedAt         DateTime @updatedAt
 
   familyMember FamilyMember @relation(fields: [familyMemberId], references: [id], onDelete: Cascade)
+
+  @@index([familyMemberId])
 }
 
 // ============================================================================
@@ -243,6 +254,8 @@ model EmergencyContact {
   updatedAt      DateTime @updatedAt
 
   familyMember FamilyMember @relation(fields: [familyMemberId], references: [id], onDelete: Cascade)
+
+  @@index([familyMemberId])
 }
 
 // ============================================================================
@@ -270,6 +283,8 @@ model Insurance {
   updatedAt        DateTime      @updatedAt
 
   familyMember FamilyMember @relation(fields: [familyMemberId], references: [id], onDelete: Cascade)
+
+  @@index([familyMemberId])
 }
 
 // ============================================================================
@@ -296,6 +311,8 @@ model Provider {
 
   appointments Appointment[]
   visits       VisitSummary[]
+
+  @@index([householdId])
 }
 
 // ============================================================================
@@ -317,6 +334,8 @@ model MedicalExpense {
   updatedAt              DateTime        @updatedAt
 
   familyMember FamilyMember @relation(fields: [familyMemberId], references: [id], onDelete: Cascade)
+
+  @@index([familyMemberId])
 }
 
 // ============================================================================
@@ -349,6 +368,8 @@ model VisitSummary {
   appointment  Appointment?  @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
   familyMember FamilyMember  @relation(fields: [familyMemberId], references: [id], onDelete: Cascade)
   provider     Provider?     @relation(fields: [providerId], references: [id], onDelete: SetNull)
+
+  @@index([familyMemberId])
 }
 
 // ============================================================================
@@ -367,6 +388,8 @@ model Workout {
 
   familyMember FamilyMember      @relation(fields: [familyMemberId], references: [id], onDelete: Cascade)
   exercises    WorkoutExercise[]
+
+  @@index([familyMemberId])
 }
 
 model WorkoutExercise {
@@ -379,6 +402,8 @@ model WorkoutExercise {
 
   workout Workout       @relation(fields: [workoutId], references: [id], onDelete: Cascade)
   sets    ExerciseSet[]
+
+  @@index([workoutId])
 }
 
 model ExerciseSet {
@@ -393,4 +418,6 @@ model ExerciseSet {
   rpe               Decimal? @db.Decimal(3, 1)
 
   workoutExercise WorkoutExercise @relation(fields: [workoutExerciseId], references: [id], onDelete: Cascade)
+
+  @@index([workoutExerciseId])
 }

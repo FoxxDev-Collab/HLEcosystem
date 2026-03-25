@@ -22,6 +22,7 @@ import {
   Download,
   Star,
   Trash2,
+  Play,
 } from "lucide-react";
 import type { SerializedFile, SerializedFolder } from "@/hooks/use-files";
 
@@ -36,8 +37,16 @@ type FileGridProps = {
   onToggleFolderSelection?: (id: string) => void;
 };
 
-const CARD_HEIGHT = 148; // approximate card height in px
-const GAP = 12; // gap-3 = 12px
+const CARD_HEIGHT = 180;
+const GAP = 8;
+
+function isImageMime(mimeType: string): boolean {
+  return mimeType.startsWith("image/");
+}
+
+function isVideoMime(mimeType: string): boolean {
+  return mimeType.startsWith("video/");
+}
 
 async function callAction(actionName: string, data: Record<string, string>) {
   const formData = new FormData();
@@ -60,7 +69,10 @@ export function FileGrid({
   onToggleFolderSelection,
 }: FileGridProps) {
   const hasSelection = onToggleFileSelection !== undefined;
-  const allItems = [...folders.map((f) => ({ type: "folder" as const, ...f })), ...files.map((f) => ({ type: "file" as const, ...f }))];
+  const allItems = [
+    ...folders.map((f) => ({ type: "folder" as const, ...f })),
+    ...files.map((f) => ({ type: "file" as const, ...f })),
+  ];
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [moveTarget, setMoveTarget] = useState<{
@@ -69,7 +81,6 @@ export function FileGrid({
     name: string;
   } | null>(null);
 
-  // Measure container width to determine columns
   const scrollRef = useRef<HTMLDivElement>(null);
   const [columns, setColumns] = useState(6);
 
@@ -79,7 +90,6 @@ export function FileGrid({
 
     const observer = new ResizeObserver((entries) => {
       const width = entries[0]?.contentRect.width ?? 0;
-      // Match grid breakpoints: grid-cols-2 sm:3 md:4 lg:5 xl:6
       if (width >= 1280) setColumns(6);
       else if (width >= 1024) setColumns(5);
       else if (width >= 768) setColumns(4);
@@ -185,8 +195,9 @@ export function FileGrid({
       <ContextMenuTrigger asChild>
         <Link
           href={`${baseUrl}?folderId=${folder.id}`}
-          draggable
+          draggable={!folder.isSystem}
           onDragStart={(e) => {
+            if (folder.isSystem) { e.preventDefault(); return; }
             e.dataTransfer.setData("application/x-folder-id", folder.id);
             e.dataTransfer.effectAllowed = "move";
           }}
@@ -198,15 +209,23 @@ export function FileGrid({
           onDragLeave={(e) => {
             e.currentTarget.classList.remove("ring-2", "ring-primary");
           }}
-          className={`group relative flex flex-col items-center gap-2 rounded-lg border p-4 hover:bg-accent/50 transition-all cursor-grab active:cursor-grabbing ${
-            selectedFolderIds.includes(folder.id) ? "ring-2 ring-primary bg-primary/5" : ""
+          className={`group relative flex flex-col items-center justify-center gap-2 rounded-xl border p-4 hover:bg-accent/50 transition-all cursor-grab active:cursor-grabbing h-full ${
+            selectedFolderIds.includes(folder.id)
+              ? "ring-2 ring-primary bg-primary/5"
+              : ""
           }`}
         >
           {hasSelection && (
             <div
-              className="absolute top-2 left-2 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
-              style={selectedFolderIds.includes(folder.id) ? { opacity: 1 } : undefined}
-              onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggleFolderSelection?.(folder.id); }}
+              className="absolute top-2.5 left-2.5 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
+              style={
+                selectedFolderIds.includes(folder.id) ? { opacity: 1 } : undefined
+              }
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onToggleFolderSelection?.(folder.id);
+              }}
             >
               <Checkbox
                 checked={selectedFolderIds.includes(folder.id)}
@@ -223,128 +242,182 @@ export function FileGrid({
             {folder.name}
           </span>
           <span className="text-xs text-muted-foreground">
-            {folder._count.files} files
+            {folder._count.files} file{folder._count.files !== 1 ? "s" : ""}
           </span>
         </Link>
       </ContextMenuTrigger>
       <ContextMenuContent>
-        <ContextMenuItem
-          onClick={() =>
-            setMoveTarget({ id: folder.id, type: "folder", name: folder.name })
-          }
-        >
-          <FolderInput className="size-4 mr-2" />
-          Move to...
-        </ContextMenuItem>
-        <ContextMenuSeparator />
-        <ContextMenuItem
-          className="text-destructive"
-          onClick={() => handleDeleteFolder(folder.id)}
-        >
-          <Trash2 className="size-4 mr-2" />
-          Delete
-        </ContextMenuItem>
+        {!folder.isSystem && (
+          <>
+            <ContextMenuItem
+              onClick={() =>
+                setMoveTarget({ id: folder.id, type: "folder", name: folder.name })
+              }
+            >
+              <FolderInput className="size-4 mr-2" />
+              Move to...
+            </ContextMenuItem>
+            <ContextMenuSeparator />
+            <ContextMenuItem
+              className="text-destructive"
+              onClick={() => handleDeleteFolder(folder.id)}
+            >
+              <Trash2 className="size-4 mr-2" />
+              Delete
+            </ContextMenuItem>
+          </>
+        )}
       </ContextMenuContent>
     </ContextMenu>
   );
 
-  const renderFileCard = (file: SerializedFile) => (
-    <ContextMenu key={file.id}>
-      <ContextMenuTrigger asChild>
-        <Link
-          href={`${baseUrl}/${file.id}`}
-          draggable
-          onDragStart={(e) => {
-            e.dataTransfer.setData("application/x-file-id", file.id);
-            e.dataTransfer.effectAllowed = "move";
-          }}
-          className={`group relative flex flex-col items-center gap-2 rounded-lg border p-4 hover:bg-accent/50 transition-all cursor-grab active:cursor-grabbing ${
-            selectedFileIds.includes(file.id) ? "ring-2 ring-primary bg-primary/5" : ""
-          }`}
-        >
-          {hasSelection && (
-            <div
-              className="absolute top-2 left-2 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
-              style={selectedFileIds.includes(file.id) ? { opacity: 1 } : undefined}
-              onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggleFileSelection?.(file.id); }}
-            >
-              <Checkbox
-                checked={selectedFileIds.includes(file.id)}
-                aria-label={`Select ${file.name}`}
-              />
-            </div>
-          )}
-          <FileIcon mimeType={file.mimeType} className="size-10" />
-          <span className="text-sm font-medium text-center truncate w-full">
-            {file.name}
-          </span>
-          <div className="flex items-center gap-1">
-            <Badge variant="secondary" className="text-xs">
-              {formatMimeType(file.mimeType)}
-            </Badge>
-            <span className="text-xs text-muted-foreground">
-              {formatFileSize(BigInt(file.size))}
-            </span>
-          </div>
-          {file.tags && file.tags.length > 0 && (
-            <div className="flex flex-wrap justify-center gap-0.5 mt-0.5">
-              {file.tags.slice(0, 3).map((tag) => (
-                <div
-                  key={tag.id}
-                  className="size-1.5 rounded-full"
-                  style={{ backgroundColor: tag.color || "#6b7280" }}
-                  title={tag.name}
+  const renderFileCard = (file: SerializedFile) => {
+    const isImage = isImageMime(file.mimeType);
+    const isVideo = isVideoMime(file.mimeType);
+    const hasThumb = isImage || isVideo;
+
+    return (
+      <ContextMenu key={file.id}>
+        <ContextMenuTrigger asChild>
+          <Link
+            href={`${baseUrl}/${file.id}`}
+            draggable
+            onDragStart={(e) => {
+              e.dataTransfer.setData("application/x-file-id", file.id);
+              e.dataTransfer.effectAllowed = "move";
+            }}
+            className={`group relative flex flex-col rounded-xl border overflow-hidden hover:shadow-md transition-all cursor-grab active:cursor-grabbing h-full ${
+              selectedFileIds.includes(file.id)
+                ? "ring-2 ring-primary bg-primary/5"
+                : ""
+            }`}
+          >
+            {hasSelection && (
+              <div
+                className="absolute top-2.5 left-2.5 z-10 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
+                style={
+                  selectedFileIds.includes(file.id) ? { opacity: 1 } : undefined
+                }
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onToggleFileSelection?.(file.id);
+                }}
+              >
+                <Checkbox
+                  checked={selectedFileIds.includes(file.id)}
+                  aria-label={`Select ${file.name}`}
+                  className={hasThumb ? "border-white/80 data-[state=checked]:bg-primary data-[state=checked]:border-primary" : ""}
                 />
-              ))}
-              {file.tags.length > 3 && (
-                <span className="text-[9px] text-muted-foreground">
-                  +{file.tags.length - 3}
+              </div>
+            )}
+
+            {/* Thumbnail area */}
+            {hasThumb ? (
+              <div className="relative aspect-[4/3] bg-muted overflow-hidden">
+                {isVideo ? (
+                  <>
+                    <video
+                      src={`/api/files/serve/${file.id}`}
+                      muted
+                      preload="metadata"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="flex items-center justify-center size-8 rounded-full bg-black/50 text-white">
+                        <Play className="size-4 ml-0.5" fill="currentColor" />
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img
+                    src={`/api/files/thumbnail/${file.id}`}
+                    alt={file.name}
+                    loading="lazy"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  />
+                )}
+                {/* Gradient overlay for tags */}
+                {file.tags && file.tags.length > 0 && (
+                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/40 to-transparent p-2 pt-4">
+                    <div className="flex flex-wrap gap-0.5">
+                      {file.tags.slice(0, 3).map((tag) => (
+                        <div
+                          key={tag.id}
+                          className="size-1.5 rounded-full"
+                          style={{ backgroundColor: tag.color || "#fff" }}
+                          title={tag.name}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="flex items-center justify-center aspect-[4/3] bg-muted/40">
+                <FileIcon mimeType={file.mimeType} className="size-10 opacity-60" />
+              </div>
+            )}
+
+            {/* File info */}
+            <div className="flex-1 flex flex-col justify-center p-3 min-w-0">
+              <span className="text-xs font-medium truncate leading-tight">
+                {file.name}
+              </span>
+              <div className="flex items-center gap-1.5 mt-1">
+                <span className="text-[10px] text-muted-foreground">
+                  {formatMimeType(file.mimeType)}
                 </span>
-              )}
+                <span className="text-[10px] text-muted-foreground/50">&middot;</span>
+                <span className="text-[10px] text-muted-foreground">
+                  {formatFileSize(BigInt(file.size))}
+                </span>
+              </div>
             </div>
-          )}
-        </Link>
-      </ContextMenuTrigger>
-      <ContextMenuContent>
-        <ContextMenuItem
-          onClick={() =>
-            setMoveTarget({ id: file.id, type: "file", name: file.name })
-          }
-        >
-          <FolderInput className="size-4 mr-2" />
-          Move to...
-        </ContextMenuItem>
-        <ContextMenuItem onClick={() => handleCopyFile(file.id)}>
-          <Copy className="size-4 mr-2" />
-          Make a copy
-        </ContextMenuItem>
-        <ContextMenuItem onClick={() => handleFavorite(file.id)}>
-          <Star className="size-4 mr-2" />
-          Favorite
-        </ContextMenuItem>
-        <ContextMenuItem asChild>
-          <a href={`/api/files/download/${file.id}`}>
-            <Download className="size-4 mr-2" />
-            Download
-          </a>
-        </ContextMenuItem>
-        <ContextMenuSeparator />
-        <ContextMenuItem
-          className="text-destructive"
-          onClick={() => handleDeleteFile(file.id)}
-        >
-          <Trash2 className="size-4 mr-2" />
-          Delete
-        </ContextMenuItem>
-      </ContextMenuContent>
-    </ContextMenu>
-  );
+          </Link>
+        </ContextMenuTrigger>
+        <ContextMenuContent>
+          <ContextMenuItem
+            onClick={() =>
+              setMoveTarget({ id: file.id, type: "file", name: file.name })
+            }
+          >
+            <FolderInput className="size-4 mr-2" />
+            Move to...
+          </ContextMenuItem>
+          <ContextMenuItem onClick={() => handleCopyFile(file.id)}>
+            <Copy className="size-4 mr-2" />
+            Make a copy
+          </ContextMenuItem>
+          <ContextMenuItem onClick={() => handleFavorite(file.id)}>
+            <Star className="size-4 mr-2" />
+            Favorite
+          </ContextMenuItem>
+          <ContextMenuItem asChild>
+            <a href={`/api/files/download/${file.id}`}>
+              <Download className="size-4 mr-2" />
+              Download
+            </a>
+          </ContextMenuItem>
+          <ContextMenuSeparator />
+          <ContextMenuItem
+            className="text-destructive"
+            onClick={() => handleDeleteFile(file.id)}
+          >
+            <Trash2 className="size-4 mr-2" />
+            Delete
+          </ContextMenuItem>
+        </ContextMenuContent>
+      </ContextMenu>
+    );
+  };
 
   return (
     <>
       <div
         ref={scrollRef}
-        className={`h-[calc(100vh-280px)] overflow-auto ${
+        className={`h-[calc(100vh-280px)] overflow-auto fs-scroll ${
           isPending ? "opacity-60 pointer-events-none" : ""
         }`}
       >
@@ -372,8 +445,10 @@ export function FileGrid({
                 }}
               >
                 <div
-                  className="grid gap-3"
-                  style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
+                  className="grid gap-2"
+                  style={{
+                    gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
+                  }}
                 >
                   {rowItems.map((item) =>
                     item.type === "folder"

@@ -4,13 +4,18 @@ import { getCurrentHouseholdId } from "@/lib/household";
 import prisma from "@/lib/prisma";
 import { getUsersByIds } from "@/lib/users";
 import { formatDateRelative } from "@/lib/format";
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, FileText, Lock, Users, Globe, Share2, Tag } from "lucide-react";
+import { Search, FileText, Lock, Users, Globe, Share2, Tag, ChevronRight } from "lucide-react";
 
 const ICONS: Record<string, typeof Lock> = { PRIVATE: Lock, HOUSEHOLD: Users, SHARED: Share2, PUBLIC: Globe };
+const COLORS: Record<string, string> = {
+  PRIVATE: "bg-muted text-muted-foreground",
+  HOUSEHOLD: "bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400",
+  SHARED: "bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400",
+  PUBLIC: "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400",
+};
 
 type Result = { id: string; title: string; visibility: string; updatedAt: Date; updatedBy: string; contentText: string };
 
@@ -23,7 +28,6 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
   let results: Result[] = [];
 
   if (tag && tag.trim().length > 0) {
-    // Tag-based search
     results = await prisma.$queryRaw<Result[]>`
       SELECT p."id", p."title", p."visibility", p."updatedAt", p."updatedBy", LEFT(p."contentText", 200) as "contentText"
       FROM family_wiki."WikiPage" p
@@ -36,7 +40,6 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
       LIMIT 50
     `;
   } else if (q && q.trim().length > 0) {
-    // Full-text search
     const query = q.trim();
     results = await prisma.$queryRaw<Result[]>`
       SELECT p."id", p."title", p."visibility", p."updatedAt", p."updatedBy", LEFT(p."contentText", 200) as "contentText"
@@ -53,7 +56,6 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
 
   const userMap = await getUsersByIds([...new Set(results.map((r) => r.updatedBy))] as string[]);
 
-  // Popular tags for quick filtering
   const popularTags = await prisma.$queryRaw<{ tag: string; count: bigint }[]>`
     SELECT pt."tag", COUNT(*) as count
     FROM family_wiki."PageTag" pt
@@ -68,25 +70,25 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
   `;
 
   return (
-    <div className="max-w-3xl space-y-6">
-      <h1 className="text-2xl font-bold">Search Wiki</h1>
+    <div className="max-w-[800px] space-y-6">
+      <h1 className="wiki-title text-3xl text-foreground">Search</h1>
+
       <form className="flex gap-2">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-          <Input name="q" defaultValue={q || ""} placeholder="Search pages..." className="pl-9" autoFocus />
+          <Input name="q" defaultValue={q || ""} placeholder="Search pages..." className="pl-9 h-10" autoFocus />
         </div>
-        <Button type="submit">Search</Button>
+        <Button type="submit" className="h-10">Search</Button>
       </form>
 
-      {/* Popular tags */}
       {popularTags.length > 0 && (
         <div className="flex items-center gap-2 flex-wrap">
-          <Tag className="size-4 text-muted-foreground" />
+          <Tag className="size-3.5 text-muted-foreground" />
           {popularTags.map((t) => (
             <Link key={t.tag} href={`/wiki/search?tag=${encodeURIComponent(t.tag)}`}>
               <Badge
                 variant={tag === t.tag ? "default" : "secondary"}
-                className="cursor-pointer text-xs"
+                className="cursor-pointer text-[11px]"
               >
                 {t.tag} ({Number(t.count)})
               </Badge>
@@ -94,7 +96,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
           ))}
           {tag && (
             <Link href="/wiki/search">
-              <Badge variant="outline" className="cursor-pointer text-xs">Clear filter</Badge>
+              <Badge variant="outline" className="cursor-pointer text-[11px]">Clear</Badge>
             </Link>
           )}
         </div>
@@ -102,27 +104,38 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
 
       {q && <p className="text-sm text-muted-foreground">{results.length} result{results.length !== 1 ? "s" : ""} for &ldquo;{q}&rdquo;</p>}
       {tag && <p className="text-sm text-muted-foreground">{results.length} page{results.length !== 1 ? "s" : ""} tagged &ldquo;{tag}&rdquo;</p>}
-      <div className="space-y-3">
+
+      <div className="space-y-2">
         {results.map((page) => {
           const Icon = ICONS[page.visibility] || Globe;
+          const color = COLORS[page.visibility] || COLORS.PUBLIC;
           return (
             <Link key={page.id} href={`/wiki/${page.id}`}>
-              <Card className="hover:bg-muted/50 transition-colors cursor-pointer">
-                <CardContent className="pt-6 space-y-1">
-                  <div className="flex items-center gap-2">
-                    <FileText className="size-4 text-muted-foreground shrink-0" />
-                    <p className="font-medium">{page.title}</p>
-                    <Badge variant="outline" className="text-xs ml-auto"><Icon className="size-3 mr-1" />{page.visibility}</Badge>
-                  </div>
-                  {page.contentText && <p className="text-sm text-muted-foreground line-clamp-2 pl-6">{page.contentText}</p>}
-                  <p className="text-xs text-muted-foreground pl-6">{userMap.get(page.updatedBy)?.name ?? "Unknown"} &middot; {formatDateRelative(page.updatedAt)}</p>
-                </CardContent>
-              </Card>
+              <div className="flex items-center gap-4 p-3 rounded-lg border border-border/40 bg-card hover:border-primary/30 hover:shadow-sm transition-all cursor-pointer group">
+                <FileText className="size-4 shrink-0 text-muted-foreground group-hover:text-primary transition-colors" />
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-sm">{page.title}</p>
+                  {page.contentText && (
+                    <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">{page.contentText}</p>
+                  )}
+                </div>
+                <Badge className={`${color} text-[10px] font-medium border-0 shrink-0`}><Icon className="size-2.5 mr-1" />{page.visibility}</Badge>
+                <div className="text-[11px] text-muted-foreground text-right shrink-0">
+                  <div>{userMap.get(page.updatedBy)?.name ?? "Unknown"}</div>
+                  <div>{formatDateRelative(page.updatedAt)}</div>
+                </div>
+                <ChevronRight className="size-3.5 text-muted-foreground/30 group-hover:text-muted-foreground transition-colors shrink-0" />
+              </div>
             </Link>
           );
         })}
       </div>
-      {(q || tag) && results.length === 0 && <p className="text-sm text-muted-foreground text-center py-8">No pages match your search.</p>}
+      {(q || tag) && results.length === 0 && (
+        <div className="text-center py-12">
+          <Search className="size-8 text-muted-foreground/40 mx-auto mb-2" />
+          <p className="text-sm text-muted-foreground">No pages match your search.</p>
+        </div>
+      )}
     </div>
   );
 }

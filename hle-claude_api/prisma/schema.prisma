@@ -1,0 +1,67 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Users are managed by Family Manager (family_manager schema).
+// This app reads users via cross-schema queries in lib/users.ts.
+// Only ADMIN role users can access this app.
+
+// ============================================================================
+// API KEY MANAGEMENT
+// ============================================================================
+
+model ApiKey {
+  id         String    @id @default(cuid())
+  name       String // "Primary", "Backup"
+  keyPrefix  String // First 8 chars for display: "sk-ant-a..."
+  keyHash    String // bcrypt hash of the full key
+  isActive   Boolean   @default(true)
+  lastUsedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  usageLogs UsageLog[]
+}
+
+// ============================================================================
+// USAGE LOGGING
+// ============================================================================
+
+model UsageLog {
+  id               String   @id @default(cuid())
+  apiKeyId         String?
+  requestingApp    String // "family_finance", "file_server", etc.
+  endpoint         String // "/api/v1/receipt-parse", etc.
+  model            String // "claude-sonnet-4-20250514", etc.
+  inputTokens      Int
+  outputTokens     Int
+  totalTokens      Int
+  estimatedCostUsd Decimal  @db.Decimal(10, 6)
+  durationMs       Int
+  statusCode       Int
+  errorMessage     String?
+  metadata         String? // JSON: request-specific context
+  createdAt        DateTime @default(now())
+
+  apiKey ApiKey? @relation(fields: [apiKeyId], references: [id])
+
+  @@index([requestingApp, createdAt])
+  @@index([createdAt])
+  @@index([apiKeyId])
+}
+
+// ============================================================================
+// SERVICE CONFIGURATION
+// ============================================================================
+
+model ServiceConfig {
+  id        String   @id @default(cuid())
+  key       String   @unique // "service_enabled", "rate_limit_per_minute", "default_model", "monthly_cost_limit"
+  value     String
+  updatedAt DateTime @updatedAt
+}

@@ -117,10 +117,51 @@ model FamilyMember {
   giftIdeas      GiftIdea[]
   relationsFrom  FamilyRelation[] @relation("relationsFrom")
   relationsTo    FamilyRelation[] @relation("relationsTo")
+  addresses      Address[]
+  careerEntries  CareerEntry[]
 
   @@unique([householdId, linkedUserId])
   @@index([householdId])
   @@index([linkedUserId])
+}
+
+model Address {
+  id             String       @id @default(cuid())
+  familyMemberId String
+  label          String?
+  addressLine1   String
+  addressLine2   String?
+  city           String
+  state          String?
+  zipCode        String?
+  country        String?
+  isCurrent      Boolean      @default(true)
+  moveInDate     DateTime?    @db.Date
+  moveOutDate    DateTime?    @db.Date
+  notes          String?
+  createdAt      DateTime     @default(now())
+
+  familyMember FamilyMember @relation(fields: [familyMemberId], references: [id], onDelete: Cascade)
+
+  @@index([familyMemberId])
+}
+
+model CareerEntry {
+  id             String       @id @default(cuid())
+  familyMemberId String
+  employer       String
+  title          String?
+  department     String?
+  startDate      DateTime?    @db.Date
+  endDate        DateTime?    @db.Date
+  isCurrent      Boolean      @default(false)
+  location       String?
+  notes          String?
+  createdAt      DateTime     @default(now())
+
+  familyMember FamilyMember @relation(fields: [familyMemberId], references: [id], onDelete: Cascade)
+
+  @@index([familyMemberId])
 }
 
 model ImportantDate {
@@ -196,6 +237,50 @@ model FamilyRelation {
 
   @@unique([fromMemberId, toMemberId])
   @@index([householdId])
+}
+
+// ─── To-Do Lists ─────────────────────────────────────────
+
+enum TodoItemStatus {
+  PENDING
+  IN_PROGRESS
+  DONE
+}
+
+model TodoList {
+  id          String   @id @default(cuid())
+  householdId String
+  name        String
+  description String?
+  color       String?
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  items TodoItem[]
+
+  @@index([householdId])
+}
+
+model TodoItem {
+  id          String         @id @default(cuid())
+  listId      String
+  title       String
+  notes       String?
+  status      TodoItemStatus @default(PENDING)
+  dueDate     DateTime?      @db.Date
+  assigneeId  String?
+  sortOrder   Int            @default(0)
+  completedAt DateTime?
+  createdById String
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  list TodoList @relation(fields: [listId], references: [id], onDelete: Cascade)
+
+  @@index([listId])
+  @@index([assigneeId])
+  @@index([dueDate])
 }
 
 // ─── Media Requests (cross-household) ────────────────────

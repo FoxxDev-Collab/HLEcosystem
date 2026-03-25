@@ -37,6 +37,8 @@ export type SerializedFolder = {
   id: string;
   name: string;
   color: string | null;
+  icon: string | null;
+  isSystem: boolean;
   _count: { files: number; subFolders: number };
   updatedAt: string;
 };
@@ -283,6 +285,8 @@ export async function GET(request: NextRequest) {
       id: f.id,
       name: f.name,
       color: f.color,
+      icon: f.icon,
+      isSystem: f.isSystem,
       _count: f._count,
       updatedAt: f.updatedAt.toISOString(),
     }));
@@ -305,6 +309,8 @@ export async function GET(request: NextRequest) {
       id: f.id,
       name: f.name,
       color: f.color,
+      icon: f.icon,
+      isSystem: f.isSystem,
       _count: f._count,
       updatedAt: f.deletedAt?.toISOString() ?? f.updatedAt.toISOString(),
     }));

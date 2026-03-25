@@ -10,8 +10,15 @@ import type { AppointmentType, AppointmentStatus } from "@prisma/client";
 export async function createAppointmentAction(formData: FormData): Promise<void> {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) redirect("/setup");
 
   const familyMemberId = formData.get("familyMemberId") as string;
+
+  // Verify familyMember belongs to household
+  const member = await prisma.familyMember.findFirst({ where: { id: familyMemberId, householdId } });
+  if (!member) return;
+
   const providerId = formData.get("providerId") as string || null;
   const date = formData.get("date") as string;
   const time = formData.get("time") as string || "09:00";
@@ -39,8 +46,18 @@ export async function createAppointmentAction(formData: FormData): Promise<void>
 }
 
 export async function updateAppointmentStatusAction(formData: FormData): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) redirect("/setup");
+
   const id = formData.get("id") as string;
   const status = formData.get("status") as AppointmentStatus;
+
+  const record = await prisma.appointment.findFirst({
+    where: { id, familyMember: { householdId } },
+  });
+  if (!record) return;
 
   await prisma.appointment.update({
     where: { id },
@@ -52,7 +69,18 @@ export async function updateAppointmentStatusAction(formData: FormData): Promise
 }
 
 export async function deleteAppointmentAction(formData: FormData): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) redirect("/setup");
+
   const id = formData.get("id") as string;
+
+  const record = await prisma.appointment.findFirst({
+    where: { id, familyMember: { householdId } },
+  });
+  if (!record) return;
+
   await prisma.appointment.delete({ where: { id } });
   revalidatePath("/appointments");
   revalidatePath("/dashboard");

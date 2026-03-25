@@ -3,16 +3,25 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
+import { getCurrentHouseholdId } from "@/lib/household";
 import prisma from "@/lib/prisma";
 import type { InsuranceType } from "@prisma/client";
 
 export async function createInsuranceAction(formData: FormData): Promise<void> {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) redirect("/setup");
+
+  const familyMemberId = formData.get("familyMemberId") as string;
+
+  // Verify familyMember belongs to household
+  const member = await prisma.familyMember.findFirst({ where: { id: familyMemberId, householdId } });
+  if (!member) return;
 
   await prisma.insurance.create({
     data: {
-      familyMemberId: formData.get("familyMemberId") as string,
+      familyMemberId,
       providerName: formData.get("providerName") as string,
       policyNumber: formData.get("policyNumber") as string,
       groupNumber: formData.get("groupNumber") as string || null,
@@ -32,14 +41,36 @@ export async function createInsuranceAction(formData: FormData): Promise<void> {
 }
 
 export async function toggleInsuranceActiveAction(formData: FormData): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) redirect("/setup");
+
   const id = formData.get("id") as string;
   const isActive = formData.get("isActive") === "true";
+
+  const record = await prisma.insurance.findFirst({
+    where: { id, familyMember: { householdId } },
+  });
+  if (!record) return;
+
   await prisma.insurance.update({ where: { id }, data: { isActive: !isActive } });
   revalidatePath("/insurance");
 }
 
 export async function deleteInsuranceAction(formData: FormData): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) redirect("/setup");
+
   const id = formData.get("id") as string;
+
+  const record = await prisma.insurance.findFirst({
+    where: { id, familyMember: { householdId } },
+  });
+  if (!record) return;
+
   await prisma.insurance.delete({ where: { id } });
   revalidatePath("/insurance");
 }

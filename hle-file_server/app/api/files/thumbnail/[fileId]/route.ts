@@ -91,7 +91,7 @@ export async function GET(
     const sharp = (await import("sharp")).default;
     const sourceBuffer = await readFileBuffer(file.storagePath);
     const thumbnail = await sharp(sourceBuffer)
-      .resize(200, 200, { fit: "cover" })
+      .resize(400, 400, { fit: "cover", withoutEnlargement: true })
       .webp({ quality: 80 })
       .toBuffer();
 

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { AppSwitcher } from "@/components/app-switcher";
 import {
   LayoutDashboard,
   Home,
@@ -154,6 +155,14 @@ export function AppSidebar({
         <NavGroup label="Vehicles" items={vehicleNav} pathname={pathname} />
         <NavGroup label="Maintenance" items={maintenanceNav} pathname={pathname} />
         <NavGroup label="Account" items={accountNav} pathname={pathname} />
+        <SidebarGroup>
+          <SidebarGroupLabel className="text-[10px] uppercase tracking-[0.08em] font-semibold text-muted-foreground/70">
+            Apps
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <AppSwitcher currentApp="HOME" />
+          </SidebarGroupContent>
+        </SidebarGroup>
       </SidebarContent>
 
       <SidebarFooter className="border-t p-4">

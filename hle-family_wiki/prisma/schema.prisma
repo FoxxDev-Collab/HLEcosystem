@@ -39,6 +39,7 @@ model WikiPage {
   pinned      Boolean        @default(false)
   archived    Boolean        @default(false)
   sortOrder   Int            @default(0)
+  wordCount   Int            @default(0)
   createdBy   String
   updatedBy   String
   createdAt   DateTime       @default(now())
@@ -49,6 +50,7 @@ model WikiPage {
   shares   PageShare[]
   comments PageComment[]
   tags     PageTag[]
+  versions PageVersion[]
 
   @@unique([ownerId, parentId, slug])
   @@index([ownerId])
@@ -98,4 +100,19 @@ model PageTag {
 
   @@unique([pageId, tag])
   @@index([tag])
+}
+
+model PageVersion {
+  id        String   @id @default(cuid())
+  pageId    String
+  version   Int
+  title     String
+  content   Json
+  editedBy  String
+  wordCount Int      @default(0)
+  createdAt DateTime @default(now())
+
+  page WikiPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@index([pageId, version])
 }

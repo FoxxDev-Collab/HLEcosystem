@@ -3,13 +3,21 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
+import { getCurrentHouseholdId } from "@/lib/household";
 import prisma from "@/lib/prisma";
 
 export async function createMedicationAction(formData: FormData): Promise<void> {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) redirect("/setup");
 
   const familyMemberId = formData.get("familyMemberId") as string;
+
+  // Verify familyMember belongs to household
+  const member = await prisma.familyMember.findFirst({ where: { id: familyMemberId, householdId } });
+  if (!member) return;
+
   const medicationName = formData.get("medicationName") as string;
   const dosage = formData.get("dosage") as string || null;
   const frequency = formData.get("frequency") as string || null;
@@ -44,8 +52,18 @@ export async function createMedicationAction(formData: FormData): Promise<void> 
 }
 
 export async function toggleMedicationActiveAction(formData: FormData): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) redirect("/setup");
+
   const id = formData.get("id") as string;
   const isActive = formData.get("isActive") === "true";
+
+  const record = await prisma.medication.findFirst({
+    where: { id, familyMember: { householdId } },
+  });
+  if (!record) return;
 
   await prisma.medication.update({
     where: { id },
@@ -57,9 +75,16 @@ export async function toggleMedicationActiveAction(formData: FormData): Promise<
 }
 
 export async function recordRefillAction(formData: FormData): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) redirect("/setup");
+
   const id = formData.get("id") as string;
 
-  const med = await prisma.medication.findUnique({ where: { id } });
+  const med = await prisma.medication.findFirst({
+    where: { id, familyMember: { householdId } },
+  });
   if (!med) return;
 
   const today = new Date();
@@ -78,7 +103,18 @@ export async function recordRefillAction(formData: FormData): Promise<void> {
 }
 
 export async function deleteMedicationAction(formData: FormData): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) redirect("/setup");
+
   const id = formData.get("id") as string;
+
+  const record = await prisma.medication.findFirst({
+    where: { id, familyMember: { householdId } },
+  });
+  if (!record) return;
+
   await prisma.medication.delete({ where: { id } });
   revalidatePath("/medications");
   revalidatePath("/dashboard");

@@ -38,6 +38,7 @@ export default async function RecurringPage() {
       where: { householdId },
       include: { account: true, category: true },
       orderBy: [{ isActive: "desc" }, { nextOccurrence: "asc" }],
+      take: 100,
     }),
     prisma.account.findMany({
       where: { householdId, isArchived: false },

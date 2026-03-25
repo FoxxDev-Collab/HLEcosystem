@@ -8,8 +8,8 @@ const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "File Server",
-  description: "Family file storage and document management",
+  title: "Files & Photos",
+  description: "Family file storage, photo library, and document management",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,

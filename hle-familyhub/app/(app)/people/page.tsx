@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
-import { UserPlus, Users, UserRoundPlus, Globe } from "lucide-react";
+import { UserPlus, Users, UserRoundPlus, Globe, ArrowRight, Star } from "lucide-react";
 import { createFamilyMemberAction, toggleActiveMemberAction, syncHouseholdMemberAction } from "./actions";
 
 const CONTACT_METHODS = ["NONE", "PHONE", "EMAIL", "TEXT"];
@@ -36,7 +36,6 @@ export default async function PeoplePage() {
   const householdId = (await getCurrentHouseholdId())!;
   const user = await getCurrentUser();
 
-  // Current household data
   const [members, householdMembers, relativeMap] = await Promise.all([
     prisma.familyMember.findMany({
       where: { householdId },
@@ -57,7 +56,6 @@ export default async function PeoplePage() {
   const linkedMembers = members.filter((m) => m.linkedUserId);
   const standaloneMembers = members.filter((m) => !m.linkedUserId);
 
-  // Discover cross-household members via relationships
   const currentRelations = await prisma.familyRelation.findMany({
     where: { householdId },
     select: { fromMemberId: true, toMemberId: true },
@@ -70,7 +68,6 @@ export default async function PeoplePage() {
     if (!currentMemberIds.has(r.toMemberId)) otherMemberIds.add(r.toMemberId);
   }
 
-  // Fetch cross-household members and group by household
   type CrossHouseholdGroup = {
     householdName: string;
     members: typeof members;
@@ -83,14 +80,12 @@ export default async function PeoplePage() {
       orderBy: { firstName: "asc" },
     });
 
-    // Group by household
     const byHousehold = new Map<string, typeof otherMembers>();
     for (const m of otherMembers) {
       if (!byHousehold.has(m.householdId)) byHousehold.set(m.householdId, []);
       byHousehold.get(m.householdId)!.push(m);
     }
 
-    // Fetch household names
     const otherHouseholdIds = [...byHousehold.keys()];
     const households = await Promise.all(otherHouseholdIds.map((id) => getHouseholdById(id)));
     for (const h of households) {
@@ -104,330 +99,329 @@ export default async function PeoplePage() {
   }
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold">People</h1>
+    <div className="space-y-6 max-w-[1200px]">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">People</h1>
+        <p className="text-muted-foreground text-sm">
+          {members.length} contact{members.length !== 1 ? "s" : ""} &middot;{" "}
+          {linkedMembers.length} household &middot; {standaloneMembers.length} other
+        </p>
+      </div>
 
-      {/* Household Members Section */}
-      <div className="space-y-4">
-        <div className="flex items-center gap-2">
-          <Users className="size-5 text-primary" />
-          <h2 className="text-lg font-semibold">Household Members</h2>
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6">
+        {/* Left column — member lists */}
+        <div className="space-y-6 min-w-0">
+          {/* Unlinked household members alert */}
+          {unlinkedHouseholdMembers.length > 0 && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-semibold text-muted-foreground">
+                  Members not yet added to People
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {unlinkedHouseholdMembers.map((hm) => {
+                    const isMe = user && hm.userId === user.id;
+                    return (
+                      <div key={hm.userId} className={`flex items-center justify-between rounded-lg border p-3 ${isMe ? "border-primary/40 bg-primary/5" : ""}`}>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <p className="text-sm font-medium truncate">{hm.displayName}</p>
+                            {isMe && <Badge variant="default" className="text-[9px]">You</Badge>}
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            {hm.familyRelationship && (
+                              <Badge variant="secondary" className="text-[10px]">
+                                {formatRelationship(hm.familyRelationship)}
+                              </Badge>
+                            )}
+                            <span className="text-[10px] text-muted-foreground truncate">{hm.userEmail}</span>
+                          </div>
+                        </div>
+                        <form action={syncHouseholdMemberAction}>
+                          <input type="hidden" name="userId" value={hm.userId} />
+                          <input type="hidden" name="displayName" value={hm.displayName} />
+                          <input type="hidden" name="familyRelationship" value={hm.familyRelationship ?? "Other"} />
+                          <Button type="submit" variant={isMe ? "default" : "outline"} size="sm" className="h-7 text-[10px] shrink-0 ml-2">
+                            <UserPlus className="size-3 mr-1" />
+                            {isMe ? "Add yourself" : "Add"}
+                          </Button>
+                        </form>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Household Members */}
+          {linkedMembers.length > 0 && (
+            <section>
+              <div className="flex items-center gap-2 mb-3">
+                <Users className="size-4 text-primary" />
+                <h2 className="text-sm font-semibold">Household Members</h2>
+                <span className="text-xs text-muted-foreground">{linkedMembers.length}</span>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {linkedMembers.map((member) => {
+                  const isMe = user && member.linkedUserId === user.id;
+                  return (
+                    <Link key={member.id} href={`/people/${member.id}`}>
+                      <Card className={`person-card cursor-pointer h-full ${!member.isActive ? "opacity-60" : ""} ${isMe ? "ring-1 ring-primary/30" : ""}`}>
+                        <CardContent className="p-4">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-1.5">
+                                <p className="text-sm font-semibold truncate">
+                                  {member.firstName} {member.lastName}
+                                </p>
+                                {isMe && <Badge className="text-[9px] bg-primary/15 text-primary border-0">You</Badge>}
+                              </div>
+                              {member.birthday && (
+                                <p className="text-[10px] text-muted-foreground mt-0.5">
+                                  {formatBirthday(member.birthday)}
+                                  {formatAge(member.birthday) && ` (${formatAge(member.birthday)})`}
+                                </p>
+                              )}
+                              {(member.phone || member.email) && (
+                                <p className="text-[10px] text-muted-foreground truncate mt-0.5">
+                                  {member.phone || member.email}
+                                </p>
+                              )}
+                            </div>
+                            <div className="flex flex-col items-end gap-1 shrink-0">
+                              <Badge variant="default" className="text-[9px]">Household</Badge>
+                              {(() => {
+                                const rel = getDisplayRelationship(member.id, member.relationship, relativeMap);
+                                return rel ? (
+                                  <Badge variant="outline" className="text-[9px]">{formatRelationship(rel)}</Badge>
+                                ) : null;
+                              })()}
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </Link>
+                  );
+                })}
+              </div>
+            </section>
+          )}
+
+          {unlinkedHouseholdMembers.length === 0 && linkedMembers.length === 0 && (
+            <p className="text-sm text-muted-foreground py-2">
+              No household members.{" "}
+              <a href={`${process.env.AUTH_URL || "http://localhost:8080"}/households`} className="text-primary hover:underline">
+                Add members in Family Manager
+              </a>.
+            </p>
+          )}
+
+          {/* Standalone Contacts */}
+          {standaloneMembers.length > 0 && (
+            <section>
+              <div className="flex items-center gap-2 mb-3">
+                <UserRoundPlus className="size-4 text-primary" />
+                <h2 className="text-sm font-semibold">Other Contacts</h2>
+                <span className="text-xs text-muted-foreground">{standaloneMembers.length}</span>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {standaloneMembers.map((member) => (
+                  <Link key={member.id} href={`/people/${member.id}`}>
+                    <Card className={`person-card cursor-pointer h-full ${!member.isActive ? "opacity-60" : ""}`}>
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold truncate">
+                              {member.firstName} {member.lastName}
+                            </p>
+                            {member.birthday && (
+                              <p className="text-[10px] text-muted-foreground mt-0.5">
+                                {formatBirthday(member.birthday)}
+                                {formatAge(member.birthday) && ` (${formatAge(member.birthday)})`}
+                              </p>
+                            )}
+                            {(member.phone || member.email) && (
+                              <p className="text-[10px] text-muted-foreground truncate mt-0.5">
+                                {member.phone || member.email}
+                              </p>
+                            )}
+                            {member.city && (
+                              <p className="text-[10px] text-muted-foreground mt-0.5">
+                                {[member.city, member.state].filter(Boolean).join(", ")}
+                              </p>
+                            )}
+                          </div>
+                          <div className="shrink-0">
+                            {(() => {
+                              const rel = getDisplayRelationship(member.id, member.relationship, relativeMap);
+                              return rel ? (
+                                <Badge variant="outline" className="text-[9px]">{formatRelationship(rel)}</Badge>
+                              ) : null;
+                            })()}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Cross-Household Family */}
+          {crossHouseholdGroups.length > 0 && (
+            <section>
+              <div className="flex items-center gap-2 mb-3">
+                <Globe className="size-4 text-primary" />
+                <h2 className="text-sm font-semibold">Family from Other Households</h2>
+              </div>
+              <p className="text-xs text-muted-foreground mb-3">
+                Connected via your family tree.{" "}
+                <Link href="/family-tree/manage" className="text-primary hover:underline">
+                  Manage connections
+                </Link>
+              </p>
+              {crossHouseholdGroups.map((group) => (
+                <div key={group.householdName} className="space-y-2 mb-4">
+                  <Badge variant="secondary" className="text-purple-700 dark:text-purple-400 text-[10px]">
+                    {group.householdName}
+                  </Badge>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {group.members.map((member) => (
+                      <Link key={member.id} href={`/people/${member.id}`}>
+                        <Card className="person-card cursor-pointer h-full">
+                          <CardContent className="p-4">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="min-w-0">
+                                <p className="text-sm font-semibold truncate">
+                                  {member.firstName} {member.lastName}
+                                </p>
+                                {member.birthday && (
+                                  <p className="text-[10px] text-muted-foreground mt-0.5">
+                                    {formatBirthday(member.birthday)}
+                                    {formatAge(member.birthday) && ` (${formatAge(member.birthday)})`}
+                                  </p>
+                                )}
+                              </div>
+                              {(() => {
+                                const rel = relativeMap.get(member.id);
+                                return rel ? (
+                                  <Badge variant="outline" className="text-[9px]">{formatRelationship(rel)}</Badge>
+                                ) : null;
+                              })()}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </section>
+          )}
         </div>
 
-        {unlinkedHouseholdMembers.length > 0 && (
+        {/* Right column — add person form */}
+        <div className="space-y-6">
           <Card>
-            <CardHeader>
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Members not yet added to People
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                <UserRoundPlus className="size-4" />
+                Add a Person
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {unlinkedHouseholdMembers.map((hm) => (
-                  <div key={hm.userId} className="flex items-center justify-between rounded-lg border p-3">
-                    <div>
-                      <p className="text-sm font-medium">{hm.displayName}</p>
-                      <div className="flex items-center gap-1.5">
-                        {hm.familyRelationship && (
-                          <Badge variant="secondary" className="text-xs">
-                            {formatRelationship(hm.familyRelationship)}
-                          </Badge>
-                        )}
-                        <span className="text-xs text-muted-foreground">{hm.userEmail}</span>
-                      </div>
-                    </div>
-                    <form action={syncHouseholdMemberAction}>
-                      <input type="hidden" name="userId" value={hm.userId} />
-                      <input type="hidden" name="displayName" value={hm.displayName} />
-                      <input type="hidden" name="familyRelationship" value={hm.familyRelationship ?? "Other"} />
-                      <Button type="submit" variant="outline" size="sm">
-                        <UserPlus className="size-3.5 mr-1" />
-                        Add Details
-                      </Button>
-                    </form>
+              <form action={createFamilyMemberAction} className="space-y-3">
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1">
+                    <Label htmlFor="firstName" className="text-xs">First Name *</Label>
+                    <Input id="firstName" name="firstName" required className="h-8 text-sm" />
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {linkedMembers.length > 0 && (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {linkedMembers.map((member) => (
-              <Card key={member.id} className={!member.isActive ? "opacity-60" : ""}>
-                <CardContent className="pt-6">
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Link href={`/people/${member.id}`} className="font-semibold hover:underline">
-                        {member.firstName} {member.lastName}
-                      </Link>
-                      <div className="flex items-center gap-1">
-                        <Badge variant="default" className="text-xs">Household</Badge>
-                        {(() => {
-                          const rel = getDisplayRelationship(member.id, member.relationship, relativeMap);
-                          return rel ? (
-                            <Badge variant="outline">{formatRelationship(rel)}</Badge>
-                          ) : (
-                            <Badge variant="secondary" className="text-xs">
-                              <Link href="/family-tree/manage" className="hover:underline">Define relationship</Link>
-                            </Badge>
-                          );
-                        })()}
-                      </div>
-                    </div>
-                    {member.birthday && (
-                      <p className="text-sm text-muted-foreground">
-                        {formatBirthday(member.birthday)}
-                        {formatAge(member.birthday) && ` (${formatAge(member.birthday)})`}
-                      </p>
-                    )}
-                    {(member.phone || member.email) && (
-                      <p className="text-sm text-muted-foreground">
-                        {member.phone && <span>{member.phone}</span>}
-                        {member.phone && member.email && <span> | </span>}
-                        {member.email && <span>{member.email}</span>}
-                      </p>
-                    )}
-                    <div className="flex items-center gap-2 pt-2">
-                      <Button asChild variant="outline" size="sm">
-                        <Link href={`/people/${member.id}`}>Details</Link>
-                      </Button>
-                    </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="lastName" className="text-xs">Last Name *</Label>
+                    <Input id="lastName" name="lastName" required className="h-8 text-sm" />
                   </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="nickname" className="text-xs">Nickname</Label>
+                  <Input id="nickname" name="nickname" className="h-8 text-sm" />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1">
+                    <Label htmlFor="birthday" className="text-xs">Birthday</Label>
+                    <Input id="birthday" name="birthday" type="date" className="h-8 text-sm" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="anniversary" className="text-xs">Anniversary</Label>
+                    <Input id="anniversary" name="anniversary" type="date" className="h-8 text-sm" />
+                  </div>
+                </div>
 
-        {unlinkedHouseholdMembers.length === 0 && linkedMembers.length === 0 && (
-          <p className="text-sm text-muted-foreground py-2">
-            No other household members. Add members in{" "}
-            <a href="http://localhost:8080/households" className="text-primary hover:underline">
-              Family Manager
-            </a>.
-          </p>
-        )}
-      </div>
+                <Separator />
 
-      <Separator />
-
-      {/* Other Contacts Section */}
-      <div className="space-y-4">
-        <div className="flex items-center gap-2">
-          <UserRoundPlus className="size-5 text-primary" />
-          <h2 className="text-lg font-semibold">Other Contacts</h2>
-        </div>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Add a Person</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form action={createFamilyMemberAction} className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                <div className="space-y-2">
-                  <Label htmlFor="firstName">First Name *</Label>
-                  <Input id="firstName" name="firstName" required />
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1">
+                    <Label htmlFor="phone" className="text-xs">Phone</Label>
+                    <Input id="phone" name="phone" type="tel" className="h-8 text-sm" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="email" className="text-xs">Email</Label>
+                    <Input id="email" name="email" type="email" className="h-8 text-sm" />
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="lastName">Last Name *</Label>
-                  <Input id="lastName" name="lastName" required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="nickname">Nickname</Label>
-                  <Input id="nickname" name="nickname" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="birthday">Birthday</Label>
-                  <Input id="birthday" name="birthday" type="date" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="anniversary">Anniversary</Label>
-                  <Input id="anniversary" name="anniversary" type="date" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone</Label>
-                  <Input id="phone" name="phone" type="tel" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input id="email" name="email" type="email" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="preferredContactMethod">Preferred Contact</Label>
-                  <select id="preferredContactMethod" name="preferredContactMethod" className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm">
+                <div className="space-y-1">
+                  <Label htmlFor="preferredContactMethod" className="text-xs">Preferred Contact</Label>
+                  <select
+                    id="preferredContactMethod"
+                    name="preferredContactMethod"
+                    className="flex h-8 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  >
                     {CONTACT_METHODS.map((m) => (
                       <option key={m} value={m}>{m}</option>
                     ))}
                   </select>
                 </div>
-              </div>
 
-              <Separator />
+                <Separator />
 
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                <div className="space-y-2">
-                  <Label htmlFor="addressLine1">Address Line 1</Label>
-                  <Input id="addressLine1" name="addressLine1" />
+                <div className="space-y-1">
+                  <Label htmlFor="addressLine1" className="text-xs">Address</Label>
+                  <Input id="addressLine1" name="addressLine1" placeholder="Line 1" className="h-8 text-sm" />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="addressLine2">Address Line 2</Label>
-                  <Input id="addressLine2" name="addressLine2" />
+                <Input name="addressLine2" placeholder="Line 2" className="h-8 text-sm" />
+                <div className="grid grid-cols-2 gap-2">
+                  <Input name="city" placeholder="City" className="h-8 text-sm" />
+                  <Input name="state" placeholder="State" className="h-8 text-sm" />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="city">City</Label>
-                  <Input id="city" name="city" />
+                <div className="grid grid-cols-2 gap-2">
+                  <Input name="zipCode" placeholder="Zip" className="h-8 text-sm" />
+                  <Input name="country" placeholder="Country" className="h-8 text-sm" />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="state">State</Label>
-                  <Input id="state" name="state" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="zipCode">Zip Code</Label>
-                  <Input id="zipCode" name="zipCode" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="country">Country</Label>
-                  <Input id="country" name="country" />
-                </div>
-              </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="notes">Notes</Label>
-                <Textarea id="notes" name="notes" rows={2} />
-              </div>
+                <Separator />
 
-              <div className="flex items-center gap-2">
-                <Checkbox id="includeInHolidayCards" name="includeInHolidayCards" />
-                <Label htmlFor="includeInHolidayCards" className="text-sm font-normal">Include in holiday card list</Label>
-              </div>
+                <div className="space-y-1">
+                  <Label htmlFor="notes" className="text-xs">Notes</Label>
+                  <Textarea id="notes" name="notes" rows={2} className="text-sm" />
+                </div>
 
-              <Button type="submit">Add Person</Button>
-            </form>
-          </CardContent>
-        </Card>
+                <div className="flex items-center gap-2">
+                  <Checkbox id="includeInHolidayCards" name="includeInHolidayCards" />
+                  <Label htmlFor="includeInHolidayCards" className="text-xs font-normal">Include in holiday card list</Label>
+                </div>
 
-        {standaloneMembers.length > 0 && (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {standaloneMembers.map((member) => (
-              <Card key={member.id} className={!member.isActive ? "opacity-60" : ""}>
-                <CardContent className="pt-6">
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Link href={`/people/${member.id}`} className="font-semibold hover:underline">
-                        {member.firstName} {member.lastName}
-                      </Link>
-                      {(() => {
-                        const rel = getDisplayRelationship(member.id, member.relationship, relativeMap);
-                        return rel ? (
-                          <Badge variant="outline">{formatRelationship(rel)}</Badge>
-                        ) : (
-                          <Badge variant="secondary" className="text-xs">
-                            <Link href="/family-tree/manage" className="hover:underline">Define relationship</Link>
-                          </Badge>
-                        );
-                      })()}
-                    </div>
-                    {member.birthday && (
-                      <p className="text-sm text-muted-foreground">
-                        {formatBirthday(member.birthday)}
-                        {formatAge(member.birthday) && ` (${formatAge(member.birthday)})`}
-                      </p>
-                    )}
-                    {(member.phone || member.email) && (
-                      <p className="text-sm text-muted-foreground">
-                        {member.phone && <span>{member.phone}</span>}
-                        {member.phone && member.email && <span> | </span>}
-                        {member.email && <span>{member.email}</span>}
-                      </p>
-                    )}
-                    {member.city && (
-                      <p className="text-sm text-muted-foreground">
-                        {[member.city, member.state].filter(Boolean).join(", ")}
-                      </p>
-                    )}
-                    <div className="flex items-center gap-2 pt-2">
-                      <form action={toggleActiveMemberAction}>
-                        <input type="hidden" name="id" value={member.id} />
-                        <Button type="submit" variant="outline" size="sm">
-                          {member.isActive ? "Deactivate" : "Activate"}
-                        </Button>
-                      </form>
-                      <Button asChild variant="outline" size="sm">
-                        <Link href={`/people/${member.id}`}>Details</Link>
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
+                <Button type="submit" className="w-full h-9">
+                  <UserPlus className="size-4 mr-1.5" />
+                  Add Person
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
       </div>
-
-      {/* Cross-Household Family Section */}
-      {crossHouseholdGroups.length > 0 && (
-        <>
-          <Separator />
-          <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <Globe className="size-5 text-primary" />
-              <h2 className="text-lg font-semibold">Family from Other Households</h2>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              People from other households connected via your family tree.{" "}
-              <Link href="/family-tree/manage" className="text-primary hover:underline">
-                Manage connections
-              </Link>{" "}
-              to add more.
-            </p>
-
-            {crossHouseholdGroups.map((group) => (
-              <div key={group.householdName} className="space-y-3">
-                <h3 className="text-sm font-medium flex items-center gap-2">
-                  <Badge variant="secondary" className="text-purple-700 dark:text-purple-400">
-                    {group.householdName}
-                  </Badge>
-                </h3>
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {group.members.map((member) => (
-                    <Card key={member.id}>
-                      <CardContent className="pt-6">
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <Link href={`/people/${member.id}`} className="font-semibold hover:underline">
-                              {member.firstName} {member.lastName}
-                            </Link>
-                            {(() => {
-                              const rel = relativeMap.get(member.id);
-                              return rel ? (
-                                <Badge variant="outline">{formatRelationship(rel)}</Badge>
-                              ) : null;
-                            })()}
-                          </div>
-                          {member.birthday && (
-                            <p className="text-sm text-muted-foreground">
-                              {formatBirthday(member.birthday)}
-                              {formatAge(member.birthday) && ` (${formatAge(member.birthday)})`}
-                            </p>
-                          )}
-                          <div className="flex items-center gap-2 pt-2">
-                            <Button asChild variant="outline" size="sm">
-                              <Link href={`/people/${member.id}`}>Details</Link>
-                            </Button>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </>
-      )}
     </div>
   );
 }

@@ -32,14 +32,36 @@ export async function createProviderAction(formData: FormData): Promise<void> {
 }
 
 export async function toggleProviderActiveAction(formData: FormData): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) redirect("/setup");
+
   const id = formData.get("id") as string;
   const isActive = formData.get("isActive") === "true";
+
+  const record = await prisma.provider.findFirst({
+    where: { id, householdId },
+  });
+  if (!record) return;
+
   await prisma.provider.update({ where: { id }, data: { isActive: !isActive } });
   revalidatePath("/providers");
 }
 
 export async function deleteProviderAction(formData: FormData): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) redirect("/setup");
+
   const id = formData.get("id") as string;
+
+  const record = await prisma.provider.findFirst({
+    where: { id, householdId },
+  });
+  if (!record) return;
+
   await prisma.provider.delete({ where: { id } });
   revalidatePath("/providers");
 }
