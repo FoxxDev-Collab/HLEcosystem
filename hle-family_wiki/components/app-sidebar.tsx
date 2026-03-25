@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { AppSwitcher } from "@/components/app-switcher";
+import { AppSwitcher, type AppUrls } from "@/components/app-switcher";
 import {
   BookOpen, User, Users, Globe, Share2, Search,
   Settings, LogOut, ChevronDown, ChevronRight, BookMarked,
@@ -176,11 +176,12 @@ function PageTreeGroup({ label, icon: Icon, pages, pathname, emptyText }: {
   );
 }
 
-export function AppSidebar({ user, household, households, pageTree }: {
+export function AppSidebar({ user, household, households, pageTree, appUrls }: {
   user: UserInfo;
   household: Household;
   households: Household[];
   pageTree: PageTree;
+  appUrls: AppUrls;
 }) {
   const pathname = usePathname();
 
@@ -289,7 +290,7 @@ export function AppSidebar({ user, household, households, pageTree }: {
             Apps
           </SidebarGroupLabel>
           <SidebarGroupContent>
-            <AppSwitcher currentApp="WIKI" />
+            <AppSwitcher currentApp="WIKI" appUrls={appUrls} />
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>

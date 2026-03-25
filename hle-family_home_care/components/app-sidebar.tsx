@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { AppSwitcher } from "@/components/app-switcher";
+import { AppSwitcher, type AppUrls } from "@/components/app-switcher";
 import {
   LayoutDashboard,
   Home,
@@ -111,10 +111,12 @@ export function AppSidebar({
   user,
   household,
   households,
+  appUrls,
 }: {
   user: UserInfo;
   household: Household;
   households: Household[];
+  appUrls: AppUrls;
 }) {
   const pathname = usePathname();
 
@@ -160,7 +162,7 @@ export function AppSidebar({
             Apps
           </SidebarGroupLabel>
           <SidebarGroupContent>
-            <AppSwitcher currentApp="HOME" />
+            <AppSwitcher currentApp="HOME" appUrls={appUrls} />
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>

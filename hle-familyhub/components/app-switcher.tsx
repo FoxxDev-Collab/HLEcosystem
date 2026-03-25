@@ -9,8 +9,6 @@ import {
   HardDrive,
   UtensilsCrossed,
   BookOpen,
-  Bot,
-  ExternalLink,
 } from "lucide-react";
 
 const apps = [
@@ -24,22 +22,13 @@ const apps = [
   { key: "WIKI", name: "Wiki", icon: BookOpen, color: "text-teal-600 dark:text-teal-400" },
 ];
 
-const envUrls: Record<string, string | undefined> = {
-  MANAGER: process.env.NEXT_PUBLIC_APP_URL_MANAGER,
-  HUB: process.env.NEXT_PUBLIC_APP_URL_HUB,
-  FINANCE: process.env.NEXT_PUBLIC_APP_URL_FINANCE,
-  HEALTH: process.env.NEXT_PUBLIC_APP_URL_HEALTH,
-  HOME: process.env.NEXT_PUBLIC_APP_URL_HOME,
-  FILES: process.env.NEXT_PUBLIC_APP_URL_FILES,
-  MEALS: process.env.NEXT_PUBLIC_APP_URL_MEALS,
-  WIKI: process.env.NEXT_PUBLIC_APP_URL_WIKI,
-};
+export type AppUrls = Record<string, string>;
 
-export function AppSwitcher({ currentApp }: { currentApp: string }) {
+export function AppSwitcher({ currentApp, appUrls }: { currentApp: string; appUrls: AppUrls }) {
   return (
     <div className="grid grid-cols-4 gap-1">
       {apps.map((app) => {
-        const url = envUrls[app.key];
+        const url = appUrls[app.key];
         if (!url) return null;
         const isCurrent = app.key === currentApp;
         const Icon = app.icon;

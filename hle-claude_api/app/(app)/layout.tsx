@@ -16,9 +16,24 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     redirect("/unauthorized");
   }
 
+  const appUrls: Record<string, string> = {};
+  const urlMap: Record<string, string | undefined> = {
+    MANAGER: process.env.NEXT_PUBLIC_APP_URL_MANAGER,
+    HUB: process.env.NEXT_PUBLIC_APP_URL_HUB,
+    FINANCE: process.env.NEXT_PUBLIC_APP_URL_FINANCE,
+    HEALTH: process.env.NEXT_PUBLIC_APP_URL_HEALTH,
+    HOME: process.env.NEXT_PUBLIC_APP_URL_HOME,
+    FILES: process.env.NEXT_PUBLIC_APP_URL_FILES,
+    MEALS: process.env.NEXT_PUBLIC_APP_URL_MEALS,
+    WIKI: process.env.NEXT_PUBLIC_APP_URL_WIKI,
+  };
+  for (const [key, val] of Object.entries(urlMap)) {
+    if (val) appUrls[key] = val;
+  }
+
   return (
     <SidebarProvider>
-      <AppSidebar user={{ name: user.name, email: user.email }} />
+      <AppSidebar user={{ name: user.name, email: user.email }} appUrls={appUrls} />
       <SidebarInset>
         <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
           <SidebarTrigger className="-ml-1" />

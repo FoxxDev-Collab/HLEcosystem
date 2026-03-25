@@ -26,6 +26,21 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   if (!household) redirect("/setup");
 
+  const appUrls: Record<string, string> = {};
+  const urlMap: Record<string, string | undefined> = {
+    MANAGER: process.env.NEXT_PUBLIC_APP_URL_MANAGER,
+    HUB: process.env.NEXT_PUBLIC_APP_URL_HUB,
+    FINANCE: process.env.NEXT_PUBLIC_APP_URL_FINANCE,
+    HEALTH: process.env.NEXT_PUBLIC_APP_URL_HEALTH,
+    HOME: process.env.NEXT_PUBLIC_APP_URL_HOME,
+    FILES: process.env.NEXT_PUBLIC_APP_URL_FILES,
+    MEALS: process.env.NEXT_PUBLIC_APP_URL_MEALS,
+    WIKI: process.env.NEXT_PUBLIC_APP_URL_WIKI,
+  };
+  for (const [key, val] of Object.entries(urlMap)) {
+    if (val) appUrls[key] = val;
+  }
+
   return (
     <QueryProvider>
     <UploadProvider>
@@ -34,6 +49,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           user={{ name: user.name, email: user.email }}
           household={{ id: household.id, name: household.name }}
           households={households.map((h) => ({ id: h.id, name: h.name }))}
+          appUrls={appUrls}
         />
         <SidebarInset>
           <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
