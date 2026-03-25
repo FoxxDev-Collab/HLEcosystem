@@ -24,7 +24,7 @@ Family Manager (identity + auth)
         |
         v
   ┌─────────────┐
-  │  PostgreSQL  │  ── one database, one schema per app
+  │  PostgreSQL │  ── one database, one schema per app
   └─────────────┘
         ^
         |
