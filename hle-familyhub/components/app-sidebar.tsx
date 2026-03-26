@@ -16,6 +16,10 @@ import {
   LogOut,
   ChevronDown,
   Heart,
+  GraduationCap,
+  BookOpen,
+  Trophy,
+  Award,
 } from "lucide-react";
 import {
   Sidebar,
@@ -51,6 +55,13 @@ const eventsNav = [
   { title: "Calendar", href: "/calendar", icon: CalendarDays },
   { title: "Important Dates", href: "/dates", icon: CalendarDays },
   { title: "To-Do Lists", href: "/todos", icon: ListTodo },
+];
+
+const educationNav = [
+  { title: "Overview", href: "/education", icon: GraduationCap },
+  { title: "Grades", href: "/education/grades", icon: BookOpen },
+  { title: "Activities", href: "/education/activities", icon: Trophy },
+  { title: "Certifications", href: "/education/certifications", icon: Award },
 ];
 
 const giftsNav = [
@@ -164,6 +175,7 @@ export function AppSidebar({
         <NavGroup label="Overview" items={overviewNav} pathname={pathname} />
         <NavGroup label="Family" items={familyNav} pathname={pathname} />
         <NavGroup label="Events" items={eventsNav} pathname={pathname} />
+        <NavGroup label="Education" items={educationNav} pathname={pathname} />
         <NavGroup label="Gifts" items={giftsNav} pathname={pathname} />
         <NavGroup label="Media" items={mediaNav} pathname={pathname} />
         <NavGroup label="Account" items={accountNav} pathname={pathname} />

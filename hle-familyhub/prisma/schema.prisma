@@ -81,6 +81,58 @@ enum GiftIdeaPriority {
   HIGH
 }
 
+enum DegreeType {
+  HIGH_SCHOOL
+  ASSOCIATE
+  BACHELOR
+  MASTER
+  DOCTORATE
+  CERTIFICATE
+  DIPLOMA
+  GED
+  TRADE
+  OTHER
+}
+
+enum EducationStatus {
+  IN_PROGRESS
+  COMPLETED
+  WITHDRAWN
+  TRANSFERRED
+}
+
+enum GradeTerm {
+  QUARTER_1
+  QUARTER_2
+  QUARTER_3
+  QUARTER_4
+  SEMESTER_1
+  SEMESTER_2
+  TRIMESTER_1
+  TRIMESTER_2
+  TRIMESTER_3
+  SUMMER
+  FULL_YEAR
+}
+
+enum ActivityCategory {
+  SPORTS
+  ARTS
+  MUSIC
+  ACADEMIC
+  VOLUNTEER
+  CLUB
+  RELIGIOUS
+  OTHER
+}
+
+enum CertificationStatus {
+  ACTIVE
+  EXPIRED
+  PENDING
+  REVOKED
+}
+
 // ─── Models ──────────────────────────────────────────────
 
 model FamilyMember {
@@ -116,7 +168,11 @@ model FamilyMember {
   relationsFrom  FamilyRelation[] @relation("relationsFrom")
   relationsTo    FamilyRelation[] @relation("relationsTo")
   addresses      Address[]
-  careerEntries  CareerEntry[]
+  careerEntries    CareerEntry[]
+  educationEntries EducationEntry[]
+  activities       Activity[]
+  achievements     Achievement[]
+  certifications   Certification[]
 
   @@unique([householdId, linkedUserId])
   @@index([householdId])
@@ -311,4 +367,124 @@ model MediaRequestComment {
   request MediaRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
 
   @@index([requestId])
+}
+
+// ─── Education ──────────────────────────────────────────
+
+model EducationEntry {
+  id             String          @id @default(cuid())
+  familyMemberId String
+  institution    String
+  degreeType     DegreeType?
+  fieldOfStudy   String?
+  startDate      DateTime?       @db.Date
+  endDate        DateTime?       @db.Date
+  graduationDate DateTime?       @db.Date
+  status         EducationStatus @default(IN_PROGRESS)
+  gpa            Decimal?        @db.Decimal(4, 2)
+  isCurrent      Boolean         @default(false)
+  location       String?
+  notes          String?
+  createdAt      DateTime        @default(now())
+
+  familyMember FamilyMember @relation(fields: [familyMemberId], references: [id], onDelete: Cascade)
+  gradeReports GradeReport[]
+
+  @@index([familyMemberId])
+}
+
+model GradeReport {
+  id               String    @id @default(cuid())
+  educationEntryId String
+  schoolYear       String
+  term             GradeTerm
+  reportDate       DateTime? @db.Date
+  overallGpa       Decimal?  @db.Decimal(4, 2)
+  notes            String?
+  createdAt        DateTime  @default(now())
+
+  educationEntry EducationEntry @relation(fields: [educationEntryId], references: [id], onDelete: Cascade)
+  grades         GradeItem[]
+
+  @@index([educationEntryId])
+}
+
+model GradeItem {
+  id            String   @id @default(cuid())
+  gradeReportId String
+  subject       String
+  grade         String
+  percentage    Decimal? @db.Decimal(5, 2)
+  credits       Decimal? @db.Decimal(4, 1)
+  teacher       String?
+  notes         String?
+
+  gradeReport GradeReport @relation(fields: [gradeReportId], references: [id], onDelete: Cascade)
+
+  @@index([gradeReportId])
+}
+
+model Activity {
+  id             String           @id @default(cuid())
+  householdId    String
+  familyMemberId String
+  name           String
+  category       ActivityCategory @default(OTHER)
+  organization   String?
+  startDate      DateTime?        @db.Date
+  endDate        DateTime?        @db.Date
+  isCurrent      Boolean          @default(true)
+  schedule       String?
+  cost           Decimal?         @db.Decimal(10, 2)
+  notes          String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  familyMember FamilyMember  @relation(fields: [familyMemberId], references: [id], onDelete: Cascade)
+  achievements Achievement[]
+
+  @@index([householdId])
+  @@index([familyMemberId])
+}
+
+model Achievement {
+  id             String    @id @default(cuid())
+  householdId    String
+  familyMemberId String
+  activityId     String?
+  title          String
+  description    String?
+  dateEarned     DateTime? @db.Date
+  issuer         String?
+  notes          String?
+  createdAt      DateTime  @default(now())
+
+  familyMember FamilyMember @relation(fields: [familyMemberId], references: [id], onDelete: Cascade)
+  activity     Activity?    @relation(fields: [activityId], references: [id], onDelete: SetNull)
+
+  @@index([householdId])
+  @@index([familyMemberId])
+}
+
+model Certification {
+  id              String              @id @default(cuid())
+  householdId     String
+  familyMemberId  String
+  name            String
+  issuingBody     String?
+  credentialId    String?
+  issueDate       DateTime?           @db.Date
+  expirationDate  DateTime?           @db.Date
+  status          CertificationStatus @default(ACTIVE)
+  renewalCost     Decimal?            @db.Decimal(10, 2)
+  url             String?
+  notes           String?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  familyMember FamilyMember @relation(fields: [familyMemberId], references: [id], onDelete: Cascade)
+
+  @@index([householdId])
+  @@index([familyMemberId])
+  @@index([expirationDate])
 }

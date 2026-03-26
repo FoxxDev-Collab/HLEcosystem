@@ -22,6 +22,7 @@ declare -A PORTS=(
   [hle-meal-prep]=8086
   [hle-family-wiki]=8087
   [hle-claude-api]=8088
+  [hle-family-travel]=8089
 )
 
 declare -A CONTAINERS=(
@@ -34,6 +35,7 @@ declare -A CONTAINERS=(
   [hle-meal-prep]=foxxlab-meal-prep
   [hle-family-wiki]=foxxlab-family-wiki
   [hle-claude-api]=foxxlab-claude-api
+  [hle-family-travel]=foxxlab-family-travel
 )
 
 SERVICES=(
@@ -46,6 +48,7 @@ SERVICES=(
   hle-meal-prep
   hle-family-wiki
   hle-claude-api
+  hle-family-travel
 )
 
 # ── Colors ────────────────────────────────────────────────────────

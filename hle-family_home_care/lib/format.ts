@@ -85,6 +85,7 @@ export function formatMileage(miles: number | null | undefined): string {
 
 export function formatFrequency(frequency: string, customDays?: number | null): string {
   switch (frequency) {
+    case "DAILY": return "Daily";
     case "WEEKLY": return "Weekly";
     case "BI_WEEKLY": return "Every 2 weeks";
     case "MONTHLY": return "Monthly";

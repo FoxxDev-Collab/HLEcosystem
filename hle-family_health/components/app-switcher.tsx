@@ -9,6 +9,7 @@ import {
   HardDrive,
   UtensilsCrossed,
   BookOpen,
+  Plane,
 } from "lucide-react";
 
 const apps = [
@@ -20,6 +21,7 @@ const apps = [
   { key: "FILES", name: "Files", icon: HardDrive, color: "text-purple-600 dark:text-purple-400" },
   { key: "MEALS", name: "Meals", icon: UtensilsCrossed, color: "text-amber-600 dark:text-amber-400" },
   { key: "WIKI", name: "Wiki", icon: BookOpen, color: "text-teal-600 dark:text-teal-400" },
+  { key: "TRAVEL", name: "Travel", icon: Plane, color: "text-cyan-600 dark:text-cyan-400" },
 ];
 
 export type AppUrls = Record<string, string>;

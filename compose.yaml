@@ -24,6 +24,7 @@ x-nextjs-app: &nextjs-app
     NEXT_PUBLIC_APP_URL_FILES: ${FILES_URL:-http://localhost:8085}
     NEXT_PUBLIC_APP_URL_MEALS: ${MEALS_URL:-http://localhost:8086}
     NEXT_PUBLIC_APP_URL_WIKI: ${WIKI_URL:-http://localhost:8087}
+    NEXT_PUBLIC_APP_URL_TRAVEL: ${TRAVEL_URL:-http://localhost:8089}
   healthcheck:
     test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1"]
     interval: 30s
@@ -234,6 +235,23 @@ services:
       <<: *nextjs-env
       DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/foxxlab?schema=family_wiki"
       APP_URL: ${WIKI_URL:-http://localhost:8087}
+
+  # Family Travel
+  hle-family-travel:
+    <<: *nextjs-app
+    container_name: foxxlab-family-travel
+    build:
+      context: .
+      dockerfile: Containerfile.nextjs
+      args:
+        APP_DIR: hle-family_travel
+        NEXT_PUBLIC_APP_NAME: "HLE Family Travel"
+    ports:
+      - "8089:3000"
+    environment:
+      <<: *nextjs-env
+      DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/foxxlab?schema=family_travel"
+      APP_URL: ${TRAVEL_URL:-http://localhost:8089}
 
   # Claude API Gateway — Centralized AI service for ecosystem apps
   hle-claude-api:

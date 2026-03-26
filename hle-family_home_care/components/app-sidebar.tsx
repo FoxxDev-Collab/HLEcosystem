@@ -16,8 +16,17 @@ import {
   Gauge,
   FileText,
   Settings,
+  Settings2,
   LogOut,
   ChevronDown,
+  ListChecks,
+  Star,
+  Shield,
+  Phone,
+  Route,
+  Package,
+  FileKey,
+  Zap,
 } from "lucide-react";
 import {
   Sidebar,
@@ -61,6 +70,21 @@ const maintenanceNav = [
   { title: "Schedules", href: "/schedules", icon: CalendarClock },
   { title: "Maintenance Log", href: "/maintenance-log", icon: ClipboardList },
   { title: "Repairs", href: "/repairs", icon: Wrench },
+];
+
+const choresNav = [
+  { title: "Chore Chart", href: "/chores", icon: ListChecks },
+  { title: "Manage Chores", href: "/chores/manage", icon: Settings2 },
+  { title: "Rewards", href: "/chores/rewards", icon: Star },
+];
+
+const emergencyNav = [
+  { title: "Overview", href: "/emergency", icon: Shield },
+  { title: "Contacts", href: "/emergency/contacts", icon: Phone },
+  { title: "Plans", href: "/emergency/plans", icon: Route },
+  { title: "Supplies", href: "/emergency/supplies", icon: Package },
+  { title: "Documents", href: "/emergency/documents", icon: FileKey },
+  { title: "Utilities", href: "/emergency/utilities", icon: Zap },
 ];
 
 const accountNav = [
@@ -156,6 +180,8 @@ export function AppSidebar({
         <NavGroup label="Home" items={homeNav} pathname={pathname} />
         <NavGroup label="Vehicles" items={vehicleNav} pathname={pathname} />
         <NavGroup label="Maintenance" items={maintenanceNav} pathname={pathname} />
+        <NavGroup label="Chores" items={choresNav} pathname={pathname} />
+        <NavGroup label="Emergency" items={emergencyNav} pathname={pathname} />
         <NavGroup label="Account" items={accountNav} pathname={pathname} />
         <SidebarGroup>
           <SidebarGroupLabel className="text-[10px] uppercase tracking-[0.08em] font-semibold text-muted-foreground/70">

@@ -29,6 +29,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     FILES: process.env.NEXT_PUBLIC_APP_URL_FILES,
     MEALS: process.env.NEXT_PUBLIC_APP_URL_MEALS,
     WIKI: process.env.NEXT_PUBLIC_APP_URL_WIKI,
+    TRAVEL: process.env.NEXT_PUBLIC_APP_URL_TRAVEL,
   };
   for (const [key, val] of Object.entries(urlMap)) {
     if (val) appUrls[key] = val;

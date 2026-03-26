@@ -1,0 +1,321 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Users are managed by Family Manager (family_manager schema).
+// This app reads users via cross-schema queries.
+
+// ============================================================================
+// ENUMS
+// ============================================================================
+
+enum TripStatus {
+  PLANNING
+  BOOKED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum ReservationType {
+  FLIGHT
+  HOTEL
+  CAR_RENTAL
+  RESTAURANT
+  ACTIVITY
+  TRAIN
+  BUS
+  FERRY
+  CRUISE
+  OTHER
+}
+
+enum ReservationStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
+
+enum TravelDocumentType {
+  PASSPORT
+  VISA
+  TRAVEL_INSURANCE
+  DRIVERS_LICENSE
+  VACCINATION_RECORD
+  ITINERARY
+  BOOKING_CONFIRMATION
+  OTHER
+}
+
+enum PackingCategory {
+  CLOTHING
+  TOILETRIES
+  ELECTRONICS
+  DOCUMENTS
+  MEDICATIONS
+  ACCESSORIES
+  GEAR
+  SNACKS
+  OTHER
+}
+
+enum BudgetCategory {
+  FLIGHTS
+  ACCOMMODATION
+  TRANSPORTATION
+  FOOD_AND_DRINK
+  ACTIVITIES
+  SHOPPING
+  INSURANCE
+  VISA_AND_FEES
+  COMMUNICATION
+  OTHER
+}
+
+enum Currency {
+  USD
+  EUR
+  GBP
+  CAD
+  AUD
+  JPY
+  CNY
+  MXN
+  CHF
+  OTHER
+}
+
+// ============================================================================
+// TRIPS
+// ============================================================================
+
+model Trip {
+  id            String     @id @default(cuid())
+  householdId   String
+  name          String
+  description   String?
+  destination   String?
+  startDate     DateTime   @db.Date
+  endDate       DateTime   @db.Date
+  status        TripStatus @default(PLANNING)
+  coverImageUrl String?
+  notes         String?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  travelers     Traveler[]
+  itineraryDays ItineraryDay[]
+  reservations  Reservation[]
+  documents     TravelDocument[]
+  packingLists  PackingList[]
+  budgetItems   BudgetItem[]
+  contacts      TravelContact[]
+
+  @@index([householdId])
+  @@index([startDate])
+  @@index([status])
+}
+
+// ============================================================================
+// TRAVELERS
+// ============================================================================
+
+model Traveler {
+  id                String   @id @default(cuid())
+  tripId            String
+  householdMemberId String
+  displayName       String
+  createdAt         DateTime @default(now())
+
+  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@unique([tripId, householdMemberId])
+  @@index([tripId])
+}
+
+// ============================================================================
+// ITINERARY
+// ============================================================================
+
+model ItineraryDay {
+  id        String   @id @default(cuid())
+  tripId    String
+  date      DateTime @db.Date
+  title     String?
+  notes     String?
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  trip       Trip                @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  activities ItineraryActivity[]
+
+  @@unique([tripId, date])
+  @@index([tripId])
+}
+
+model ItineraryActivity {
+  id             String   @id @default(cuid())
+  itineraryDayId String
+  title          String
+  startTime      String?
+  endTime        String?
+  location       String?
+  address        String?
+  bookingRef     String?
+  cost           Decimal? @db.Decimal(10, 2)
+  currency       Currency @default(USD)
+  notes          String?
+  sortOrder      Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  itineraryDay ItineraryDay @relation(fields: [itineraryDayId], references: [id], onDelete: Cascade)
+
+  @@index([itineraryDayId])
+}
+
+// ============================================================================
+// RESERVATIONS
+// ============================================================================
+
+model Reservation {
+  id                 String            @id @default(cuid())
+  tripId             String
+  type               ReservationType
+  status             ReservationStatus @default(PENDING)
+  providerName       String
+  confirmationNumber String?
+  startDateTime      DateTime?
+  endDateTime        DateTime?
+  location           String?
+  departureLocation  String?
+  arrivalLocation    String?
+  cost               Decimal?          @db.Decimal(10, 2)
+  currency           Currency          @default(USD)
+  isPaid             Boolean           @default(false)
+  bookingUrl         String?
+  contactPhone       String?
+  contactEmail       String?
+  notes              String?
+  fileServerFileId   String?
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+
+  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@index([tripId])
+  @@index([type])
+}
+
+// ============================================================================
+// TRAVEL DOCUMENTS
+// ============================================================================
+
+model TravelDocument {
+  id                String             @id @default(cuid())
+  householdId       String
+  tripId            String?
+  householdMemberId String?
+  displayName       String?
+  type              TravelDocumentType
+  documentNumber    String?
+  issuingCountry    String?
+  issueDate         DateTime?          @db.Date
+  expiryDate        DateTime?          @db.Date
+  fileServerFileId  String?
+  notes             String?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  trip Trip? @relation(fields: [tripId], references: [id], onDelete: SetNull)
+
+  @@index([householdId])
+  @@index([tripId])
+  @@index([expiryDate])
+}
+
+// ============================================================================
+// PACKING LISTS
+// ============================================================================
+
+model PackingList {
+  id        String   @id @default(cuid())
+  tripId    String
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  trip  Trip          @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  items PackingItem[]
+
+  @@index([tripId])
+}
+
+model PackingItem {
+  id            String          @id @default(cuid())
+  packingListId String
+  name          String
+  category      PackingCategory @default(OTHER)
+  quantity      Int             @default(1)
+  isPacked      Boolean         @default(false)
+  notes         String?
+  sortOrder     Int             @default(0)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  packingList PackingList @relation(fields: [packingListId], references: [id], onDelete: Cascade)
+
+  @@index([packingListId])
+}
+
+// ============================================================================
+// TRIP BUDGET
+// ============================================================================
+
+model BudgetItem {
+  id                   String         @id @default(cuid())
+  tripId               String
+  category             BudgetCategory
+  description          String
+  plannedAmount        Decimal        @db.Decimal(10, 2)
+  actualAmount         Decimal?       @db.Decimal(10, 2)
+  currency             Currency       @default(USD)
+  financeTransactionId String?
+  notes                String?
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+
+  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@index([tripId])
+}
+
+// ============================================================================
+// TRAVEL CONTACTS
+// ============================================================================
+
+model TravelContact {
+  id        String   @id @default(cuid())
+  tripId    String
+  name      String
+  role      String?
+  phone     String?
+  email     String?
+  address   String?
+  website   String?
+  notes     String?
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@index([tripId])
+}

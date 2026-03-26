@@ -57,6 +57,7 @@ enum ProviderType {
   PHARMACY
   THERAPIST
   CHIROPRACTOR
+  VETERINARIAN
   OTHER
 }
 
@@ -94,6 +95,45 @@ enum ExpenseCategory {
   COPAY
   LAB_WORK
   THERAPY
+  OTHER
+}
+
+enum Species {
+  DOG
+  CAT
+  BIRD
+  FISH
+  REPTILE
+  SMALL_MAMMAL
+  HORSE
+  OTHER
+}
+
+enum PetAppointmentType {
+  WELLNESS_EXAM
+  VACCINATION
+  DENTAL
+  SURGERY
+  EMERGENCY
+  GROOMING
+  LAB_WORK
+  FOLLOW_UP
+  OTHER
+}
+
+enum PetAppointmentStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+  RESCHEDULED
+}
+
+enum PetInsuranceType {
+  ACCIDENT_ONLY
+  ACCIDENT_AND_ILLNESS
+  WELLNESS
+  COMPREHENSIVE
   OTHER
 }
 
@@ -137,20 +177,20 @@ model FamilyMember {
 }
 
 model HealthProfile {
-  id                  String   @id @default(cuid())
-  familyMemberId      String   @unique
+  id                  String    @id @default(cuid())
+  familyMemberId      String    @unique
   bloodType           BloodType @default(UNKNOWN)
-  heightCm            Decimal? @db.Decimal(5, 2)
-  weightKg            Decimal? @db.Decimal(5, 2)
-  allergies           String[] @default([])
-  chronicConditions   String[] @default([])
-  majorSurgeries      String[] @default([])
+  heightCm            Decimal?  @db.Decimal(5, 2)
+  weightKg            Decimal?  @db.Decimal(5, 2)
+  allergies           String[]  @default([])
+  chronicConditions   String[]  @default([])
+  majorSurgeries      String[]  @default([])
   primaryCareProvider String?
   preferredHospital   String?
   medicalNotes        String?
-  isOrganDonor        Boolean  @default(false)
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  isOrganDonor        Boolean   @default(false)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 
   familyMember FamilyMember @relation(fields: [familyMemberId], references: [id], onDelete: Cascade)
 }
@@ -219,17 +259,17 @@ model Medication {
 // ============================================================================
 
 model Vaccination {
-  id                String   @id @default(cuid())
-  familyMemberId    String
-  vaccineName       String
-  doseNumber        String?
-  dateAdministered  DateTime @db.Date
-  nextDoseDate      DateTime? @db.Date
-  administeredBy    String?
-  lotNumber         String?
-  notes             String?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  id               String    @id @default(cuid())
+  familyMemberId   String
+  vaccineName      String
+  doseNumber       String?
+  dateAdministered DateTime  @db.Date
+  nextDoseDate     DateTime? @db.Date
+  administeredBy   String?
+  lotNumber        String?
+  notes            String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
   familyMember FamilyMember @relation(fields: [familyMemberId], references: [id], onDelete: Cascade)
 
@@ -309,8 +349,10 @@ model Provider {
   createdAt              DateTime     @default(now())
   updatedAt              DateTime     @updatedAt
 
-  appointments Appointment[]
-  visits       VisitSummary[]
+  appointments    Appointment[]
+  visits          VisitSummary[]
+  petVaccinations PetVaccination[]
+  petAppointments PetAppointment[]
 
   @@index([householdId])
 }
@@ -343,31 +385,31 @@ model MedicalExpense {
 // ============================================================================
 
 model VisitSummary {
-  id                    String    @id @default(cuid())
-  appointmentId         String?   @unique
-  familyMemberId        String
-  providerId            String?
-  visitDate             DateTime
-  visitType             VisitType @default(IN_PERSON)
-  chiefComplaint        String?
-  diagnosis             String?
-  treatmentProvided     String?
-  prescriptionsWritten  String?
-  labTestsOrdered       String?
-  followUpInstructions  String?
-  nextVisitRecommended  DateTime?
-  attachedDocuments     String?
-  notes                 String?
-  billedAmount          Decimal?  @db.Decimal(10, 2)
-  insurancePaid         Decimal?  @db.Decimal(10, 2)
-  outOfPocketCost       Decimal?  @db.Decimal(10, 2)
-  paidFromHsa           Boolean   @default(false)
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
+  id                   String    @id @default(cuid())
+  appointmentId        String?   @unique
+  familyMemberId       String
+  providerId           String?
+  visitDate            DateTime
+  visitType            VisitType @default(IN_PERSON)
+  chiefComplaint       String?
+  diagnosis            String?
+  treatmentProvided    String?
+  prescriptionsWritten String?
+  labTestsOrdered      String?
+  followUpInstructions String?
+  nextVisitRecommended DateTime?
+  attachedDocuments    String?
+  notes                String?
+  billedAmount         Decimal?  @db.Decimal(10, 2)
+  insurancePaid        Decimal?  @db.Decimal(10, 2)
+  outOfPocketCost      Decimal?  @db.Decimal(10, 2)
+  paidFromHsa          Boolean   @default(false)
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 
-  appointment  Appointment?  @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
-  familyMember FamilyMember  @relation(fields: [familyMemberId], references: [id], onDelete: Cascade)
-  provider     Provider?     @relation(fields: [providerId], references: [id], onDelete: SetNull)
+  appointment  Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  familyMember FamilyMember @relation(fields: [familyMemberId], references: [id], onDelete: Cascade)
+  provider     Provider?    @relation(fields: [providerId], references: [id], onDelete: SetNull)
 
   @@index([familyMemberId])
 }
@@ -420,4 +462,143 @@ model ExerciseSet {
   workoutExercise WorkoutExercise @relation(fields: [workoutExerciseId], references: [id], onDelete: Cascade)
 
   @@index([workoutExerciseId])
+}
+
+// ============================================================================
+// PET HEALTH TRACKING
+// ============================================================================
+
+model Pet {
+  id           String    @id @default(cuid())
+  householdId  String
+  name         String
+  species      Species
+  breed        String?
+  color        String?
+  weightLbs    Decimal?  @db.Decimal(6, 2)
+  dateOfBirth  DateTime? @db.Date
+  gender       String?
+  microchipId  String?
+  adoptionDate DateTime? @db.Date
+  photoUrl     String?
+  notes        String?
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  vaccinations PetVaccination[]
+  medications  PetMedication[]
+  appointments PetAppointment[]
+  conditions   PetCondition[]
+  insurances   PetInsurance[]
+
+  @@index([householdId])
+}
+
+model PetVaccination {
+  id               String    @id @default(cuid())
+  petId            String
+  vaccineName      String
+  doseNumber       String?
+  dateAdministered DateTime  @db.Date
+  nextDueDate      DateTime? @db.Date
+  administeredBy   String?
+  providerId       String?
+  lotNumber        String?
+  notes            String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  pet      Pet       @relation(fields: [petId], references: [id], onDelete: Cascade)
+  provider Provider? @relation(fields: [providerId], references: [id], onDelete: SetNull)
+
+  @@index([petId])
+}
+
+model PetMedication {
+  id             String    @id @default(cuid())
+  petId          String
+  medicationName String
+  dosage         String?
+  frequency      String?
+  startDate      DateTime? @db.Date
+  endDate        DateTime? @db.Date
+  isActive       Boolean   @default(true)
+  prescribedBy   String?
+  pharmacy       String?
+  nextRefillDate DateTime? @db.Date
+  purpose        String?
+  costPerRefill  Decimal?  @db.Decimal(10, 2)
+  notes          String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  pet Pet @relation(fields: [petId], references: [id], onDelete: Cascade)
+
+  @@index([petId])
+}
+
+model PetAppointment {
+  id                  String               @id @default(cuid())
+  petId               String
+  providerId          String?
+  appointmentDateTime DateTime
+  durationMinutes     Int                  @default(30)
+  appointmentType     PetAppointmentType   @default(OTHER)
+  status              PetAppointmentStatus @default(SCHEDULED)
+  location            String?
+  reasonForVisit      String?
+  diagnosis           String?
+  treatmentNotes      String?
+  cost                Decimal?             @db.Decimal(10, 2)
+  notes               String?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+
+  pet      Pet       @relation(fields: [petId], references: [id], onDelete: Cascade)
+  provider Provider? @relation(fields: [providerId], references: [id], onDelete: SetNull)
+
+  @@index([petId])
+}
+
+model PetCondition {
+  id            String    @id @default(cuid())
+  petId         String
+  conditionName String
+  diagnosedDate DateTime? @db.Date
+  resolvedDate  DateTime? @db.Date
+  isOngoing     Boolean   @default(true)
+  severity      String?
+  treatment     String?
+  notes         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  pet Pet @relation(fields: [petId], references: [id], onDelete: Cascade)
+
+  @@index([petId])
+}
+
+model PetInsurance {
+  id               String           @id @default(cuid())
+  petId            String
+  providerName     String
+  policyNumber     String
+  insuranceType    PetInsuranceType @default(COMPREHENSIVE)
+  monthlyPremium   Decimal?         @db.Decimal(10, 2)
+  deductible       Decimal?         @db.Decimal(10, 2)
+  annualLimit      Decimal?         @db.Decimal(10, 2)
+  reimbursementPct Int?
+  effectiveDate    DateTime?        @db.Date
+  expirationDate   DateTime?        @db.Date
+  phoneNumber      String?
+  website          String?
+  notes            String?
+  isActive         Boolean          @default(true)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  pet Pet @relation(fields: [petId], references: [id], onDelete: Cascade)
+
+  @@index([petId])
 }

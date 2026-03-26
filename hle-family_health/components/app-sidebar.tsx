@@ -16,6 +16,7 @@ import {
   FileText,
   DollarSign,
   Dumbbell,
+  PawPrint,
   Settings,
   LogOut,
   ChevronDown,
@@ -58,6 +59,10 @@ const directoryNav = [
   { title: "Providers", href: "/providers", icon: Stethoscope },
   { title: "Insurance", href: "/insurance", icon: Shield },
   { title: "Emergency Contacts", href: "/emergency-contacts", icon: Phone },
+];
+
+const petsNav = [
+  { title: "Pets", href: "/pets", icon: PawPrint },
 ];
 
 const wellnessNav = [
@@ -141,6 +146,7 @@ export function AppSidebar({
         <NavGroup label="Overview" items={overviewNav} pathname={pathname} />
         <NavGroup label="Medical" items={medicalNav} pathname={pathname} />
         <NavGroup label="Directory" items={directoryNav} pathname={pathname} />
+        <NavGroup label="Pets" items={petsNav} pathname={pathname} />
         <NavGroup label="Wellness" items={wellnessNav} pathname={pathname} />
         <SidebarGroup>
           <SidebarGroupLabel className="text-[10px] uppercase tracking-[0.08em] font-semibold text-muted-foreground/70">

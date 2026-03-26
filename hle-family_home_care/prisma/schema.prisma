@@ -83,6 +83,61 @@ enum DocumentType {
   OTHER
 }
 
+// ─── Chores ───────────────────────────────────────────────
+
+enum ChoreFrequency {
+  DAILY
+  WEEKLY
+  BI_WEEKLY
+  MONTHLY
+  CUSTOM_DAYS
+}
+
+enum RotationMode {
+  NONE
+  ROUND_ROBIN
+  WEEKLY_ROTATION
+}
+
+enum ChoreCompletionStatus {
+  PENDING
+  COMPLETED
+  SKIPPED
+  MISSED
+}
+
+// ─── Emergency ────────────────────────────────────────────
+
+enum EmergencyContactType {
+  NEIGHBOR
+  UTILITY
+  LOCAL_SERVICE
+  INSURANCE
+  GOVERNMENT
+  VETERINARIAN
+  OTHER
+}
+
+enum EmergencyPlanType {
+  FIRE
+  FLOOD
+  EARTHQUAKE
+  TORNADO
+  HURRICANE
+  POWER_OUTAGE
+  MEDICAL
+  INTRUDER
+  EVACUATION
+  CUSTOM
+}
+
+enum SupplyCondition {
+  GOOD
+  LOW
+  EXPIRED
+  NEEDS_REPLACEMENT
+}
+
 // ============================================================================
 // ROOMS / LOCATIONS
 // ============================================================================
@@ -98,6 +153,10 @@ model Room {
   updatedAt   DateTime @updatedAt
 
   items Item[]
+
+  chores              Chore[]
+  emergencySupplyKits EmergencySupplyKit[]
+  utilityShutoffs     UtilityShutoff[]
 
   @@unique([householdId, name])
   @@index([householdId])
@@ -337,4 +396,211 @@ model Document {
   @@index([itemId])
   @@index([vehicleId])
   @@index([repairId])
+}
+
+// ============================================================================
+// CHORES / HOUSEHOLD TASKS
+// ============================================================================
+
+model Chore {
+  id                 String         @id @default(cuid())
+  householdId        String
+  title              String
+  description        String?
+  roomId             String?
+  frequency          ChoreFrequency @default(WEEKLY)
+  customIntervalDays Int?
+  rotationMode       RotationMode   @default(NONE)
+  pointValue         Int            @default(0)
+  estimatedMinutes   Int?
+  isActive           Boolean        @default(true)
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+
+  room        Room?              @relation(fields: [roomId], references: [id], onDelete: SetNull)
+  assignments ChoreAssignment[]
+  completions ChoreCompletion[]
+
+  @@index([householdId])
+  @@index([roomId])
+}
+
+model ChoreAssignment {
+  id           String   @id @default(cuid())
+  choreId      String
+  assigneeId   String
+  assigneeName String
+  sortOrder    Int      @default(0)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  chore Chore @relation(fields: [choreId], references: [id], onDelete: Cascade)
+
+  @@unique([choreId, assigneeId])
+  @@index([assigneeId])
+}
+
+model ChoreCompletion {
+  id              String                @id @default(cuid())
+  householdId     String
+  choreId         String
+  completedById   String
+  completedByName String
+  dueDate         DateTime              @db.Date
+  completedDate   DateTime?             @db.Date
+  status          ChoreCompletionStatus @default(PENDING)
+  pointsEarned    Int                   @default(0)
+  notes           String?
+  createdAt       DateTime              @default(now())
+
+  chore Chore @relation(fields: [choreId], references: [id], onDelete: Cascade)
+
+  @@index([householdId])
+  @@index([choreId])
+  @@index([completedById])
+  @@index([dueDate])
+}
+
+model ChoreReward {
+  id          String   @id @default(cuid())
+  householdId String
+  title       String
+  description String?
+  pointCost   Int
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  redemptions RewardRedemption[]
+
+  @@index([householdId])
+}
+
+model RewardRedemption {
+  id             String   @id @default(cuid())
+  householdId    String
+  rewardId       String
+  redeemedById   String
+  redeemedByName String
+  pointsSpent    Int
+  redeemedAt     DateTime @default(now())
+
+  reward ChoreReward @relation(fields: [rewardId], references: [id], onDelete: Cascade)
+
+  @@index([householdId])
+  @@index([redeemedById])
+}
+
+// ============================================================================
+// EMERGENCY PREPAREDNESS
+// ============================================================================
+
+model EmergencyContact {
+  id             String               @id @default(cuid())
+  householdId    String
+  name           String
+  type           EmergencyContactType @default(OTHER)
+  company        String?
+  phone          String?
+  phoneAlt       String?
+  email          String?
+  address        String?
+  accountNumber  String?
+  availableHours String?
+  priority       Int                  @default(0)
+  notes          String?
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+
+  @@index([householdId])
+  @@index([type])
+}
+
+model EmergencyPlan {
+  id                    String            @id @default(cuid())
+  householdId           String
+  type                  EmergencyPlanType
+  title                 String
+  description           String?
+  meetingPoint          String?
+  evacuationRoute       String?
+  procedures            String?
+  lastReviewed          DateTime?         @db.Date
+  reviewFrequencyMonths Int?
+  notes                 String?
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+
+  @@index([householdId])
+}
+
+model EmergencySupplyKit {
+  id          String    @id @default(cuid())
+  householdId String
+  name        String
+  location    String?
+  roomId      String?
+  description String?
+  lastChecked DateTime? @db.Date
+  notes       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  room  Room?             @relation(fields: [roomId], references: [id], onDelete: SetNull)
+  items EmergencySupply[]
+
+  @@index([householdId])
+}
+
+model EmergencySupply {
+  id             String          @id @default(cuid())
+  kitId          String
+  name           String
+  quantity       Int             @default(1)
+  unit           String?
+  expirationDate DateTime?       @db.Date
+  condition      SupplyCondition @default(GOOD)
+  notes          String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  kit EmergencySupplyKit @relation(fields: [kitId], references: [id], onDelete: Cascade)
+
+  @@index([kitId])
+  @@index([expirationDate])
+}
+
+model UtilityShutoff {
+  id          String   @id @default(cuid())
+  householdId String
+  utilityType String
+  location    String
+  roomId      String?
+  procedure   String?
+  toolsNeeded String?
+  photoUrl    String?
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  room Room? @relation(fields: [roomId], references: [id], onDelete: SetNull)
+
+  @@index([householdId])
+}
+
+model ImportantDocumentLocation {
+  id               String    @id @default(cuid())
+  householdId      String
+  documentName     String
+  category         String?
+  physicalLocation String?
+  digitalLocation  String?
+  accountNumber    String?
+  policyNumber     String?
+  expirationDate   DateTime? @db.Date
+  notes            String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([householdId])
 }
