@@ -155,14 +155,16 @@ function toDateTimeInputValue(dateStr: string | null): string {
 export function PetDetailTabs({ pet, vetProviders }: { pet: SerializedPet; vetProviders: VetProvider[] }) {
   return (
     <Tabs defaultValue="profile">
-      <TabsList className="w-full justify-start">
-        <TabsTrigger value="profile">Profile</TabsTrigger>
-        <TabsTrigger value="vaccinations">Vaccinations</TabsTrigger>
-        <TabsTrigger value="medications">Medications</TabsTrigger>
-        <TabsTrigger value="appointments">Appointments</TabsTrigger>
-        <TabsTrigger value="conditions">Conditions</TabsTrigger>
-        <TabsTrigger value="insurance">Insurance</TabsTrigger>
-      </TabsList>
+      <div className="overflow-x-auto -mx-1 px-1 scrollbar-none">
+        <TabsList className="w-full min-w-max justify-start">
+          <TabsTrigger value="profile">Profile</TabsTrigger>
+          <TabsTrigger value="vaccinations">Vaccinations</TabsTrigger>
+          <TabsTrigger value="medications">Medications</TabsTrigger>
+          <TabsTrigger value="appointments">Appointments</TabsTrigger>
+          <TabsTrigger value="conditions">Conditions</TabsTrigger>
+          <TabsTrigger value="insurance">Insurance</TabsTrigger>
+        </TabsList>
+      </div>
 
       {/* Profile Tab */}
       <TabsContent value="profile">
