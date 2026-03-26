@@ -31,7 +31,7 @@ export default async function DashboardPage() {
   ] = await Promise.all([
     prisma.familyMember.findMany({
       where: { householdId, isActive: true },
-      include: { healthProfile: true },
+      include: { healthProfiles: { orderBy: { recordDate: "desc" }, take: 1 } },
       orderBy: { firstName: "asc" },
     }),
     prisma.appointment.findMany({
@@ -180,7 +180,7 @@ export default async function DashboardPage() {
                           : ""}
                       </div>
                     </div>
-                    {member.healthProfile ? (
+                    {member.healthProfiles.length > 0 ? (
                       <Badge variant="outline" className="text-xs">Profile</Badge>
                     ) : (
                       <Badge variant="secondary" className="text-xs">No profile</Badge>

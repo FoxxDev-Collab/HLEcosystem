@@ -20,12 +20,12 @@ export default async function FamilyMemberDetailPage({ params }: { params: Promi
   const member = await prisma.familyMember.findUnique({
     where: { id, householdId },
     include: {
-      healthProfile: true,
+      healthProfiles: { orderBy: { recordDate: "desc" }, take: 1 },
       medications: { where: { isActive: true }, orderBy: { medicationName: "asc" } },
       appointments: { where: { status: "SCHEDULED" }, orderBy: { appointmentDateTime: "asc" }, take: 5, include: { provider: true } },
       vaccinations: { orderBy: { dateAdministered: "desc" }, take: 5 },
       emergencyContacts: { orderBy: { priority: "asc" } },
-      insurances: { where: { isActive: true } },
+      insuranceCoverages: { where: { policy: { isActive: true } }, include: { policy: true } },
     },
   });
   if (!member) notFound();
@@ -56,58 +56,63 @@ export default async function FamilyMemberDetailPage({ params }: { params: Promi
         )}
       </div>
 
-      {/* Health Profile */}
+      {/* Health Profile (Latest Record) */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>Health Profile</CardTitle>
             <Button variant="outline" size="sm" asChild>
               <Link href={`/profiles?memberId=${id}`}>
-                {member.healthProfile ? "Edit Profile" : "Create Profile"}
+                {member.healthProfiles.length > 0 ? "View Records" : "Create Profile"}
               </Link>
             </Button>
           </div>
         </CardHeader>
         <CardContent>
-          {member.healthProfile ? (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              <div>
-                <div className="text-xs text-muted-foreground">Blood Type</div>
-                <div className="text-sm font-medium">{member.healthProfile.bloodType.replace(/_/g, " ")}</div>
-              </div>
-              <div>
-                <div className="text-xs text-muted-foreground">Height / Weight</div>
-                <div className="text-sm font-medium">
-                  {member.healthProfile.heightCm ? `${Number(member.healthProfile.heightCm)} cm` : "\u2014"}
-                  {" / "}
-                  {member.healthProfile.weightKg ? `${Number(member.healthProfile.weightKg)} kg` : "\u2014"}
-                </div>
-              </div>
-              <div>
-                <div className="text-xs text-muted-foreground">Organ Donor</div>
-                <div className="text-sm font-medium">{member.healthProfile.isOrganDonor ? "Yes" : "No"}</div>
-              </div>
-              {member.healthProfile.allergies.length > 0 && (
-                <div className="sm:col-span-2 lg:col-span-3">
-                  <div className="text-xs text-muted-foreground mb-1">Allergies</div>
-                  <div className="flex flex-wrap gap-1">
-                    {member.healthProfile.allergies.map((a) => (
-                      <Badge key={a} variant="destructive" className="text-xs">{a}</Badge>
-                    ))}
+          {member.healthProfiles.length > 0 ? (
+            (() => {
+              const hp = member.healthProfiles[0];
+              return (
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  <div>
+                    <div className="text-xs text-muted-foreground">Blood Type</div>
+                    <div className="text-sm font-medium">{hp.bloodType.replace(/_/g, " ")}</div>
                   </div>
-                </div>
-              )}
-              {member.healthProfile.chronicConditions.length > 0 && (
-                <div className="sm:col-span-2 lg:col-span-3">
-                  <div className="text-xs text-muted-foreground mb-1">Chronic Conditions</div>
-                  <div className="flex flex-wrap gap-1">
-                    {member.healthProfile.chronicConditions.map((c) => (
-                      <Badge key={c} variant="outline" className="text-xs">{c}</Badge>
-                    ))}
+                  <div>
+                    <div className="text-xs text-muted-foreground">Height / Weight</div>
+                    <div className="text-sm font-medium">
+                      {hp.heightCm ? `${Number(hp.heightCm)} cm` : "\u2014"}
+                      {" / "}
+                      {hp.weightKg ? `${Number(hp.weightKg)} kg` : "\u2014"}
+                    </div>
                   </div>
+                  <div>
+                    <div className="text-xs text-muted-foreground">Organ Donor</div>
+                    <div className="text-sm font-medium">{hp.isOrganDonor ? "Yes" : "No"}</div>
+                  </div>
+                  {hp.allergies.length > 0 && (
+                    <div className="sm:col-span-2 lg:col-span-3">
+                      <div className="text-xs text-muted-foreground mb-1">Allergies</div>
+                      <div className="flex flex-wrap gap-1">
+                        {hp.allergies.map((a) => (
+                          <Badge key={a} variant="destructive" className="text-xs">{a}</Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {hp.chronicConditions.length > 0 && (
+                    <div className="sm:col-span-2 lg:col-span-3">
+                      <div className="text-xs text-muted-foreground mb-1">Chronic Conditions</div>
+                      <div className="flex flex-wrap gap-1">
+                        {hp.chronicConditions.map((c) => (
+                          <Badge key={c} variant="outline" className="text-xs">{c}</Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
+              );
+            })()
           ) : (
             <p className="text-sm text-muted-foreground text-center py-4">No health profile yet.</p>
           )}

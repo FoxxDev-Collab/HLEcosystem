@@ -159,15 +159,15 @@ model FamilyMember {
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
-  healthProfile     HealthProfile?
-  appointments      Appointment[]
-  medications       Medication[]
-  vaccinations      Vaccination[]
-  emergencyContacts EmergencyContact[]
-  insurances        Insurance[]
-  medicalExpenses   MedicalExpense[]
-  visitSummaries    VisitSummary[]
-  workouts          Workout[]
+  healthProfiles         HealthProfileRecord[]
+  appointments           Appointment[]
+  medications            Medication[]
+  vaccinations           Vaccination[]
+  emergencyContacts      EmergencyContact[]
+  insuranceCoverages     InsurancePolicyCoverage[]
+  medicalExpenses        MedicalExpense[]
+  visitSummaries         VisitSummary[]
+  workouts               Workout[]
 
   @@unique([householdId, familyhubMemberId])
   @@unique([householdId, linkedUserId])
@@ -176,9 +176,10 @@ model FamilyMember {
   @@index([familyhubMemberId])
 }
 
-model HealthProfile {
+model HealthProfileRecord {
   id                  String    @id @default(cuid())
-  familyMemberId      String    @unique
+  familyMemberId      String
+  recordDate          DateTime  @default(now()) @db.Date
   bloodType           BloodType @default(UNKNOWN)
   heightCm            Decimal?  @db.Decimal(5, 2)
   weightKg            Decimal?  @db.Decimal(5, 2)
@@ -193,6 +194,9 @@ model HealthProfile {
   updatedAt           DateTime  @updatedAt
 
   familyMember FamilyMember @relation(fields: [familyMemberId], references: [id], onDelete: Cascade)
+
+  @@index([familyMemberId])
+  @@index([familyMemberId, recordDate(sort: Desc)])
 }
 
 // ============================================================================
@@ -302,9 +306,9 @@ model EmergencyContact {
 // INSURANCE
 // ============================================================================
 
-model Insurance {
+model InsurancePolicy {
   id               String        @id @default(cuid())
-  familyMemberId   String
+  householdId      String
   providerName     String
   policyNumber     String
   groupNumber      String?
@@ -322,9 +326,25 @@ model Insurance {
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
 
-  familyMember FamilyMember @relation(fields: [familyMemberId], references: [id], onDelete: Cascade)
+  coveredMembers InsurancePolicyCoverage[]
 
+  @@index([householdId])
+}
+
+model InsurancePolicyCoverage {
+  id               String   @id @default(cuid())
+  policyId         String
+  familyMemberId   String
+  subscriberId     String?
+  relationToHolder String?
+  createdAt        DateTime @default(now())
+
+  policy       InsurancePolicy @relation(fields: [policyId], references: [id], onDelete: Cascade)
+  familyMember FamilyMember    @relation(fields: [familyMemberId], references: [id], onDelete: Cascade)
+
+  @@unique([policyId, familyMemberId])
   @@index([familyMemberId])
+  @@index([policyId])
 }
 
 // ============================================================================

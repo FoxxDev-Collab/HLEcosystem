@@ -24,7 +24,7 @@ export default async function FamilyPage() {
   const healthMembers = await prisma.familyMember.findMany({
     where: { householdId },
     include: {
-      healthProfile: true,
+      healthProfiles: { orderBy: { recordDate: "desc" }, take: 1 },
       _count: {
         select: {
           medications: { where: { isActive: true } },
@@ -95,7 +95,7 @@ export default async function FamilyPage() {
                   {isTracked && tracked ? (
                     <div className="space-y-3">
                       <div className="flex flex-wrap gap-2">
-                        {tracked.healthProfile ? (
+                        {tracked.healthProfiles.length > 0 ? (
                           <Badge variant="outline" className="text-xs">Profile</Badge>
                         ) : (
                           <Badge variant="secondary" className="text-xs">No profile</Badge>
@@ -167,7 +167,7 @@ export default async function FamilyPage() {
                         : "DOB not set"}
                     </div>
                     <div className="flex flex-wrap gap-2 mt-3">
-                      {member.healthProfile ? (
+                      {member.healthProfiles.length > 0 ? (
                         <Badge variant="outline" className="text-xs">Profile</Badge>
                       ) : (
                         <Badge variant="secondary" className="text-xs">No profile</Badge>
