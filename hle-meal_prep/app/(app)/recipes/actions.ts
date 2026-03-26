@@ -144,3 +144,30 @@ export async function addRecipeToListAction(formData: FormData) {
   revalidatePath(`/recipes/${recipeSlug}`);
   redirect(`/shopping-lists/${targetListId}`);
 }
+
+export async function toggleFavoriteRecipeAction(formData: FormData) {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) redirect("/setup");
+
+  const mealieRecipeId = formData.get("mealieRecipeId") as string;
+  const mealieSlug = formData.get("mealieSlug") as string;
+  const recipeName = formData.get("recipeName") as string;
+  if (!mealieRecipeId || !mealieSlug || !recipeName) return;
+
+  const existing = await prisma.favoriteRecipe.findFirst({
+    where: { householdId, mealieRecipeId },
+  });
+
+  if (existing) {
+    await prisma.favoriteRecipe.delete({ where: { id: existing.id } });
+  } else {
+    await prisma.favoriteRecipe.create({
+      data: { householdId, mealieRecipeId, mealieSlug, recipeName },
+    });
+  }
+
+  revalidatePath("/recipes");
+  revalidatePath("/recipes/" + mealieSlug);
+}

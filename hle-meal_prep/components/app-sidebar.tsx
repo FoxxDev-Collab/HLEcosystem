@@ -45,6 +45,7 @@ const overviewNav = [
   { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { title: "Meal Plan", href: "/mealie", icon: ChefHat },
   { title: "Recipes", href: "/recipes", icon: BookOpen },
+  { title: "What Can I Cook?", href: "/recipes/what-can-i-cook", icon: UtensilsCrossed },
   { title: "Mealie Lists", href: "/mealie/shopping-lists", icon: ListChecks },
 ];
 

@@ -10,6 +10,8 @@ import {
   getRecipeImageUrl,
   getMealieRecipeUrl,
   normalizeIngredientName,
+  hasNutritionData,
+  parseNutritionAmount,
 } from "@/lib/mealie";
 import type { MealieIngredient } from "@/lib/mealie";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,6 +25,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { formatCurrency } from "@/lib/format";
 import {
   ArrowLeft,
   Clock,
@@ -34,8 +37,11 @@ import {
   Check,
   Plus,
   ChefHat,
+  Apple,
+  Star,
+  DollarSign,
 } from "lucide-react";
-import { importIngredientsAction } from "../actions";
+import { importIngredientsAction, toggleFavoriteRecipeAction } from "../actions";
 
 function formatIngredientDisplay(ing: MealieIngredient): string {
   const parts: string[] = [];
@@ -70,6 +76,11 @@ export default async function RecipeDetailPage({
     redirect("/recipes");
   }
 
+  // Check if this recipe is favorited
+  const favorite = await prisma.favoriteRecipe.findFirst({
+    where: { householdId, mealieRecipeId: recipe.id },
+  });
+
   // Load existing products to check matches
   const existingProducts = await prisma.product.findMany({
     where: { householdId },
@@ -98,6 +109,39 @@ export default async function RecipeDetailPage({
 
   const matchedCount = ingredientMatches.filter((m) => m.matched).length;
   const newCount = ingredientMatches.filter((m) => !m.matched && !m.skipped).length;
+
+  // Cost estimate: look up latest prices for matched products
+  const matchedProductIds = ingredientMatches
+    .filter((m) => m.matched)
+    .map((m) => {
+      const name = normalizeIngredientName(m.ingredient);
+      // Find exact or partial match
+      for (const [existingName, productId] of productLookup.entries()) {
+        if (existingName === name || existingName.includes(name) || name.includes(existingName)) {
+          return productId;
+        }
+      }
+      return null;
+    })
+    .filter((id): id is string => id !== null);
+
+  let totalCost = 0;
+  let pricedCount = 0;
+  if (matchedProductIds.length > 0) {
+    const latestPrices = await prisma.storePrice.findMany({
+      where: { productId: { in: matchedProductIds } },
+      orderBy: { observedAt: "desc" },
+      distinct: ["productId"],
+    });
+    for (const price of latestPrices) {
+      totalCost += Number(price.price);
+      pricedCount++;
+    }
+  }
+  const unpricedCount = recipe.recipeIngredient.length - pricedCount;
+  const perServingCost = recipe.recipeServings && totalCost > 0
+    ? totalCost / recipe.recipeServings
+    : null;
 
   return (
     <div className="space-y-6">
@@ -156,6 +200,18 @@ export default async function RecipeDetailPage({
                 <span>{recipe.recipeServings} servings</span>
               </div>
             )}
+            {totalCost > 0 && (
+              <div className="flex items-center gap-1.5 text-muted-foreground">
+                <DollarSign className="size-4" />
+                <span>~{formatCurrency(totalCost)}</span>
+                {perServingCost && (
+                  <span className="text-xs">({formatCurrency(perServingCost)}/serving)</span>
+                )}
+                {unpricedCount > 0 && (
+                  <span className="text-xs opacity-70">({unpricedCount} unpriced)</span>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Categories and tags */}
@@ -174,6 +230,14 @@ export default async function RecipeDetailPage({
 
           {/* Actions */}
           <div className="flex flex-wrap gap-2">
+            <form action={toggleFavoriteRecipeAction}>
+              <input type="hidden" name="mealieRecipeId" value={recipe.id} />
+              <input type="hidden" name="mealieSlug" value={recipe.slug} />
+              <input type="hidden" name="recipeName" value={recipe.name} />
+              <Button type="submit" variant="ghost" size="icon" className="size-10">
+                <Star className={`size-5 ${favorite ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"}`} />
+              </Button>
+            </form>
             <Link href={`/mealie/sync-review?recipeId=${recipe.id}&recipeName=${encodeURIComponent(recipe.name)}`}>
               <Button className="gap-2">
                 <ShoppingCart className="size-4" />
@@ -303,6 +367,51 @@ export default async function RecipeDetailPage({
           </CardContent>
         </Card>
       )}
+
+      {/* Nutrition Facts */}
+      {recipe.nutrition && hasNutritionData(recipe.nutrition) && (() => {
+        const nutrition = recipe.nutrition;
+        const nutrients = [
+          { label: "Calories", value: nutrition.calories, unit: "kcal" },
+          { label: "Protein", value: nutrition.proteinContent, unit: "g" },
+          { label: "Carbs", value: nutrition.carbohydrateContent, unit: "g" },
+          { label: "Fat", value: nutrition.fatContent, unit: "g" },
+          { label: "Fiber", value: nutrition.fiberContent, unit: "g" },
+          { label: "Sugar", value: nutrition.sugarContent, unit: "g" },
+          { label: "Sodium", value: nutrition.sodiumContent, unit: "mg" },
+        ].filter((n) => {
+          const parsed = parseNutritionAmount(n.value);
+          return parsed !== null;
+        });
+
+        if (nutrients.length === 0) return null;
+
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Apple className="size-5" />
+                Nutrition Facts
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                {nutrients.map((n) => (
+                  <div key={n.label} className="rounded-lg border p-3 text-center">
+                    <div className="text-2xl font-bold">
+                      {parseNutritionAmount(n.value)}
+                      <span className="text-sm font-normal text-muted-foreground ml-1">
+                        {n.unit}
+                      </span>
+                    </div>
+                    <div className="text-sm text-muted-foreground mt-1">{n.label}</div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })()}
     </div>
   );
 }

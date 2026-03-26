@@ -21,14 +21,17 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
+  Star,
 } from "lucide-react";
+import { toggleFavoriteRecipeAction } from "./actions";
+import prisma from "@/lib/prisma";
 
 const PER_PAGE = 20;
 
 export default async function RecipesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ search?: string; category?: string; page?: string }>;
+  searchParams: Promise<{ search?: string; category?: string; page?: string; favorites?: string }>;
 }) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
@@ -72,9 +75,10 @@ export default async function RecipesPage({
   const params = await searchParams;
   const searchQuery = params.search || "";
   const categoryFilter = params.category || "";
+  const favoritesFilter = params.favorites === "true";
   const currentPage = Math.max(1, parseInt(params.page || "1", 10));
 
-  const [recipesData, categories] = await Promise.all([
+  const [recipesData, categories, favorites] = await Promise.all([
     getRecipes(
       householdId,
       currentPage,
@@ -82,14 +86,25 @@ export default async function RecipesPage({
       searchQuery || undefined
     ),
     getRecipeCategories(householdId),
+    prisma.favoriteRecipe.findMany({
+      where: { householdId },
+      select: { mealieRecipeId: true, mealieSlug: true, recipeName: true },
+    }),
   ]);
 
+  const favoriteIds = new Set(favorites.map((f) => f.mealieRecipeId));
+
   // Client-side category filtering (Mealie search endpoint handles text search)
-  const filteredItems = categoryFilter
+  let filteredItems = categoryFilter
     ? recipesData.items.filter((r) =>
         r.recipeCategory?.some((c) => c.slug === categoryFilter)
       )
     : recipesData.items;
+
+  // Favorites filtering
+  if (favoritesFilter) {
+    filteredItems = filteredItems.filter((r) => favoriteIds.has(r.id));
+  }
 
   const totalPages = recipesData.totalPages;
 
@@ -122,7 +137,7 @@ export default async function RecipesPage({
         <Button type="submit" variant="secondary">
           Search
         </Button>
-        {(searchQuery || categoryFilter) && (
+        {(searchQuery || categoryFilter || favoritesFilter) && (
           <Link href="/recipes">
             <Button variant="ghost" type="button">
               Clear
@@ -135,7 +150,13 @@ export default async function RecipesPage({
       {categories.length > 0 && (
         <div className="flex flex-wrap gap-2">
           <Link href={searchQuery ? `/recipes?search=${encodeURIComponent(searchQuery)}` : "/recipes"}>
-            <Badge variant={!categoryFilter ? "default" : "outline"}>All</Badge>
+            <Badge variant={!categoryFilter && !favoritesFilter ? "default" : "outline"}>All</Badge>
+          </Link>
+          <Link href={searchQuery ? `/recipes?search=${encodeURIComponent(searchQuery)}&favorites=true` : "/recipes?favorites=true"}>
+            <Badge variant={favoritesFilter ? "default" : "outline"} className="gap-1">
+              <Star className={`size-3 ${favoritesFilter ? "fill-yellow-400 text-yellow-400" : ""}`} />
+              Favorites
+            </Badge>
           </Link>
           {categories.map((cat) => {
             const href = searchQuery
@@ -159,8 +180,8 @@ export default async function RecipesPage({
             <BookOpen className="size-12 mx-auto mb-4 text-muted-foreground" />
             <h3 className="text-lg font-semibold mb-1">No Recipes Found</h3>
             <p className="text-sm text-muted-foreground">
-              {searchQuery || categoryFilter
-                ? "Try adjusting your search or category filter."
+              {searchQuery || categoryFilter || favoritesFilter
+                ? "Try adjusting your search or filters."
                 : "No recipes found in your Mealie instance."}
             </p>
           </CardContent>
@@ -168,8 +189,16 @@ export default async function RecipesPage({
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {filteredItems.map((recipe) => (
-            <Link key={recipe.id} href={`/recipes/${recipe.slug}`}>
-              <Card className="overflow-hidden hover:shadow-md transition-shadow h-full">
+            <Card key={recipe.id} className="overflow-hidden hover:shadow-md transition-shadow h-full relative">
+              <form action={toggleFavoriteRecipeAction} className="absolute top-2 right-2 z-10">
+                <input type="hidden" name="mealieRecipeId" value={recipe.id} />
+                <input type="hidden" name="mealieSlug" value={recipe.slug} />
+                <input type="hidden" name="recipeName" value={recipe.name} />
+                <button type="submit" className="rounded-full bg-background/80 backdrop-blur-sm p-1.5 hover:bg-background transition-colors">
+                  <Star className={`size-4 ${favoriteIds.has(recipe.id) ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"}`} />
+                </button>
+              </form>
+              <Link href={`/recipes/${recipe.slug}`}>
                 <div className="relative aspect-video bg-muted">
                   <Image
                     src={getRecipeImageUrl(mealieConfig.apiUrl, recipe.id)}
@@ -219,8 +248,8 @@ export default async function RecipesPage({
                     </div>
                   )}
                 </CardContent>
-              </Card>
-            </Link>
+              </Link>
+            </Card>
           ))}
         </div>
       )}
@@ -230,7 +259,7 @@ export default async function RecipesPage({
         <div className="flex items-center justify-center gap-2">
           {currentPage > 1 ? (
             <Link
-              href={buildPageUrl(currentPage - 1, searchQuery, categoryFilter)}
+              href={buildPageUrl(currentPage - 1, searchQuery, categoryFilter, favoritesFilter)}
             >
               <Button variant="outline" size="icon">
                 <ChevronLeft className="size-4" />
@@ -246,7 +275,7 @@ export default async function RecipesPage({
           </span>
           {currentPage < totalPages ? (
             <Link
-              href={buildPageUrl(currentPage + 1, searchQuery, categoryFilter)}
+              href={buildPageUrl(currentPage + 1, searchQuery, categoryFilter, favoritesFilter)}
             >
               <Button variant="outline" size="icon">
                 <ChevronRight className="size-4" />
@@ -263,10 +292,11 @@ export default async function RecipesPage({
   );
 }
 
-function buildPageUrl(page: number, search: string, category: string): string {
+function buildPageUrl(page: number, search: string, category: string, favorites?: boolean): string {
   const params = new URLSearchParams();
   if (search) params.set("search", search);
   if (category) params.set("category", category);
+  if (favorites) params.set("favorites", "true");
   if (page > 1) params.set("page", String(page));
   const qs = params.toString();
   return qs ? `/recipes?${qs}` : "/recipes";

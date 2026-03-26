@@ -5,7 +5,7 @@ import { getCurrentHouseholdId } from "@/lib/household";
 import prisma from "@/lib/prisma";
 import { formatCurrency } from "@/lib/format";
 import { formatUnit } from "@/lib/format";
-import { ArrowLeft, Trash2, Package, Check } from "lucide-react";
+import { ArrowLeft, Trash2, Package, Check, Copy } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,6 +31,7 @@ import {
   addListItemAction,
   toggleListItemAction,
   removeListItemAction,
+  duplicateListAction,
 } from "../actions";
 import { stockFromListAction } from "@/app/(app)/pantry/actions";
 
@@ -235,6 +236,13 @@ export default async function ShoppingListDetailPage({
               </Button>
             </form>
           )}
+          <form action={duplicateListAction}>
+            <input type="hidden" name="id" value={list.id} />
+            <Button type="submit" variant="outline" size="sm" className="gap-1.5">
+              <Copy className="size-4" />
+              Duplicate
+            </Button>
+          </form>
           <form action={stockFromListAction}>
             <input type="hidden" name="listId" value={list.id} />
             <Button type="submit" variant="outline" size="sm" className="gap-1.5">

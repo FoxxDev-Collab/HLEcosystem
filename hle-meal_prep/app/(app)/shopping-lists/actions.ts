@@ -169,3 +169,45 @@ export async function assignStoreAction(formData: FormData) {
 
   revalidatePath(`/shopping-lists/${listId}`);
 }
+
+export async function duplicateListAction(formData: FormData) {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) redirect("/setup");
+
+  const id = formData.get("id") as string;
+  if (!id) return;
+
+  const sourceList = await prisma.shoppingList.findFirst({
+    where: { id, householdId },
+    include: { items: true },
+  });
+  if (!sourceList) return;
+
+  const newList = await prisma.shoppingList.create({
+    data: {
+      householdId,
+      name: sourceList.name + " (Copy)",
+      status: "DRAFT",
+    },
+  });
+
+  if (sourceList.items.length > 0) {
+    await prisma.shoppingListItem.createMany({
+      data: sourceList.items.map((item) => ({
+        listId: newList.id,
+        productId: item.productId,
+        storeId: item.storeId,
+        quantity: item.quantity,
+        unit: item.unit,
+        notes: item.notes,
+        sortOrder: item.sortOrder,
+        isChecked: false,
+      })),
+    });
+  }
+
+  revalidatePath("/shopping-lists");
+  redirect("/shopping-lists/" + newList.id);
+}

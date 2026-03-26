@@ -5,7 +5,9 @@ import { getCurrentHouseholdId } from "@/lib/household";
 import prisma from "@/lib/prisma";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { formatUnit } from "@/lib/format";
-import { ArrowLeft, Trash2 } from "lucide-react";
+import { getMealieConfig, getRecipes, getRecipeImageUrl } from "@/lib/mealie";
+import { ArrowLeft, Trash2, Package, BookOpen } from "lucide-react";
+import { PriceChart } from "@/components/price-chart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,7 +48,7 @@ export default async function ProductDetailPage({
 
   const { id } = await params;
 
-  const [product, categories, stores] = await Promise.all([
+  const [product, categories, stores, pantryItem, mealieConfig] = await Promise.all([
     prisma.product.findFirst({
       where: { id, householdId },
       include: {
@@ -65,9 +67,41 @@ export default async function ProductDetailPage({
       where: { householdId, isActive: true },
       orderBy: { name: "asc" },
     }),
+    prisma.pantryItem.findFirst({
+      where: { productId: id, householdId },
+    }),
+    getMealieConfig(householdId),
   ]);
 
   if (!product) notFound();
+
+  // Search Mealie for recipes using this product
+  let usedInRecipes: { name: string; slug: string; id: string }[] = [];
+  if (mealieConfig) {
+    try {
+      const search = await getRecipes(householdId, 1, 10, product.name);
+      usedInRecipes = search.items.map((r) => ({ name: r.name, slug: r.slug, id: r.id }));
+    } catch {
+      // Mealie unavailable — skip
+    }
+  }
+
+  // Build price chart data
+  const chartStoreMap = new Map<string, { name: string; color: string }>();
+  const chartDateMap = new Map<string, { date: string; [key: string]: string | number }>();
+
+  for (const price of [...product.prices].reverse()) {
+    const dateStr = formatDate(price.observedAt);
+    const storeName = price.store.name;
+    chartStoreMap.set(price.store.id, { name: storeName, color: price.store.color || "#94a3b8" });
+
+    const existing = chartDateMap.get(dateStr) || { date: dateStr };
+    existing[storeName] = Number(price.price);
+    chartDateMap.set(dateStr, existing);
+  }
+
+  const chartData = Array.from(chartDateMap.values());
+  const chartStores = Array.from(chartStoreMap.values());
 
   const today = new Date().toISOString().split("T")[0];
 
@@ -92,6 +126,12 @@ export default async function ProductDetailPage({
             <span className="text-sm text-muted-foreground">
               {formatUnit(product.defaultUnit)}
             </span>
+            {pantryItem && (
+              <Badge variant="outline" className="gap-1">
+                <Package className="size-3" />
+                In Pantry: {Number(pantryItem.quantity)} {pantryItem.unit ? formatUnit(pantryItem.unit) : formatUnit(product.defaultUnit)}
+              </Badge>
+            )}
           </div>
         </div>
       </div>
@@ -220,6 +260,50 @@ export default async function ProductDetailPage({
           </CardContent>
         </Card>
       </div>
+
+      {/* Price Trend Chart */}
+      {chartData.length >= 2 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Price Trend</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <PriceChart data={chartData} stores={chartStores} />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Used in Recipes */}
+      {usedInRecipes.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BookOpen className="size-5" />
+              Used in Recipes ({usedInRecipes.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {usedInRecipes.map((recipe) => (
+                <Link
+                  key={recipe.slug}
+                  href={`/recipes/${recipe.slug}`}
+                  className="flex items-center gap-3 rounded-lg border p-3 hover:bg-muted/50 transition-colors"
+                >
+                  {mealieConfig && (
+                    <img
+                      src={getRecipeImageUrl(mealieConfig.apiUrl, recipe.id)}
+                      alt=""
+                      className="size-10 rounded object-cover"
+                    />
+                  )}
+                  <span className="text-sm font-medium line-clamp-1">{recipe.name}</span>
+                </Link>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>

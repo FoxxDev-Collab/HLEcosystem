@@ -178,6 +178,18 @@ model MealieConfig {
   updatedAt   DateTime @updatedAt
 }
 
+model FavoriteRecipe {
+  id             String   @id @default(cuid())
+  householdId    String
+  mealieRecipeId String
+  mealieSlug     String
+  recipeName     String
+  createdAt      DateTime @default(now())
+
+  @@unique([householdId, mealieRecipeId])
+  @@index([householdId])
+}
+
 model ShoppingListItem {
   id        String       @id @default(cuid())
   listId    String

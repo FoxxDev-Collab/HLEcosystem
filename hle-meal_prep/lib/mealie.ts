@@ -32,9 +32,20 @@ export type MealieInstruction = {
   text: string;
 };
 
+export type MealieNutrition = {
+  calories?: string | null;
+  fatContent?: string | null;
+  proteinContent?: string | null;
+  carbohydrateContent?: string | null;
+  fiberContent?: string | null;
+  sugarContent?: string | null;
+  sodiumContent?: string | null;
+};
+
 export type MealieRecipe = MealieRecipeSummary & {
   recipeIngredient: MealieIngredient[];
   recipeInstructions: MealieInstruction[];
+  nutrition: MealieNutrition | null;
   recipeCategory: { name: string; slug: string }[];
   tags: { name: string; slug: string }[];
 };
@@ -272,6 +283,24 @@ export function getMonthRange(date: Date = new Date()): {
     year,
     month,
   };
+}
+
+// ── Nutrition Helpers ────────────────────────────────────────────
+
+export function parseNutritionAmount(value: string | null | undefined): number | null {
+  if (!value) return null;
+  const match = value.match(/([\d.]+)/);
+  return match ? parseFloat(match[1]) : null;
+}
+
+export function hasNutritionData(nutrition: MealieNutrition | null | undefined): boolean {
+  if (!nutrition) return false;
+  return !!(
+    nutrition.calories ||
+    nutrition.proteinContent ||
+    nutrition.fatContent ||
+    nutrition.carbohydrateContent
+  );
 }
 
 // ── Ingredient Normalization ─────────────────────────────────────

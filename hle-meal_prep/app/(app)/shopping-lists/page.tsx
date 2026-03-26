@@ -4,7 +4,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { getCurrentHouseholdId } from "@/lib/household";
 import prisma from "@/lib/prisma";
 import { formatDate } from "@/lib/format";
-import { ShoppingCart, Trash2 } from "lucide-react";
+import { ShoppingCart, Trash2, Copy } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,7 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { createListAction, deleteListAction } from "./actions";
+import { createListAction, deleteListAction, duplicateListAction } from "./actions";
 
 const statusColors: Record<string, string> = {
   DRAFT: "secondary",
@@ -125,7 +125,13 @@ export default async function ShoppingListsPage() {
                       {formatDate(list.createdAt)}
                     </TableCell>
                     <TableCell>
-                      <form action={deleteListAction}>
+                      <form action={duplicateListAction} className="inline">
+                        <input type="hidden" name="id" value={list.id} />
+                        <Button type="submit" variant="ghost" size="sm" className="h-8 w-8 p-0">
+                          <Copy className="size-4" />
+                        </Button>
+                      </form>
+                      <form action={deleteListAction} className="inline">
                         <input type="hidden" name="id" value={list.id} />
                         <Button
                           type="submit"

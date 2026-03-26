@@ -7,7 +7,10 @@ import {
   getMealieConfig,
   getMonthRange,
   getMealieRecipeUrl,
+  getRecipe,
+  parseNutritionAmount,
 } from "@/lib/mealie";
+import type { MealieNutrition } from "@/lib/mealie";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -130,6 +133,40 @@ export default async function MealiePage({
     const existing = mealsByDate.get(entry.date) || [];
     existing.push(entry);
     mealsByDate.set(entry.date, existing);
+  }
+
+  // Fetch nutrition data for recipes in this month
+  const recipeIds = [...new Set(mealPlan.filter((e) => e.recipeId).map((e) => e.recipeId!))];
+  const nutritionMap = new Map<string, MealieNutrition>();
+
+  if (recipeIds.length > 0) {
+    const recipeResults = await Promise.allSettled(
+      recipeIds.map((id) => getRecipe(householdId, id))
+    );
+    for (const result of recipeResults) {
+      if (result.status === "fulfilled" && result.value.nutrition) {
+        nutritionMap.set(result.value.id, result.value.nutrition);
+      }
+    }
+  }
+
+  // Calculate daily calories
+  function getDayCalories(dateStr: string): number | null {
+    const meals = mealsByDate.get(dateStr);
+    if (!meals) return null;
+    let total = 0;
+    let hasAny = false;
+    for (const meal of meals) {
+      if (!meal.recipeId) continue;
+      const nutrition = nutritionMap.get(meal.recipeId);
+      if (!nutrition) continue;
+      const cal = parseNutritionAmount(nutrition.calories);
+      if (cal !== null) {
+        total += cal;
+        hasAny = true;
+      }
+    }
+    return hasAny ? total : null;
   }
 
   // Build calendar grid: fill in days from prev/next month to complete weeks
@@ -317,6 +354,16 @@ export default async function MealiePage({
                       </div>
                     ))}
                 </div>
+
+                {/* Daily calorie total */}
+                {(() => {
+                  const cal = getDayCalories(calDay.dateStr);
+                  return cal !== null ? (
+                    <div className="text-[10px] text-muted-foreground font-medium mt-auto pt-1">
+                      ~{cal} cal
+                    </div>
+                  ) : null;
+                })()}
 
                 {/* Empty day — subtle indicator for current month only */}
                 {!hasMeals && calDay.isCurrentMonth && (
