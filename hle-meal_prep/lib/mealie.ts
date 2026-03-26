@@ -11,6 +11,8 @@ export type MealieRecipeSummary = {
   prepTime: string | null;
   performTime: string | null;
   recipeServings: number | null;
+  rating: number | null;
+  dateAdded: string | null;
   image: string | null;
   orgURL: string | null;
   recipeCategory: { name: string; slug: string }[];
@@ -156,11 +158,23 @@ export function getMealieRecipeUrl(apiUrl: string, slug: string): string {
   return `${apiUrl}/g/home/r/${slug}`;
 }
 
+export type RecipeQueryOptions = {
+  page?: number;
+  perPage?: number;
+  search?: string;
+  categories?: string;
+  tags?: string;
+  foods?: string;
+  orderBy?: string;
+  orderDirection?: "asc" | "desc";
+};
+
 export async function getRecipes(
   householdId: string,
   page: number,
   perPage: number,
-  search?: string
+  search?: string,
+  options?: Omit<RecipeQueryOptions, "page" | "perPage" | "search">
 ): Promise<{ items: MealieRecipeSummary[]; total: number; totalPages: number }> {
   const config = await getMealieConfig(householdId);
   if (!config) return { items: [], total: 0, totalPages: 0 };
@@ -170,6 +184,11 @@ export async function getRecipes(
     perPage: String(perPage),
   });
   if (search) params.set("search", search);
+  if (options?.categories) params.set("categories", options.categories);
+  if (options?.tags) params.set("tags", options.tags);
+  if (options?.foods) params.set("foods", options.foods);
+  if (options?.orderBy) params.set("orderBy", options.orderBy);
+  if (options?.orderDirection) params.set("orderDirection", options.orderDirection);
 
   const data = await mealieFetch<{
     items: MealieRecipeSummary[];
@@ -191,6 +210,32 @@ export async function getRecipeCategories(
   const data = await mealieFetch<{ items: { name: string; slug: string }[] }>(
     config,
     "/api/organizers/categories"
+  );
+  return data.items;
+}
+
+export async function getRecipeTags(
+  householdId: string
+): Promise<{ name: string; slug: string }[]> {
+  const config = await getMealieConfig(householdId);
+  if (!config) return [];
+
+  const data = await mealieFetch<{ items: { name: string; slug: string }[] }>(
+    config,
+    "/api/organizers/tags"
+  );
+  return data.items;
+}
+
+export async function getRecipeFoods(
+  householdId: string
+): Promise<{ id: string; name: string }[]> {
+  const config = await getMealieConfig(householdId);
+  if (!config) return [];
+
+  const data = await mealieFetch<{ items: { id: string; name: string }[] }>(
+    config,
+    "/api/foods?perPage=200&orderBy=name&orderDirection=asc"
   );
   return data.items;
 }
