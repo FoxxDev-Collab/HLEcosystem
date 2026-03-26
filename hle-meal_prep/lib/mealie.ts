@@ -26,8 +26,15 @@ export type MealieIngredient = {
   referenceId: string;
 };
 
+export type MealieInstruction = {
+  id: string;
+  title: string;
+  text: string;
+};
+
 export type MealieRecipe = MealieRecipeSummary & {
   recipeIngredient: MealieIngredient[];
+  recipeInstructions: MealieInstruction[];
   recipeCategory: { name: string; slug: string }[];
   tags: { name: string; slug: string }[];
 };

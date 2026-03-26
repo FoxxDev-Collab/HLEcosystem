@@ -33,6 +33,7 @@ import {
   Download,
   Check,
   Plus,
+  ChefHat,
 } from "lucide-react";
 import { importIngredientsAction } from "../actions";
 
@@ -271,6 +272,37 @@ export default async function RecipeDetailPage({
           )}
         </CardContent>
       </Card>
+
+      {/* Cooking Instructions */}
+      {recipe.recipeInstructions && recipe.recipeInstructions.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <ChefHat className="size-5" />
+              Instructions ({recipe.recipeInstructions.length} steps)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ol className="space-y-6">
+              {recipe.recipeInstructions.map((step, idx) => (
+                <li key={step.id || idx} className="flex gap-4">
+                  <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-semibold">
+                    {idx + 1}
+                  </div>
+                  <div className="space-y-1 pt-1">
+                    {step.title && (
+                      <h3 className="font-semibold text-sm">{step.title}</h3>
+                    )}
+                    <p className="text-sm leading-relaxed text-muted-foreground">
+                      {step.text}
+                    </p>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
