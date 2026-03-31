@@ -68,6 +68,66 @@ export async function recordDebtPaymentAction(formData: FormData): Promise<void>
   revalidatePath("/debts");
 }
 
+export async function updateDebtAction(formData: FormData): Promise<{ error?: string }> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) redirect("/setup");
+
+  const id = formData.get("id") as string;
+  const name = formData.get("name") as string;
+  const type = formData.get("type") as DebtType;
+  const lender = (formData.get("lender") as string) || null;
+  const originalPrincipal = parseFloat(formData.get("originalPrincipal") as string);
+  const currentBalance = parseFloat(formData.get("currentBalance") as string);
+  const interestRate = parseFloat(formData.get("interestRate") as string || "0");
+  const minimumPayment = formData.get("minimumPayment")
+    ? parseFloat(formData.get("minimumPayment") as string)
+    : null;
+
+  // Verify ownership
+  const existing = await prisma.debt.findUnique({ where: { id } });
+  if (!existing || existing.householdId !== householdId) {
+    return { error: "Debt not found" };
+  }
+
+  await prisma.debt.update({
+    where: { id },
+    data: {
+      name,
+      type,
+      lender,
+      originalPrincipal,
+      currentBalance,
+      interestRate: interestRate / 100,
+      minimumPayment,
+    },
+  });
+
+  revalidatePath("/debts");
+  revalidatePath(`/debts/${id}`);
+  return {};
+}
+
+export async function deleteDebtAction(formData: FormData): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) redirect("/setup");
+
+  const id = formData.get("id") as string;
+
+  // Verify ownership
+  const existing = await prisma.debt.findUnique({ where: { id } });
+  if (!existing || existing.householdId !== householdId) return;
+
+  // Payments cascade-delete via Prisma schema
+  await prisma.debt.delete({ where: { id } });
+
+  revalidatePath("/debts");
+  redirect("/debts");
+}
+
 export async function archiveDebtAction(formData: FormData): Promise<void> {
   const id = formData.get("id") as string;
   const isArchived = formData.get("isArchived") === "true";

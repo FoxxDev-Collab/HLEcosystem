@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { ArrowLeft } from "lucide-react";
 import { recordDebtPaymentAction } from "../actions";
 import { ExtraPaymentCalculator } from "./extra-payment-calc";
+import { DebtEditDialog, DebtDeleteDialog } from "./debt-actions";
 
 const DEBT_TYPE_LABELS: Record<string, string> = {
   MORTGAGE: "Mortgage", AUTO_LOAN: "Auto Loan", STUDENT_LOAN: "Student Loan",
@@ -55,12 +56,25 @@ export default async function DebtDetailPage({ params }: { params: Promise<{ id:
         <Button variant="ghost" size="icon" asChild>
           <Link href="/debts"><ArrowLeft className="size-4" /></Link>
         </Button>
-        <div>
+        <div className="flex-1">
           <h1 className="text-2xl font-bold tracking-tight">{debt.name}</h1>
           <p className="text-muted-foreground">
             {DEBT_TYPE_LABELS[debt.type]}
             {debt.lender && ` at ${debt.lender}`}
           </p>
+        </div>
+        <div className="flex gap-2">
+          <DebtEditDialog debt={{
+            id: debt.id,
+            name: debt.name,
+            type: debt.type,
+            lender: debt.lender,
+            originalPrincipal: Number(debt.originalPrincipal),
+            currentBalance: Number(debt.currentBalance),
+            interestRate: Number(debt.interestRate),
+            minimumPayment: debt.minimumPayment ? Number(debt.minimumPayment) : null,
+          }} />
+          <DebtDeleteDialog debtId={debt.id} debtName={debt.name} />
         </div>
       </div>
 
