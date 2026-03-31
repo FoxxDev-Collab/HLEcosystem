@@ -18,6 +18,7 @@ declare -A PORTS=(
   [hle-meal-prep]=8086
   [hle-family-wiki]=8087
   [hle-claude-api]=8088
+  [hle-family-travel]=8089
 )
 
 declare -A CONTAINERS=(
@@ -30,6 +31,7 @@ declare -A CONTAINERS=(
   [hle-meal-prep]=foxxlab-meal-prep
   [hle-family-wiki]=foxxlab-family-wiki
   [hle-claude-api]=foxxlab-claude-api
+  [hle-family-travel]=foxxlab-family-travel
 )
 
 SERVICES=(
@@ -42,6 +44,7 @@ SERVICES=(
   hle-meal-prep
   hle-family-wiki
   hle-claude-api
+  hle-family-travel
 )
 
 # Upload volume → container mapping
@@ -483,6 +486,7 @@ ${BOLD}SERVICES${NC} (${#SERVICES[@]} apps)
   hle-meal-prep         :8086   Meal Prep
   hle-family-wiki       :8087   Family Wiki
   hle-claude-api        :8088   Claude API Gateway
+  hle-family-travel     :8089   Family Travel
   postgres              (logs/shell only)
 
 ${BOLD}EXAMPLES${NC}

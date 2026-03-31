@@ -179,6 +179,18 @@ services:
       DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/foxxlab?schema=family_wiki"
       APP_URL: ${WIKI_URL:-http://localhost:8087}
 
+  # Family Travel — Trip planning, itineraries, packing lists
+  hle-family-travel:
+    <<: *nextjs-app
+    image: ghcr.io/foxxdev-collab/hle-family-travel:latest
+    container_name: foxxlab-family-travel
+    ports:
+      - "${TRAVEL_PORT:-8089}:3000"
+    environment:
+      <<: *nextjs-env
+      DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/foxxlab?schema=family_travel"
+      APP_URL: ${TRAVEL_URL:-http://localhost:8089}
+
   # Claude API Gateway — Centralized AI service for ecosystem apps
   hle-claude-api:
     <<: *nextjs-app

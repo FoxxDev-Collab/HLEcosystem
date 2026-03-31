@@ -47,6 +47,9 @@ jobs:
           - app_dir: hle-claude_api
             image_name: hle-claude-api
             app_name: "HLE Claude API"
+          - app_dir: hle-family_travel
+            image_name: hle-family-travel
+            app_name: "HLE Family Travel"
 
     steps:
       - name: Checkout
