@@ -9,7 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Trash2, Search, X } from "lucide-react";
+import { Trash2, Search, X, Link2, Sparkles } from "lucide-react";
+import Link from "next/link";
 import { TransactionForm } from "@/components/transaction-form";
 import { createTransactionAction, deleteTransactionAction } from "./actions";
 import type { Prisma } from "@prisma/client";
@@ -106,7 +107,17 @@ export default async function TransactionsPage({
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold tracking-tight">Transactions</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold tracking-tight">Transactions</h1>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" asChild>
+            <Link href="/transactions/categorize"><Sparkles className="size-4 mr-2" />AI Categorize</Link>
+          </Button>
+          <Button variant="outline" size="sm" asChild>
+            <Link href="/transactions/smart-link"><Link2 className="size-4 mr-2" />AI Smart Link</Link>
+          </Button>
+        </div>
+      </div>
 
       {/* Quick Add */}
       <Card>
