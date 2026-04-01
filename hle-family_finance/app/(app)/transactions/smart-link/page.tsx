@@ -72,6 +72,7 @@ export default async function SmartLinkPage() {
             amount: Number(t.amount),
             date: t.date.toISOString(),
             accountName: t.account.name,
+            accountId: t.accountId,
             type: t.type,
           }))}
           patternCount={patternCount}

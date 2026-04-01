@@ -5,10 +5,13 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { getCurrentHouseholdId } from "@/lib/household";
 import prisma from "@/lib/prisma";
-import { smartLinkTransactions, type SmartLinkMatch } from "@/lib/claude-api";
+import { smartLinkTransactions, type SmartLinkMatch, type SuggestedBill, type SuggestedRecurring } from "@/lib/claude-api";
+import type { BillCategory, RecurrenceFrequency } from "@prisma/client";
 
 export type AnalyzeResult = {
   matches: SmartLinkMatch[];
+  suggestedBills: SuggestedBill[];
+  suggestedRecurring: SuggestedRecurring[];
 } | { error: string };
 
 export async function analyzeTransactionsAction(
@@ -80,7 +83,11 @@ export async function analyzeTransactionsAction(
     return { error: result.error || "Analysis failed" };
   }
 
-  return { matches: result.data.matches };
+  return {
+    matches: result.data.matches || [],
+    suggestedBills: result.data.suggestedBills || [],
+    suggestedRecurring: result.data.suggestedRecurring || [],
+  };
 }
 
 export async function acceptDebtLinkAction(
@@ -203,6 +210,116 @@ export async function acceptRecurringLinkAction(
   revalidatePath("/recurring");
   revalidatePath("/transactions/smart-link");
   return {};
+}
+
+export async function createBillFromSuggestionAction(
+  name: string,
+  payee: string,
+  category: string,
+  expectedAmount: number,
+  dueDayOfMonth: number,
+  transactionIds: string[]
+): Promise<{ error?: string; billId?: string }> {
+  const user = await getCurrentUser();
+  if (!user) return { error: "Not authenticated" };
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) return { error: "No household" };
+
+  const bill = await prisma.monthlyBill.create({
+    data: {
+      householdId,
+      name,
+      payee,
+      category: category as BillCategory,
+      expectedAmount,
+      dueDayOfMonth,
+    },
+  });
+
+  // Link the transactions as bill payments
+  for (const txId of transactionIds) {
+    const tx = await prisma.transaction.findUnique({ where: { id: txId } });
+    if (!tx || tx.householdId !== householdId) continue;
+
+    const txDate = new Date(tx.date);
+    const dueDate = new Date(txDate.getFullYear(), txDate.getMonth(), dueDayOfMonth);
+
+    try {
+      await prisma.billPayment.create({
+        data: {
+          monthlyBillId: bill.id,
+          dueDate,
+          paidDate: tx.date,
+          amountDue: expectedAmount,
+          amountPaid: Math.abs(Number(tx.amount)),
+          status: "PAID",
+          linkedTransactionId: txId,
+        },
+      });
+    } catch {
+      // Skip if already linked
+    }
+  }
+
+  // Save pattern for auto-mapping
+  const normalized = payee.toLowerCase().trim();
+  if (normalized) {
+    await savePattern(householdId, normalized, "bill", bill.id, name);
+  }
+
+  revalidatePath("/bills");
+  revalidatePath("/transactions/smart-link");
+  return { billId: bill.id };
+}
+
+export async function createRecurringFromSuggestionAction(
+  name: string,
+  payee: string,
+  amount: number,
+  frequency: string,
+  accountId: string,
+  transactionIds: string[]
+): Promise<{ error?: string; recurringId?: string }> {
+  const user = await getCurrentUser();
+  if (!user) return { error: "Not authenticated" };
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) return { error: "No household" };
+
+  const rec = await prisma.recurringTransaction.create({
+    data: {
+      householdId,
+      accountId,
+      name,
+      payee,
+      type: "EXPENSE",
+      amount,
+      frequency: frequency as RecurrenceFrequency,
+      startDate: new Date(),
+      isActive: true,
+    },
+  });
+
+  // Link existing transactions
+  for (const txId of transactionIds) {
+    try {
+      await prisma.transaction.update({
+        where: { id: txId, householdId },
+        data: { recurringTransactionId: rec.id },
+      });
+    } catch {
+      // Skip failures
+    }
+  }
+
+  // Save pattern
+  const normalized = payee.toLowerCase().trim();
+  if (normalized) {
+    await savePattern(householdId, normalized, "recurring", rec.id, name);
+  }
+
+  revalidatePath("/recurring");
+  revalidatePath("/transactions/smart-link");
+  return { recurringId: rec.id };
 }
 
 async function savePattern(

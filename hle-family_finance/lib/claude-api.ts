@@ -75,8 +75,31 @@ export type SmartLinkMatch = {
   payeePattern: string;
 };
 
+export type SuggestedBill = {
+  name: string;
+  payee: string;
+  category: "UTILITIES" | "INSURANCE" | "SUBSCRIPTIONS" | "PHONE" | "INTERNET" | "RENT" | "MORTGAGE" | "CAR_PAYMENT" | "CHILD_CARE" | "STREAMING" | "OTHER";
+  expectedAmount: number;
+  dueDayOfMonth: number;
+  transactionIds: string[];
+  confidence: number;
+  reasoning: string;
+};
+
+export type SuggestedRecurring = {
+  name: string;
+  payee: string;
+  amount: number;
+  frequency: "WEEKLY" | "BI_WEEKLY" | "MONTHLY" | "QUARTERLY" | "YEARLY";
+  transactionIds: string[];
+  confidence: number;
+  reasoning: string;
+};
+
 export type SmartLinkResult = {
   matches: SmartLinkMatch[];
+  suggestedBills: SuggestedBill[];
+  suggestedRecurring: SuggestedRecurring[];
 };
 
 export async function smartLinkTransactions(payload: {

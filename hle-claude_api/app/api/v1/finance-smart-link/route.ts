@@ -62,28 +62,40 @@ export async function POST(request: NextRequest) {
     `- [${t.id}] ${t.date} | ${t.type} | $${Math.abs(t.amount).toFixed(2)} | Payee: "${t.payee || ""}" | Desc: "${t.description || ""}" | Account: ${t.accountName} | Category: ${t.categoryName || "None"}`
   ).join("\n");
 
-  const prompt = `You are a financial transaction analyst. Analyze unlinked bank transactions and match them to the household's known debts, bills, or recurring payment patterns.
+  const prompt = `You are a financial transaction analyst. You have two jobs:
+
+1. MATCH transactions to the household's known debts, bills, or recurring patterns
+2. DISCOVER new bills and recurring payments that the household hasn't set up yet
 
 DEBTS (loans/debts the household is paying off):
 ${debtsList || "None tracked"}
 
-BILLS (monthly bills):
+EXISTING BILLS (monthly bills already tracked):
 ${billsList || "None tracked"}
 
-RECURRING TRANSACTION PATTERNS:
+EXISTING RECURRING TRANSACTION PATTERNS:
 ${recurringList || "None tracked"}
 
 UNLINKED TRANSACTIONS TO ANALYZE:
 ${txList}
 
-For each transaction that matches a debt, bill, or recurring pattern, return a match. Consider:
+## JOB 1: Match to existing items
+For each transaction that matches an existing debt, bill, or recurring pattern, add to "matches". Consider:
 - Payee name similarity (e.g., "Wells Fargo Mortgage" matches a Wells Fargo mortgage debt)
 - Amount proximity (e.g., $2,450.00 near a $2,400 minimum payment)
 - Timing patterns (payment on the 1st matches dueDayOfMonth=1)
 - Transaction descriptions containing loan or account references
-- Category hints (e.g., a transaction categorized as "Insurance" matching an insurance bill)
 
-For debt payment matches, estimate the principal vs interest split using simple monthly amortization: monthly_interest = balance * (annual_rate / 12), principal = payment - monthly_interest.
+For debt payment matches, estimate the principal vs interest split: monthly_interest = balance * (annual_rate / 12), principal = payment - monthly_interest.
+
+## JOB 2: Discover NEW bills and recurring payments
+Look for transactions that appear to be regular bills or recurring payments that are NOT already tracked in the existing bills/recurring lists above. Signs include:
+- Multiple transactions to the same payee at similar amounts (subscription, utility, insurance)
+- Payee names suggesting bills: utilities, insurance, streaming services, gym memberships, phone, internet, etc.
+- Even a single transaction can be suggested if the payee name strongly suggests a recurring bill (e.g., "Netflix", "State Farm Insurance", "AT&T Wireless")
+
+For discovered bills, pick the best category from: UTILITIES, INSURANCE, SUBSCRIPTIONS, PHONE, INTERNET, RENT, MORTGAGE, CAR_PAYMENT, CHILD_CARE, STREAMING, OTHER.
+For discovered recurring, pick frequency: WEEKLY, BI_WEEKLY, MONTHLY, QUARTERLY, YEARLY.
 
 Return ONLY valid JSON:
 {
@@ -94,15 +106,38 @@ Return ONLY valid JSON:
       "matchId": "string (the debt/bill/recurring id)",
       "matchName": "string (name of matched item for display)",
       "confidence": 0.0 to 1.0,
-      "reasoning": "brief explanation of why this matches",
+      "reasoning": "brief explanation",
       "suggestedPrincipal": number | null,
       "suggestedInterest": number | null,
-      "payeePattern": "string (normalized payee pattern for auto-mapping, e.g. 'wells fargo mortgage')"
+      "payeePattern": "string (normalized payee pattern for auto-mapping)"
+    }
+  ],
+  "suggestedBills": [
+    {
+      "name": "descriptive bill name (e.g. 'AT&T Wireless')",
+      "payee": "payee name from transaction",
+      "category": "UTILITIES|INSURANCE|SUBSCRIPTIONS|PHONE|INTERNET|RENT|MORTGAGE|CAR_PAYMENT|CHILD_CARE|STREAMING|OTHER",
+      "expectedAmount": number,
+      "dueDayOfMonth": 1-31,
+      "transactionIds": ["ids of transactions that are payments for this bill"],
+      "confidence": 0.0 to 1.0,
+      "reasoning": "why this looks like a recurring bill"
+    }
+  ],
+  "suggestedRecurring": [
+    {
+      "name": "descriptive name",
+      "payee": "payee name from transaction",
+      "amount": number,
+      "frequency": "WEEKLY|BI_WEEKLY|MONTHLY|QUARTERLY|YEARLY",
+      "transactionIds": ["ids of matching transactions"],
+      "confidence": 0.0 to 1.0,
+      "reasoning": "why this looks like a recurring payment"
     }
   ]
 }
 
-Only include matches with confidence >= 0.5. Many transactions will be ordinary purchases — do NOT force-match everything.`;
+Only include items with confidence >= 0.5. Do NOT suggest bills/recurring that duplicate existing ones. Do NOT force-match ordinary one-off purchases.`;
 
   try {
     const client = getClient();
