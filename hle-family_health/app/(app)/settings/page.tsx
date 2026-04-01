@@ -19,7 +19,7 @@ export default async function SettingsPage() {
       prisma.medication.count({ where: { familyMember: { householdId } } }),
       prisma.vaccination.count({ where: { familyMember: { householdId } } }),
       prisma.provider.count({ where: { householdId } }),
-      prisma.insurance.count({ where: { familyMember: { householdId } } }),
+      prisma.insurancePolicy.count({ where: { householdId } }),
       prisma.visitSummary.count({ where: { familyMember: { householdId } } }),
       prisma.medicalExpense.count({ where: { familyMember: { householdId } } }),
       prisma.workout.count({ where: { familyMember: { householdId } } }),
