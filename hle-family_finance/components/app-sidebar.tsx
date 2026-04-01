@@ -25,6 +25,8 @@ import {
   DollarSign,
   ScanLine,
   Sparkles,
+  BrainCircuit,
+  Link2,
 } from "lucide-react";
 import {
   Sidebar,
@@ -59,6 +61,7 @@ const budgetNav = [
   { title: "Budget Planner", href: "/budget-planner", icon: FolderKanban },
   { title: "Trips", href: "/trips", icon: Luggage },
   { title: "Wishlists", href: "/wishlist", icon: Heart },
+  { title: "AI Advisor", href: "/advisor", icon: BrainCircuit },
   { title: "Reports", href: "/reports", icon: BarChart3 },
 ];
 
@@ -72,6 +75,7 @@ const wealthNav = [
 const toolsNav = [
   { title: "Receipts", href: "/receipts", icon: ScanLine },
   { title: "AI Categorize", href: "/transactions/categorize", icon: Sparkles },
+  { title: "AI Smart Link", href: "/transactions/smart-link", icon: Link2 },
   { title: "Import", href: "/import", icon: Upload },
   { title: "Taxes", href: "/taxes", icon: Landmark },
   { title: "Settings", href: "/settings", icon: Settings },

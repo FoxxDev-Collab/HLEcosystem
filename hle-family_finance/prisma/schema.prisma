@@ -673,6 +673,35 @@ model WishlistItem {
 }
 
 // ============================================================================
+// AI ADVISOR & LINK PATTERNS
+// ============================================================================
+
+model AdvisorReport {
+  id          String   @id @default(cuid())
+  householdId String
+  reportData  Json
+  generatedAt DateTime @default(now())
+
+  @@index([householdId, generatedAt])
+}
+
+model TransactionLinkPattern {
+  id          String   @id @default(cuid())
+  householdId String
+  payeePattern String
+  matchType   String   // "debt" | "bill" | "recurring"
+  matchId     String   // debt/bill/recurring ID
+  matchName   String
+  confidence  Float    @default(0.8)
+  usageCount  Int      @default(1)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([householdId, payeePattern, matchType])
+  @@index([householdId])
+}
+
+// ============================================================================
 // TRIP EXPENSE TRACKER
 // ============================================================================
 

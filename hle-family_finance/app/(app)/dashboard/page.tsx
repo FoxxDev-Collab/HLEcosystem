@@ -19,6 +19,8 @@ import {
   ArrowLeftRight,
   BarChart3,
   Clock,
+  BrainCircuit,
+  Link2,
 } from "lucide-react";
 
 async function getDashboardData(householdId: string) {
@@ -557,13 +559,17 @@ export default async function DashboardPage() {
                 <ArrowLeftRight className="size-3.5" />
                 Add transaction
               </Link>
+              <Link href="/transactions/smart-link" className="flex items-center gap-2.5 text-xs py-1.5 hover:text-primary transition-colors">
+                <Link2 className="size-3.5" />
+                AI Smart Link
+              </Link>
+              <Link href="/advisor" className="flex items-center gap-2.5 text-xs py-1.5 hover:text-primary transition-colors">
+                <BrainCircuit className="size-3.5" />
+                Financial Advisor
+              </Link>
               <Link href="/budgets" className="flex items-center gap-2.5 text-xs py-1.5 hover:text-primary transition-colors">
                 <BarChart3 className="size-3.5" />
                 Review budget
-              </Link>
-              <Link href="/reports" className="flex items-center gap-2.5 text-xs py-1.5 hover:text-primary transition-colors">
-                <BarChart3 className="size-3.5" />
-                View reports
               </Link>
             </CardContent>
           </Card>

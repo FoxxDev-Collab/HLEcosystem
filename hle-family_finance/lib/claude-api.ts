@@ -60,3 +60,69 @@ export async function categorizeTransaction(
 ): Promise<ApiResponse<CategorizeResult>> {
   return callClaudeApi<CategorizeResult>("categorize", { description, payee, amount, categories });
 }
+
+// ── Smart Link Types ────────────────────────────────────────────
+
+export type SmartLinkMatch = {
+  transactionId: string;
+  matchType: "debt" | "bill" | "recurring";
+  matchId: string;
+  matchName: string;
+  confidence: number;
+  reasoning: string;
+  suggestedPrincipal: number | null;
+  suggestedInterest: number | null;
+  payeePattern: string;
+};
+
+export type SmartLinkResult = {
+  matches: SmartLinkMatch[];
+};
+
+export async function smartLinkTransactions(payload: {
+  transactions: Record<string, unknown>[];
+  debts: Record<string, unknown>[];
+  bills: Record<string, unknown>[];
+  recurring: Record<string, unknown>[];
+}): Promise<ApiResponse<SmartLinkResult>> {
+  return callClaudeApi<SmartLinkResult>("finance-smart-link", payload);
+}
+
+// ── Advisor Types ───────────────────────────────────────────────
+
+export type AdvisorHealthScore = {
+  score: number;
+  grade: string;
+  summary: string;
+};
+
+export type AdvisorSpendingAnalysis = {
+  topCategories: Array<{ category: string; amount: number; trend: "up" | "down" | "stable"; note: string }>;
+  anomalies: Array<{ description: string; amount: number; severity: "info" | "warning" | "alert" }>;
+  monthOverMonth: string;
+};
+
+export type AdvisorReport = {
+  healthScore: AdvisorHealthScore;
+  spendingAnalysis: AdvisorSpendingAnalysis;
+  subscriptionDetection: Array<{ name: string; estimatedMonthly: number; confidence: number; suggestion: "keep" | "review" | "cancel" }>;
+  debtStrategy: {
+    totalDebt: number;
+    avalancheOrder: Array<{ name: string; rate: number; balance: number }>;
+    snowballOrder: Array<{ name: string; rate: number; balance: number }>;
+    recommendation: "avalanche" | "snowball";
+    reasoning: string;
+    estimatedPayoffMonths: number;
+    totalInterestSaved: number;
+  };
+  budgetRecommendations: Array<{ category: string; current: number; suggested: number; reasoning: string }>;
+  savingsOpportunities: Array<{ description: string; estimatedMonthlySavings: number; difficulty: "easy" | "moderate" | "hard" }>;
+  actionItems: Array<{ priority: number; title: string; description: string; impact: "high" | "medium" | "low" }>;
+  unlinkedTransactionCheck: { hasUnlinkedPayments: boolean; message: string };
+};
+
+export async function generateAdvisorReport(
+  snapshot: Record<string, unknown>
+): Promise<ApiResponse<AdvisorReport>> {
+  return callClaudeApi<AdvisorReport>("finance-advisor", snapshot);
+}
