@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, Plus, Trash2, Check, ExternalLink } from "lucide-react";
 import { addItemAction, toggleItemPurchasedAction, deleteItemAction, updateProjectStatusAction } from "../actions";
+import { ProjectEditDialog, ProjectDeleteDialog, ItemEditDialog } from "./project-actions";
 
 export default async function ProjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -32,7 +33,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" asChild>
             <Link href="/budget-planner"><ArrowLeft className="size-4" /></Link>
@@ -42,7 +43,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
             {project.description && <p className="text-muted-foreground">{project.description}</p>}
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           {(["PLANNING", "ACTIVE", "COMPLETED", "CANCELLED"] as const).map((status) => (
             <form key={status} action={updateProjectStatusAction}>
               <input type="hidden" name="id" value={id} />
@@ -56,6 +57,14 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
               </Button>
             </form>
           ))}
+          <ProjectEditDialog project={{
+            id: project.id,
+            name: project.name,
+            description: project.description,
+            targetDate: project.targetDate,
+            color: project.color,
+          }} />
+          <ProjectDeleteDialog projectId={project.id} projectName={project.name} />
         </div>
       </div>
 
@@ -133,8 +142,16 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className="text-sm font-medium">{formatCurrency(item.lineTotal)}</span>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <span className="text-sm font-medium mr-1">{formatCurrency(item.lineTotal)}</span>
+                    <ItemEditDialog item={{
+                      id: item.id,
+                      name: item.name,
+                      quantity: item.quantity,
+                      unitCost: Number(item.unitCost),
+                      referenceUrl: item.referenceUrl,
+                      description: item.description,
+                    }} />
                     <form action={deleteItemAction}>
                       <input type="hidden" name="id" value={item.id} />
                       <Button type="submit" variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive">

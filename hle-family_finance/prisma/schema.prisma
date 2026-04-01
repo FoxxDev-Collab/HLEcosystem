@@ -398,6 +398,10 @@ model Asset {
   vin              String?
   mileage          Int?
   licensePlate     String?
+  // Sold workflow
+  isSold           Boolean  @default(false)
+  soldPrice        Decimal? @db.Decimal(18, 2)
+  soldDate         DateTime? @db.Date
   // Common
   linkedDebtId     String?
   icon             String?

@@ -4,17 +4,18 @@ import { getCurrentUser } from "@/lib/auth";
 import { getCurrentHouseholdId } from "@/lib/household";
 import prisma from "@/lib/prisma";
 import { formatCurrency, formatPercent, formatDate } from "@/lib/format";
-import { calculateAmortization, calculateExtraPaymentSavings } from "@/lib/amortization";
+import { calculateAmortization } from "@/lib/amortization";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Home, Car, Link2 } from "lucide-react";
 import { recordDebtPaymentAction } from "../actions";
 import { ExtraPaymentCalculator } from "./extra-payment-calc";
 import { DebtEditDialog, DebtDeleteDialog } from "./debt-actions";
+import { PaymentTransactionLink } from "./payment-transaction-link";
 
 const DEBT_TYPE_LABELS: Record<string, string> = {
   MORTGAGE: "Mortgage", AUTO_LOAN: "Auto Loan", STUDENT_LOAN: "Student Loan",
@@ -32,10 +33,33 @@ export default async function DebtDetailPage({ params }: { params: Promise<{ id:
   const debt = await prisma.debt.findUnique({
     where: { id, householdId },
     include: {
-      payments: { orderBy: { paymentDate: "desc" } },
+      payments: {
+        orderBy: { paymentDate: "desc" },
+        include: { linkedTransaction: { select: { id: true, payee: true, description: true, amount: true, date: true } } },
+      },
+      linkedAssets: {
+        where: { isArchived: false },
+        select: { id: true, name: true, type: true, currentValue: true },
+      },
     },
   });
   if (!debt) notFound();
+
+  // Recent expense transactions for linking (unlinked, last 90 days)
+  const ninetyDaysAgo = new Date();
+  ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+
+  const recentTransactions = await prisma.transaction.findMany({
+    where: {
+      householdId,
+      type: "EXPENSE",
+      date: { gte: ninetyDaysAgo },
+      linkedDebtPayments: { none: {} },
+    },
+    select: { id: true, payee: true, description: true, amount: true, date: true },
+    orderBy: { date: "desc" },
+    take: 50,
+  });
 
   const balance = Number(debt.currentBalance);
   const rate = Number(debt.interestRate);
@@ -45,7 +69,6 @@ export default async function DebtDetailPage({ params }: { params: Promise<{ id:
     ? ((originalPrincipal - balance) / originalPrincipal) * 100
     : 0;
 
-  // Amortization (only if we have rate and payment)
   const projection = rate > 0 && minPayment > 0
     ? calculateAmortization(balance, rate, minPayment)
     : null;
@@ -99,6 +122,44 @@ export default async function DebtDetailPage({ params }: { params: Promise<{ id:
           <CardContent><div className="text-2xl font-bold">{minPayment > 0 ? formatCurrency(minPayment) : "—"}/mo</div></CardContent>
         </Card>
       </div>
+
+      {/* Linked Assets */}
+      {debt.linkedAssets.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-1.5">
+              <Link2 className="size-4" />Linked Assets
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {debt.linkedAssets.map((asset) => (
+                <Link
+                  key={asset.id}
+                  href={`/assets/${asset.id}`}
+                  className="flex items-center gap-3 p-3 rounded-lg border hover:bg-accent/50 transition-colors"
+                >
+                  <div className="size-8 rounded bg-primary/10 flex items-center justify-center">
+                    {asset.type === "REAL_ESTATE" ? <Home className="size-4 text-primary" /> :
+                     asset.type === "VEHICLE" ? <Car className="size-4 text-primary" /> :
+                     <Link2 className="size-4 text-primary" />}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium truncate">{asset.name}</div>
+                    <div className="text-xs text-muted-foreground">
+                      Value: {formatCurrency(asset.currentValue)}
+                      {" · Equity: "}
+                      <span className={Number(asset.currentValue) - balance >= 0 ? "text-green-600" : "text-red-600"}>
+                        {formatCurrency(Number(asset.currentValue) - balance)}
+                      </span>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Progress */}
       <Card>
@@ -226,15 +287,35 @@ export default async function DebtDetailPage({ params }: { params: Promise<{ id:
           <CardContent>
             <div className="divide-y">
               {debt.payments.map((p) => (
-                <div key={p.id} className="flex items-center justify-between py-3">
-                  <div>
-                    <div className="text-sm font-medium">{formatDate(p.paymentDate)}</div>
+                <div key={p.id} className="flex items-center justify-between py-3 gap-4">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium">{formatDate(p.paymentDate)}</span>
+                      {p.linkedTransaction ? (
+                        <Badge variant="outline" className="text-xs text-green-600 border-green-300">
+                          <Link2 className="size-3 mr-1" />
+                          {p.linkedTransaction.payee || p.linkedTransaction.description || "Linked"}
+                        </Badge>
+                      ) : (
+                        <PaymentTransactionLink
+                          paymentId={p.id}
+                          paymentAmount={Number(p.totalAmount)}
+                          transactions={recentTransactions.map((t) => ({
+                            id: t.id,
+                            payee: t.payee,
+                            description: t.description,
+                            amount: Number(t.amount),
+                            date: t.date.toISOString(),
+                          }))}
+                        />
+                      )}
+                    </div>
                     <div className="text-xs text-muted-foreground">
                       Principal: {formatCurrency(p.principalAmount)} &middot; Interest: {formatCurrency(p.interestAmount)}
                       {Number(p.extraPrincipal) > 0 && <> &middot; Extra: {formatCurrency(p.extraPrincipal)}</>}
                     </div>
                   </div>
-                  <div className="text-right">
+                  <div className="text-right shrink-0">
                     <div className="text-sm font-medium">{formatCurrency(p.totalAmount)}</div>
                     {p.remainingBalance !== null && (
                       <div className="text-xs text-muted-foreground">Bal: {formatCurrency(p.remainingBalance)}</div>

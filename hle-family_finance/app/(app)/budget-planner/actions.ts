@@ -141,3 +141,86 @@ export async function deleteItemAction(formData: FormData): Promise<void> {
   revalidatePath(`/budget-planner/${item.projectId}`);
   revalidatePath("/budget-planner");
 }
+
+export async function updateProjectAction(formData: FormData): Promise<{ error?: string }> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) redirect("/setup");
+
+  const id = formData.get("id") as string;
+  const name = formData.get("name") as string;
+  const description = (formData.get("description") as string) || null;
+  const targetDate = formData.get("targetDate") as string;
+  const color = (formData.get("color") as string) || "#6366f1";
+
+  const existing = await prisma.budgetPlannerProject.findUnique({ where: { id } });
+  if (!existing || existing.householdId !== householdId) {
+    return { error: "Project not found" };
+  }
+
+  await prisma.budgetPlannerProject.update({
+    where: { id },
+    data: {
+      name,
+      description,
+      targetDate: targetDate ? new Date(targetDate) : null,
+      color,
+    },
+  });
+
+  revalidatePath(`/budget-planner/${id}`);
+  revalidatePath("/budget-planner");
+  return {};
+}
+
+export async function deleteProjectAction(formData: FormData): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) redirect("/setup");
+
+  const id = formData.get("id") as string;
+
+  const existing = await prisma.budgetPlannerProject.findUnique({ where: { id } });
+  if (!existing || existing.householdId !== householdId) return;
+
+  // Items cascade-delete via Prisma schema
+  await prisma.budgetPlannerItem.deleteMany({ where: { projectId: id } });
+  await prisma.budgetPlannerProject.delete({ where: { id } });
+
+  revalidatePath("/budget-planner");
+  redirect("/budget-planner");
+}
+
+export async function updateItemAction(formData: FormData): Promise<{ error?: string }> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) redirect("/setup");
+
+  const id = formData.get("id") as string;
+  const name = formData.get("name") as string;
+  const quantity = parseInt(formData.get("quantity") as string || "1");
+  const unitCost = parseFloat(formData.get("unitCost") as string);
+  const referenceUrl = (formData.get("referenceUrl") as string) || null;
+  const description = (formData.get("description") as string) || null;
+  const lineTotal = quantity * unitCost;
+
+  const item = await prisma.budgetPlannerItem.update({
+    where: { id },
+    data: { name, quantity, unitCost, lineTotal, referenceUrl, description },
+  });
+
+  // Recalculate project total
+  const items = await prisma.budgetPlannerItem.findMany({ where: { projectId: item.projectId } });
+  const totalCost = items.reduce((sum, i) => sum + Number(i.lineTotal), 0);
+  await prisma.budgetPlannerProject.update({
+    where: { id: item.projectId },
+    data: { totalCost },
+  });
+
+  revalidatePath(`/budget-planner/${item.projectId}`);
+  revalidatePath("/budget-planner");
+  return {};
+}

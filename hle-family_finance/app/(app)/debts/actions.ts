@@ -43,6 +43,7 @@ export async function recordDebtPaymentAction(formData: FormData): Promise<void>
   const totalAmount = parseFloat(formData.get("totalAmount") as string);
   const principalAmount = parseFloat(formData.get("principalAmount") as string || "0");
   const interestAmount = parseFloat(formData.get("interestAmount") as string || "0");
+  const linkedTransactionId = (formData.get("linkedTransactionId") as string) || null;
 
   const debt = await prisma.debt.findUnique({ where: { id: debtId } });
   if (!debt) return;
@@ -57,6 +58,7 @@ export async function recordDebtPaymentAction(formData: FormData): Promise<void>
       principalAmount,
       interestAmount,
       remainingBalance,
+      linkedTransactionId,
     },
   });
 
@@ -66,6 +68,33 @@ export async function recordDebtPaymentAction(formData: FormData): Promise<void>
   });
 
   revalidatePath("/debts");
+  revalidatePath(`/debts/${debtId}`);
+}
+
+export async function linkPaymentToTransactionAction(
+  paymentId: string,
+  transactionId: string | null
+): Promise<{ error?: string }> {
+  const user = await getCurrentUser();
+  if (!user) return { error: "Not authenticated" };
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) return { error: "No household" };
+
+  const payment = await prisma.debtPayment.findUnique({
+    where: { id: paymentId },
+    include: { debt: true },
+  });
+  if (!payment || payment.debt.householdId !== householdId) {
+    return { error: "Payment not found" };
+  }
+
+  await prisma.debtPayment.update({
+    where: { id: paymentId },
+    data: { linkedTransactionId: transactionId },
+  });
+
+  revalidatePath(`/debts/${payment.debtId}`);
+  return {};
 }
 
 export async function updateDebtAction(formData: FormData): Promise<{ error?: string }> {

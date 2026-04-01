@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
 import { getCurrentHouseholdId } from "@/lib/household";
 import prisma from "@/lib/prisma";
@@ -7,8 +8,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, RefreshCw } from "lucide-react";
+import { Plus, RefreshCw, Link2, ArrowRight } from "lucide-react";
 import { createAssetAction, updateAssetValueAction } from "./actions";
 
 const ASSET_TYPES = [
@@ -28,10 +30,18 @@ export default async function AssetsPage() {
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/setup");
 
-  const assets = await prisma.asset.findMany({
-    where: { householdId, isArchived: false },
-    orderBy: [{ type: "asc" }, { currentValue: "desc" }],
-  });
+  const [assets, debts] = await Promise.all([
+    prisma.asset.findMany({
+      where: { householdId, isArchived: false },
+      include: { linkedDebt: { select: { id: true, name: true, currentBalance: true } } },
+      orderBy: [{ type: "asc" }, { currentValue: "desc" }],
+    }),
+    prisma.debt.findMany({
+      where: { householdId, isArchived: false },
+      select: { id: true, name: true, type: true, currentBalance: true },
+      orderBy: { name: "asc" },
+    }),
+  ]);
 
   const totalValue = assets
     .filter((a) => a.includeInNetWorth)
@@ -70,6 +80,32 @@ export default async function AssetsPage() {
               <Label>Current Value</Label>
               <Input name="currentValue" type="number" step="0.01" placeholder="0.00" required />
             </div>
+            <div className="space-y-1">
+              <Label>Purchase Price</Label>
+              <Input name="purchasePrice" type="number" step="0.01" placeholder="Optional" />
+            </div>
+            <div className="space-y-1">
+              <Label>Purchase Date</Label>
+              <Input name="purchaseDate" type="date" />
+            </div>
+            {debts.length > 0 && (
+              <div className="space-y-1">
+                <Label>Link Debt</Label>
+                <Select name="linkedDebtId" defaultValue="none">
+                  <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    {debts.map((d) => (
+                      <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            <div className="space-y-1">
+              <Label>Notes</Label>
+              <Input name="notes" placeholder="Optional" />
+            </div>
             <Button type="submit"><Plus className="size-4 mr-2" />Add Asset</Button>
           </form>
         </CardContent>
@@ -85,11 +121,21 @@ export default async function AssetsPage() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {assets.map((asset) => (
-            <Card key={asset.id}>
+            <Card key={asset.id} className="hover:bg-accent/30 transition-colors group">
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-base">{asset.name}</CardTitle>
-                  <span className="text-xs text-muted-foreground">{ASSET_TYPES.find((t) => t.value === asset.type)?.label}</span>
+                  <Link href={`/assets/${asset.id}`}>
+                    <CardTitle className="text-base hover:underline cursor-pointer">{asset.name}</CardTitle>
+                  </Link>
+                  <div className="flex items-center gap-1.5">
+                    {asset.linkedDebt && (
+                      <Badge variant="outline" className="text-xs gap-1">
+                        <Link2 className="size-3" />
+                        {asset.linkedDebt.name}
+                      </Badge>
+                    )}
+                    <span className="text-xs text-muted-foreground">{ASSET_TYPES.find((t) => t.value === asset.type)?.label}</span>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
@@ -105,20 +151,35 @@ export default async function AssetsPage() {
                     )}
                   </div>
                 )}
+                {asset.linkedDebt && (
+                  <div className="text-xs mt-1">
+                    <span className="text-muted-foreground">Equity: </span>
+                    <span className={Number(asset.currentValue) - Number(asset.linkedDebt.currentBalance) >= 0 ? "text-green-600 font-medium" : "text-red-600 font-medium"}>
+                      {formatCurrency(Number(asset.currentValue) - Number(asset.linkedDebt.currentBalance))}
+                    </span>
+                  </div>
+                )}
                 {asset.valueAsOfDate && (
                   <div className="text-xs text-muted-foreground">
                     Updated: {formatDate(asset.valueAsOfDate)}
                   </div>
                 )}
 
-                {/* Update Value */}
-                <form action={updateAssetValueAction} className="flex gap-2 mt-3">
-                  <input type="hidden" name="id" value={asset.id} />
-                  <Input name="currentValue" type="number" step="0.01" placeholder="New value" className="h-8 text-sm" />
-                  <Button type="submit" variant="outline" size="sm" className="shrink-0">
-                    <RefreshCw className="size-3.5 mr-1" />Update
+                {/* Quick actions */}
+                <div className="flex gap-2 mt-3">
+                  <form action={updateAssetValueAction} className="flex gap-2 flex-1">
+                    <input type="hidden" name="id" value={asset.id} />
+                    <Input name="currentValue" type="number" step="0.01" placeholder="New value" className="h-8 text-sm" />
+                    <Button type="submit" variant="outline" size="sm" className="shrink-0">
+                      <RefreshCw className="size-3.5 mr-1" />Update
+                    </Button>
+                  </form>
+                  <Button variant="ghost" size="sm" className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" asChild>
+                    <Link href={`/assets/${asset.id}`}>
+                      <ArrowRight className="size-3.5" />
+                    </Link>
                   </Button>
-                </form>
+                </div>
               </CardContent>
             </Card>
           ))}
