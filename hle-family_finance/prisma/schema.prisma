@@ -455,13 +455,16 @@ model Debt {
   includeInNetWorth  Boolean   @default(true)
   notes              String?
   isArchived         Boolean   @default(false)
+  refinancedFromId   String?
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 
-  linkedAccount Account?      @relation(fields: [linkedAccountId], references: [id])
-  payments      DebtPayment[]
-  linkedAssets  Asset[]
-  linkedBills   MonthlyBill[]
+  linkedAccount  Account?      @relation(fields: [linkedAccountId], references: [id])
+  refinancedFrom Debt?         @relation("RefinancedFrom", fields: [refinancedFromId], references: [id])
+  refinancedTo   Debt[]        @relation("RefinancedFrom")
+  payments       DebtPayment[]
+  linkedAssets   Asset[]
+  linkedBills    MonthlyBill[]
 }
 
 model DebtPayment {

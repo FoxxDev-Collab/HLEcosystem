@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { ArrowLeft, Home, Car, Link2 } from "lucide-react";
 import { recordDebtPaymentAction } from "../actions";
 import { ExtraPaymentCalculator } from "./extra-payment-calc";
-import { DebtEditDialog, DebtDeleteDialog } from "./debt-actions";
+import { DebtEditDialog, DebtDeleteDialog, DebtRefinanceDialog } from "./debt-actions";
 import { PaymentTransactionLink } from "./payment-transaction-link";
 
 const DEBT_TYPE_LABELS: Record<string, string> = {
@@ -41,6 +41,12 @@ export default async function DebtDetailPage({ params }: { params: Promise<{ id:
         where: { isArchived: false },
         select: { id: true, name: true, type: true, currentValue: true },
       },
+      linkedBills: {
+        where: { isActive: true },
+        select: { id: true, name: true },
+      },
+      refinancedFrom: { select: { id: true, name: true } },
+      refinancedTo: { select: { id: true, name: true }, take: 1 },
     },
   });
   if (!debt) notFound();
@@ -97,6 +103,17 @@ export default async function DebtDetailPage({ params }: { params: Promise<{ id:
             interestRate: Number(debt.interestRate),
             minimumPayment: debt.minimumPayment ? Number(debt.minimumPayment) : null,
           }} />
+          <DebtRefinanceDialog debt={{
+            id: debt.id,
+            name: debt.name,
+            type: debt.type,
+            lender: debt.lender,
+            currentBalance: Number(debt.currentBalance),
+            interestRate: Number(debt.interestRate),
+            minimumPayment: debt.minimumPayment ? Number(debt.minimumPayment) : null,
+            linkedAssetCount: debt.linkedAssets.length,
+            linkedBillCount: debt.linkedBills.length,
+          }} />
           <DebtDeleteDialog debtId={debt.id} debtName={debt.name} />
         </div>
       </div>
@@ -122,6 +139,33 @@ export default async function DebtDetailPage({ params }: { params: Promise<{ id:
           <CardContent><div className="text-2xl font-bold">{minPayment > 0 ? formatCurrency(minPayment) : "—"}/mo</div></CardContent>
         </Card>
       </div>
+
+      {/* Refinance History */}
+      {(debt.refinancedFrom || debt.refinancedTo.length > 0) && (
+        <Card className="border-amber-200">
+          <CardContent className="pt-5">
+            <div className="flex items-center gap-2 text-sm flex-wrap">
+              <Badge variant="outline" className="text-amber-600 border-amber-300">Refinance</Badge>
+              {debt.refinancedFrom && (
+                <span className="text-muted-foreground">
+                  Refinanced from{" "}
+                  <Link href={`/debts/${debt.refinancedFrom.id}`} className="text-primary hover:underline font-medium">
+                    {debt.refinancedFrom.name}
+                  </Link>
+                </span>
+              )}
+              {debt.refinancedTo.length > 0 && (
+                <span className="text-muted-foreground">
+                  Refinanced to{" "}
+                  <Link href={`/debts/${debt.refinancedTo[0].id}`} className="text-primary hover:underline font-medium">
+                    {debt.refinancedTo[0].name}
+                  </Link>
+                </span>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Linked Assets */}
       {debt.linkedAssets.length > 0 && (

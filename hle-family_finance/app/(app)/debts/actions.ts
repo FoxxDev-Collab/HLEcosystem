@@ -157,6 +157,92 @@ export async function deleteDebtAction(formData: FormData): Promise<void> {
   redirect("/debts");
 }
 
+export async function refinanceDebtAction(formData: FormData): Promise<{ error?: string; newDebtId?: string }> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) redirect("/setup");
+
+  const oldDebtId = formData.get("oldDebtId") as string;
+  const name = formData.get("name") as string;
+  const type = formData.get("type") as DebtType;
+  const lender = (formData.get("lender") as string) || null;
+  const newBalance = parseFloat(formData.get("newBalance") as string);
+  const interestRate = parseFloat(formData.get("interestRate") as string || "0");
+  const termMonths = formData.get("termMonths") ? parseInt(formData.get("termMonths") as string) : null;
+  const minimumPayment = formData.get("minimumPayment") ? parseFloat(formData.get("minimumPayment") as string) : null;
+
+  const oldDebt = await prisma.debt.findUnique({
+    where: { id: oldDebtId },
+    include: { linkedAssets: true, linkedBills: true },
+  });
+  if (!oldDebt || oldDebt.householdId !== householdId) {
+    return { error: "Debt not found" };
+  }
+
+  // Create the new debt
+  const newDebt = await prisma.debt.create({
+    data: {
+      householdId,
+      name,
+      type,
+      lender,
+      originalPrincipal: newBalance,
+      currentBalance: newBalance,
+      interestRate: interestRate / 100,
+      termMonths,
+      minimumPayment,
+      paymentDayOfMonth: oldDebt.paymentDayOfMonth,
+      linkedAccountId: oldDebt.linkedAccountId,
+      refinancedFromId: oldDebtId,
+      notes: `Refinanced from "${oldDebt.name}" (balance was ${Number(oldDebt.currentBalance).toLocaleString("en-US", { style: "currency", currency: "USD" })})`,
+    },
+  });
+
+  // Transfer linked assets to new debt
+  for (const asset of oldDebt.linkedAssets) {
+    await prisma.asset.update({
+      where: { id: asset.id },
+      data: { linkedDebtId: newDebt.id },
+    });
+  }
+
+  // Transfer linked bills to new debt
+  for (const bill of oldDebt.linkedBills) {
+    await prisma.monthlyBill.update({
+      where: { id: bill.id },
+      data: { linkedDebtId: newDebt.id },
+    });
+  }
+
+  // Transfer link patterns to new debt
+  const patterns = await prisma.transactionLinkPattern.findMany({
+    where: { householdId, matchType: "debt", matchId: oldDebtId },
+  });
+  for (const pattern of patterns) {
+    await prisma.transactionLinkPattern.update({
+      where: { id: pattern.id },
+      data: { matchId: newDebt.id, matchName: name },
+    });
+  }
+
+  // Archive old debt with refinance note
+  await prisma.debt.update({
+    where: { id: oldDebtId },
+    data: {
+      isArchived: true,
+      notes: oldDebt.notes
+        ? `${oldDebt.notes}\n\nRefinanced to "${name}" on ${new Date().toLocaleDateString()}`
+        : `Refinanced to "${name}" on ${new Date().toLocaleDateString()}`,
+    },
+  });
+
+  revalidatePath("/debts");
+  revalidatePath("/assets");
+  revalidatePath("/bills");
+  return { newDebtId: newDebt.id };
+}
+
 export async function archiveDebtAction(formData: FormData): Promise<void> {
   const id = formData.get("id") as string;
   const isArchived = formData.get("isArchived") === "true";
