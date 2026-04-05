@@ -45,10 +45,12 @@ export function useUpload() {
   return ctx;
 }
 
-const MAX_CONCURRENT = 3;
+const MAX_CONCURRENT = 2;
 // Files above this threshold use chunked upload
-const CHUNK_THRESHOLD = 50 * 1024 * 1024; // 50MB
+const CHUNK_THRESHOLD = 10 * 1024 * 1024; // 10MB — lower threshold avoids memory issues with formData()
 const CHUNK_SIZE = 5 * 1024 * 1024; // 5MB per chunk
+const MAX_RETRIES = 2;
+const RETRY_DELAY_MS = 1500;
 
 function generateId() {
   return Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
@@ -106,29 +108,50 @@ export function UploadProvider({ children }: { children: ReactNode }) {
         let lastTime = Date.now();
         let lastBytes = 0;
 
-        // 2. Upload chunks sequentially
+        // 2. Upload chunks sequentially with retry
         for (let i = 0; i < totalChunks; i++) {
           if (abortController.signal.aborted) throw new Error("Cancelled");
 
           const start = i * CHUNK_SIZE;
           const end = Math.min(start + CHUNK_SIZE, item.file.size);
-          const chunk = item.file.slice(start, end);
 
-          const chunkRes = await fetch("/api/files/upload/chunked", {
-            method: "PUT",
-            headers: {
-              "x-upload-id": uploadId,
-              "x-chunk-index": String(i),
-              "Content-Type": "application/octet-stream",
-            },
-            body: chunk,
-            signal: abortController.signal,
-          });
+          let chunkSuccess = false;
+          for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+            if (abortController.signal.aborted) throw new Error("Cancelled");
 
-          if (!chunkRes.ok) {
-            const body = await chunkRes.json().catch(() => ({}));
-            throw new Error(body.error || `Chunk ${i} failed (${chunkRes.status})`);
+            const chunk = item.file.slice(start, end);
+
+            try {
+              const chunkRes = await fetch("/api/files/upload/chunked", {
+                method: "PUT",
+                headers: {
+                  "x-upload-id": uploadId,
+                  "x-chunk-index": String(i),
+                  "Content-Type": "application/octet-stream",
+                },
+                body: chunk,
+                signal: abortController.signal,
+              });
+
+              if (chunkRes.ok) {
+                chunkSuccess = true;
+                break;
+              }
+
+              if (attempt === MAX_RETRIES) {
+                const body = await chunkRes.json().catch(() => ({}));
+                throw new Error(body.error || `Chunk ${i} failed (${chunkRes.status})`);
+              }
+            } catch (err) {
+              if (abortController.signal.aborted) throw new Error("Cancelled");
+              if (attempt === MAX_RETRIES) throw err;
+            }
+
+            // Wait before retry
+            await new Promise((r) => setTimeout(r, RETRY_DELAY_MS * Math.pow(2, attempt)));
           }
+
+          if (!chunkSuccess) throw new Error(`Chunk ${i} failed after retries`);
 
           uploadedBytes += (end - start);
           const progress = Math.round((uploadedBytes / item.file.size) * 100);
@@ -188,7 +211,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
 
   // ── Single-request upload via XHR (for small files, supports progress) ──
   const uploadSingle = useCallback(
-    (item: UploadItem) => {
+    (item: UploadItem, attempt = 0): Promise<void> => {
       const formData = new FormData();
       formData.append("file", item.file);
       if (item.folderId) formData.append("folderId", item.folderId);
@@ -225,6 +248,11 @@ export function UploadProvider({ children }: { children: ReactNode }) {
             item.status = "done";
             completedSinceLastInvalidate.current++;
             updateUpload(item.id, { progress: 100, status: "done", speed: undefined });
+            resolve();
+          } else if (xhr.status >= 500 && attempt < MAX_RETRIES) {
+            const delay = RETRY_DELAY_MS * Math.pow(2, attempt);
+            updateUpload(item.id, { progress: 0, speed: undefined });
+            setTimeout(() => uploadSingle(item, attempt + 1).then(resolve), delay);
           } else {
             let errorMsg = "Upload failed";
             try {
@@ -237,18 +265,24 @@ export function UploadProvider({ children }: { children: ReactNode }) {
               error: `${errorMsg} (${xhr.status})`,
               speed: undefined,
             });
+            resolve();
           }
-          resolve();
         });
 
         xhr.addEventListener("error", () => {
-          item.status = "error";
-          updateUpload(item.id, {
-            status: "error",
-            error: "Network error — check your connection",
-            speed: undefined,
-          });
-          resolve();
+          if (attempt < MAX_RETRIES) {
+            const delay = RETRY_DELAY_MS * Math.pow(2, attempt);
+            updateUpload(item.id, { progress: 0, speed: undefined });
+            setTimeout(() => uploadSingle(item, attempt + 1).then(resolve), delay);
+          } else {
+            item.status = "error";
+            updateUpload(item.id, {
+              status: "error",
+              error: "Network error — check your connection",
+              speed: undefined,
+            });
+            resolve();
+          }
         });
 
         xhr.addEventListener("abort", () => {
@@ -264,37 +298,40 @@ export function UploadProvider({ children }: { children: ReactNode }) {
     [updateUpload]
   );
 
+  const isProcessing = useRef(false);
+
   const processNext = useCallback(() => {
-    if (activeCount.current >= MAX_CONCURRENT) return;
+    if (isProcessing.current) return;
+    isProcessing.current = true;
 
-    const next = queueRef.current.find((u) => u.status === "queued");
-    if (!next) {
-      if (completedSinceLastInvalidate.current > 0) {
-        invalidateFiles();
+    while (activeCount.current < MAX_CONCURRENT) {
+      const next = queueRef.current.find((u) => u.status === "queued");
+      if (!next) break;
+
+      activeCount.current++;
+      next.status = "uploading";
+      next.startedAt = Date.now();
+      updateUpload(next.id, { status: "uploading", startedAt: next.startedAt });
+
+      const isLarge = next.file.size > CHUNK_THRESHOLD;
+
+      const done = () => {
+        activeCount.current--;
+        processNext();
+      };
+
+      if (isLarge) {
+        uploadChunked(next).then(done);
+      } else {
+        uploadSingle(next).then(done);
       }
-      return;
     }
 
-    activeCount.current++;
-    next.status = "uploading";
-    next.startedAt = Date.now();
-    updateUpload(next.id, { status: "uploading", startedAt: next.startedAt });
+    isProcessing.current = false;
 
-    const isLarge = next.file.size > CHUNK_THRESHOLD;
-
-    const done = () => {
-      activeCount.current--;
-      processNext();
-    };
-
-    if (isLarge) {
-      uploadChunked(next).then(done);
-    } else {
-      uploadSingle(next).then(done);
+    if (activeCount.current === 0 && completedSinceLastInvalidate.current > 0) {
+      invalidateFiles();
     }
-
-    // Kick off more concurrent uploads
-    processNext();
   }, [updateUpload, invalidateFiles, uploadChunked, uploadSingle]);
 
   const enqueueFiles = useCallback(

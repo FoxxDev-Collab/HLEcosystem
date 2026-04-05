@@ -128,30 +128,34 @@ export function PhotoLightbox({ files, initialIndex, open, onClose }: PhotoLight
         </div>
 
         <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="text-white/70 hover:text-white hover:bg-white/10"
-            onClick={() => setZoom((z) => Math.min(z + 0.25, 4))}
-          >
-            <ZoomIn className="size-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="text-white/70 hover:text-white hover:bg-white/10"
-            onClick={() => setZoom((z) => Math.max(z - 0.25, 0.5))}
-          >
-            <ZoomOut className="size-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="text-white/70 hover:text-white hover:bg-white/10"
-            onClick={() => setRotation((r) => (r + 90) % 360)}
-          >
-            <RotateCw className="size-4" />
-          </Button>
+          {!isVideo && (
+            <>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-white/70 hover:text-white hover:bg-white/10"
+                onClick={() => setZoom((z) => Math.min(z + 0.25, 4))}
+              >
+                <ZoomIn className="size-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-white/70 hover:text-white hover:bg-white/10"
+                onClick={() => setZoom((z) => Math.max(z - 0.25, 0.5))}
+              >
+                <ZoomOut className="size-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-white/70 hover:text-white hover:bg-white/10"
+                onClick={() => setRotation((r) => (r + 90) % 360)}
+              >
+                <RotateCw className="size-4" />
+              </Button>
+            </>
+          )}
           <Button
             variant="ghost"
             size="icon"
@@ -178,7 +182,7 @@ export function PhotoLightbox({ files, initialIndex, open, onClose }: PhotoLight
         {/* Previous button */}
         {currentIndex > 0 && (
           <button
-            className="absolute left-4 z-10 flex items-center justify-center size-10 rounded-full bg-black/40 text-white/80 hover:bg-black/60 hover:text-white transition-all lightbox-nav"
+            className="absolute left-2 sm:left-4 z-10 flex items-center justify-center size-10 rounded-full bg-black/50 text-white/90 hover:bg-black/70 hover:text-white transition-all"
             onClick={(e) => {
               e.stopPropagation();
               goPrev();
@@ -190,9 +194,9 @@ export function PhotoLightbox({ files, initialIndex, open, onClose }: PhotoLight
 
         {/* Image/Video */}
         <div
-          className="max-w-full max-h-full flex items-center justify-center p-4"
+          className="max-w-full max-h-full flex items-center justify-center p-2 sm:p-4"
           onClick={(e) => e.stopPropagation()}
-          style={{
+          style={isVideo ? undefined : {
             transform: `scale(${zoom}) rotate(${rotation}deg)`,
             transition: "transform 0.2s cubic-bezier(0.2, 0, 0, 1)",
           }}
@@ -201,7 +205,9 @@ export function PhotoLightbox({ files, initialIndex, open, onClose }: PhotoLight
             <video
               controls
               autoPlay
-              className="max-w-[90vw] max-h-[80vh] rounded-lg"
+              playsInline
+              preload="metadata"
+              className="w-full max-w-[95vw] sm:max-w-[90vw] max-h-[75vh] sm:max-h-[80vh] rounded-lg"
               key={file.id}
             >
               <source src={`/api/files/serve/${file.id}`} type={file.mimeType} />
@@ -211,7 +217,7 @@ export function PhotoLightbox({ files, initialIndex, open, onClose }: PhotoLight
             <img
               src={`/api/files/serve/${file.id}`}
               alt={file.name}
-              className="max-w-[90vw] max-h-[80vh] object-contain select-none"
+              className="max-w-[95vw] sm:max-w-[90vw] max-h-[75vh] sm:max-h-[80vh] object-contain select-none"
               draggable={false}
               key={file.id}
             />
@@ -221,7 +227,7 @@ export function PhotoLightbox({ files, initialIndex, open, onClose }: PhotoLight
         {/* Next button */}
         {currentIndex < files.length - 1 && (
           <button
-            className="absolute right-4 z-10 flex items-center justify-center size-10 rounded-full bg-black/40 text-white/80 hover:bg-black/60 hover:text-white transition-all lightbox-nav"
+            className="absolute right-2 sm:right-4 z-10 flex items-center justify-center size-10 rounded-full bg-black/50 text-white/90 hover:bg-black/70 hover:text-white transition-all"
             onClick={(e) => {
               e.stopPropagation();
               goNext();
