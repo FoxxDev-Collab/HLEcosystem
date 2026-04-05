@@ -33,6 +33,10 @@ export default async function AlbumDetailPage({
         },
         orderBy: { sortOrder: "asc" },
       },
+      shareLinks: {
+        where: { isActive: true },
+        orderBy: { createdAt: "desc" },
+      },
     },
   });
 
@@ -51,6 +55,12 @@ export default async function AlbumDetailPage({
       mimeType: af.file.mimeType,
       size: af.file.size.toString(),
       createdAt: af.file.createdAt.toISOString(),
+    })),
+    shareLinks: album.shareLinks.map((l) => ({
+      id: l.id,
+      token: l.token,
+      expiresAt: l.expiresAt?.toISOString() ?? null,
+      createdAt: l.createdAt.toISOString(),
     })),
   };
 

@@ -158,3 +158,54 @@ export async function setAlbumCoverAction(formData: FormData) {
   revalidatePath(`/albums/${albumId}`);
   revalidatePath("/albums");
 }
+
+export async function createAlbumShareLinkAction(formData: FormData) {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) redirect("/setup");
+
+  const albumId = formData.get("albumId") as string;
+  const expiresAtStr = formData.get("expiresAt") as string | null;
+
+  if (!albumId) return;
+
+  const album = await prisma.album.findFirst({
+    where: { id: albumId, householdId },
+  });
+  if (!album) return;
+
+  const link = await prisma.albumShareLink.create({
+    data: {
+      albumId,
+      createdByUserId: user.id,
+      expiresAt: expiresAtStr ? new Date(expiresAtStr) : null,
+    },
+  });
+
+  revalidatePath(`/albums/${albumId}`);
+  return { token: link.token };
+}
+
+export async function revokeAlbumShareLinkAction(formData: FormData) {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) redirect("/setup");
+
+  const linkId = formData.get("linkId") as string;
+  if (!linkId) return;
+
+  const link = await prisma.albumShareLink.findFirst({
+    where: { id: linkId },
+    include: { album: true },
+  });
+  if (!link || link.album.householdId !== householdId) return;
+
+  await prisma.albumShareLink.update({
+    where: { id: linkId },
+    data: { isActive: false },
+  });
+
+  revalidatePath(`/albums/${link.albumId}`);
+}
