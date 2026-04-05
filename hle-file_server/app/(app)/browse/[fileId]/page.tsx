@@ -272,10 +272,12 @@ function PreviewArea({
 
     case "video":
       return (
-        <div className="flex items-center justify-center rounded-lg border bg-black p-2">
+        <div className="flex items-center justify-center rounded-lg border bg-black sm:p-2">
           <video
             controls
-            className="max-w-full max-h-[70vh] rounded-lg"
+            playsInline
+            preload="metadata"
+            className="w-full sm:max-w-full max-h-[50vh] sm:max-h-[70vh] sm:rounded-lg"
           >
             <source src={`/api/files/serve/${fileId}`} type={mimeType} />
             Your browser does not support the video tag.

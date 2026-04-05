@@ -15,7 +15,7 @@ const MAGIC_SIGNATURES: Array<{ bytes: number[]; offset?: number; mime: string }
   { bytes: [0x25, 0x50, 0x44, 0x46], mime: "application/pdf" },         // PDF
   { bytes: [0x50, 0x4b, 0x03, 0x04], mime: "application/zip" },         // ZIP/DOCX/XLSX
   { bytes: [0x1f, 0x8b], mime: "application/gzip" },                     // GZIP
-  { bytes: [0x00, 0x00, 0x00], mime: "video/mp4" },                      // MP4 (ftyp at offset 4)
+  { bytes: [0x66, 0x74, 0x79, 0x70], offset: 4, mime: "video/mp4" },      // MP4 (ftyp at offset 4)
   { bytes: [0x1a, 0x45, 0xdf, 0xa3], mime: "video/webm" },              // WebM/MKV
   { bytes: [0x49, 0x44, 0x33], mime: "audio/mpeg" },                     // MP3 (ID3)
   { bytes: [0xff, 0xfb], mime: "audio/mpeg" },                           // MP3 (sync)
