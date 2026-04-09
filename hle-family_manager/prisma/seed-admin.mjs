@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 
-// seed-admin.js — First-run admin user + household seeding
+// seed-admin.mjs — First-run admin user + household seeding
 // Runs on container startup if ADMIN_EMAIL is set and no users exist.
 // Requires: DATABASE_URL, ADMIN_EMAIL, ADMIN_PASSWORD, ADMIN_NAME (optional), HOUSEHOLD_NAME (optional)
 
-const { PrismaClient } = require("@prisma/client");
-const bcrypt = require("bcryptjs");
+import { PrismaClient } from "@prisma/client";
+import bcrypt from "bcryptjs";
 
 async function main() {
   const email = process.env.ADMIN_EMAIL;

@@ -155,7 +155,7 @@ export default async function SyncReviewPage({
 
   for (const [key, { parsed, totalQuantity, recipeNotes }] of sorted) {
     // Try exact match
-    let matchedId = productLookup.get(parsed.normalizedKey) || null;
+    const matchedId = productLookup.get(parsed.normalizedKey) || null;
     let matchedName: string | null = null;
 
     // If exact match found, get the display name

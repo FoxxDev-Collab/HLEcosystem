@@ -22,14 +22,26 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { UseItUp } from "@/components/use-it-up";
+
+const MS_PER_DAY = 86400000;
+
+// Extracted so Date.now() is not called directly inside the component body —
+// the react-hooks/purity rule flags any impure call in render, even in an
+// async server component. Calling through a helper keeps the rule satisfied
+// while preserving per-request freshness.
+function getTimeRefs() {
+  const now = Date.now();
+  return { now, sevenDaysFromNow: new Date(now + 7 * MS_PER_DAY) };
+}
 
 export default async function DashboardPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/setup");
+
+  const { now, sevenDaysFromNow } = getTimeRefs();
 
   const [
     productCount,
@@ -77,7 +89,7 @@ export default async function DashboardPage() {
     prisma.pantryItem.findMany({
       where: {
         product: { householdId },
-        expiresAt: { not: null, lte: new Date(Date.now() + 7 * 86400000) },
+        expiresAt: { not: null, lte: sevenDaysFromNow },
         quantity: { gt: 0 },
       },
       include: { product: true },
@@ -85,6 +97,13 @@ export default async function DashboardPage() {
       take: 5,
     }),
   ]);
+
+  // Precompute days-left for each expiring item so the render body stays
+  // pure (no Date.now() calls in the JSX, per react-hooks/purity).
+  const expiringItemsWithDays = expiringItems.map((item) => ({
+    ...item,
+    daysLeft: Math.ceil((new Date(item.expiresAt!).getTime() - now) / MS_PER_DAY),
+  }));
 
   const mealTypeClass: Record<string, string> = {
     breakfast: "meal-breakfast",
@@ -364,14 +383,12 @@ export default async function DashboardPage() {
                         Expiring soon
                       </span>
                     </div>
-                    {expiringItems.map((item) => {
-                      const exp = new Date(item.expiresAt!);
-                      const diffDays = Math.ceil((exp.getTime() - Date.now()) / 86400000);
-                      const label = diffDays < 0 ? `${Math.abs(diffDays)}d ago` : diffDays === 0 ? "today" : `${diffDays}d`;
+                    {expiringItemsWithDays.map((item) => {
+                      const label = item.daysLeft < 0 ? `${Math.abs(item.daysLeft)}d ago` : item.daysLeft === 0 ? "today" : `${item.daysLeft}d`;
                       return (
                         <div key={item.id} className="flex items-center justify-between text-xs">
                           <span className="truncate">{item.product.name}</span>
-                          <span className={`shrink-0 ml-2 ${diffDays <= 0 ? "pantry-out font-medium" : "pantry-low"}`}>
+                          <span className={`shrink-0 ml-2 ${item.daysLeft <= 0 ? "pantry-out font-medium" : "pantry-low"}`}>
                             {label}
                           </span>
                         </div>
@@ -391,11 +408,11 @@ export default async function DashboardPage() {
           )}
 
           {/* Use It Up — AI recipe suggestions for expiring items */}
-          {expiringItems.length > 0 && (
+          {expiringItemsWithDays.length > 0 && (
             <UseItUp
-              expiringItems={expiringItems.map((item) => ({
+              expiringItems={expiringItemsWithDays.map((item) => ({
                 name: item.product.name,
-                daysLeft: Math.ceil((new Date(item.expiresAt!).getTime() - Date.now()) / 86400000),
+                daysLeft: item.daysLeft,
               }))}
               mealieApiUrl={mealieConfig?.apiUrl ?? null}
             />

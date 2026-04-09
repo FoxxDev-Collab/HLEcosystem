@@ -96,7 +96,7 @@ export async function GET(request: NextRequest) {
 
   // For low-stock and in-stock filters, we need to fetch all matching items
   // then filter in memory (Prisma can't compare two columns)
-  let needsPostFilter = filter === "low-stock" || filter === "in-stock";
+  const needsPostFilter = filter === "low-stock" || filter === "in-stock";
 
   let items;
   let totalCount: number;

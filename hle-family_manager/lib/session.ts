@@ -1,6 +1,6 @@
 import crypto from "crypto";
 import { prisma } from "./prisma";
-import type { UserPublic } from "./users";
+import { toPublic, type UserPublic } from "./users";
 
 const SESSION_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
@@ -38,10 +38,9 @@ export async function validateSession(
   }
   if (!session.user.active) return null;
 
-  const { password: _, totpSecret: __, ...userPublic } = session.user;
   return {
     session: { id: session.id, userId: session.userId },
-    user: userPublic,
+    user: toPublic(session.user),
   };
 }
 

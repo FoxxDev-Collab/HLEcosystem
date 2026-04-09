@@ -39,33 +39,33 @@ type ReceiptData = {
 export function ReceiptScanner({ accounts, categories }: { accounts: Account[]; categories: Category[] }) {
   const [scanning, startScan] = useTransition();
   const [creating, startCreate] = useTransition();
+  const [suggesting, startSuggest] = useTransition();
   const [result, setResult] = useState<ReceiptData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>("");
   const [suggestion, setSuggestion] = useState<CategorySuggestion>(null);
-  const [suggesting, setSuggesting] = useState(false);
 
-  // Auto-suggest category when receipt is scanned
+  // Auto-suggest category when receipt is scanned.
+  // Previously used a manual `suggesting` state flipped synchronously inside
+  // the effect, which violates react-hooks/set-state-in-effect in React 19.
+  // `useTransition` gives us the pending flag without a synchronous setState.
   useEffect(() => {
     if (!result || categories.length === 0) return;
 
-    setSuggesting(true);
     const itemSummary = result.items.map((i) => i.name).join(", ");
     const categoryNames = categories.map((c) => c.name);
 
-    suggestCategoryAction(result.store, itemSummary, categoryNames)
-      .then((s) => {
-        setSuggestion(s);
-        if (s) {
-          // Find matching category by name
-          const match = categories.find(
-            (c) => c.name.toLowerCase() === s.category.toLowerCase()
-          );
-          if (match) setSelectedCategoryId(match.id);
-        }
-      })
-      .finally(() => setSuggesting(false));
+    startSuggest(async () => {
+      const s = await suggestCategoryAction(result.store, itemSummary, categoryNames);
+      setSuggestion(s);
+      if (s) {
+        const match = categories.find(
+          (c) => c.name.toLowerCase() === s.category.toLowerCase()
+        );
+        if (match) setSelectedCategoryId(match.id);
+      }
+    });
   }, [result, categories]);
 
   const handleScan = (formData: FormData) => {

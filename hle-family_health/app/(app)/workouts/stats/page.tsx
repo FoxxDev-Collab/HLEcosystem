@@ -336,23 +336,23 @@ export default async function WorkoutStatsPage({
       {/* Member Filter */}
       {members.length > 1 && (
         <div className="flex flex-wrap gap-2">
-          <a href="/workouts/stats">
+          <Link href="/workouts/stats">
             <Badge
               variant={!params.memberId ? "default" : "outline"}
               className="cursor-pointer"
             >
               All
             </Badge>
-          </a>
+          </Link>
           {members.map((m) => (
-            <a key={m.id} href={`/workouts/stats?memberId=${m.id}`}>
+            <Link key={m.id} href={`/workouts/stats?memberId=${m.id}`}>
               <Badge
                 variant={params.memberId === m.id ? "default" : "outline"}
                 className="cursor-pointer"
               >
                 {m.firstName}
               </Badge>
-            </a>
+            </Link>
           ))}
         </div>
       )}

@@ -1,8 +1,88 @@
 # HLEcosystem — Family Management Platform
 
+> **Read this before touching security-relevant code.** If your change affects authentication, session handling, Server Actions, database queries, file uploads, external integrations, or role enforcement, you MUST read [`docs/THREAT_MODEL.md`](./docs/THREAT_MODEL.md) and the relevant section of [`docs/SECURITY_CONTROLS.md`](./docs/SECURITY_CONTROLS.md) before proposing changes. The failure mode documented in [`docs/adr/0005-household-scoped-tenancy.md`](./docs/adr/0005-household-scoped-tenancy.md) is the single most important rule in this codebase. It has already happened once.
+
 ## What This Is
 
-A multi-app family management ecosystem: 7 Next.js apps sharing a single PostgreSQL database with schema-level isolation. Each app owns its own Prisma schema and database schema. Family Manager is the central identity provider.
+A multi-app family management ecosystem: 10 Next.js apps sharing a single PostgreSQL database with schema-level isolation. Each app owns its own Prisma schema and database schema. Family Manager is the central identity provider.
+
+## Security workflow (MANDATORY for any AI assistant or contributor)
+
+This project is security-critical. It stores health, financial, and identity data. Every change must pass through the workflow below. Skipping steps is not acceptable, even "just this once" — the 2026-04-08 cross-tenant account-balance incident documented in ADR-0005 happened because a reasonable-looking shortcut skipped the household ownership check.
+
+### Before you write any code
+
+1. **Understand what trust boundary you are crossing.** Look up the relevant row in [`docs/THREAT_MODEL.md`](./docs/THREAT_MODEL.md) §4. If you are introducing a *new* public endpoint, a new external service call, or a new storage surface, you are creating a new trust boundary — stop and update the threat model first.
+2. **Identify which NIST 800-53 controls apply** to your change using [`docs/SECURITY_CONTROLS.md`](./docs/SECURITY_CONTROLS.md). Auth changes → AC-2/3/6/12, IA-2/5. Data access → AC-3, SI-10. New endpoints → SC-7, SI-10. File handling → SI-10, SC-28.
+3. **If the change contradicts an ADR, read the ADR first.** See [`docs/adr/README.md`](./docs/adr/README.md) for the index. If the ADR is wrong, the right move is a new ADR that supersedes it, not a silent deviation.
+
+### While you write code
+
+Every Server Action, API route, or database query MUST satisfy the following invariants. No exceptions.
+
+1. **Authentication gate first.** Every Server Action starts with:
+   ```typescript
+   const user = await getCurrentUser();
+   if (!user) redirect("/login");
+   const householdId = await getCurrentHouseholdId();
+   if (!householdId) redirect("/setup");
+   ```
+   This is the canonical pattern. Copy it exactly.
+
+2. **Household scoping on every query.** Every `prisma.<model>.*` call on a tenant-scoped table MUST include `householdId` in the `where` clause. For mutations referencing a foreign ID (e.g. "update account X's balance"), **re-verify ownership first** via `findFirst({ where: { id: someId, householdId } })` before mutating. Do not trust IDs from form data. The 2026-04-08 incident was exactly this bug.
+
+3. **Input validation at the boundary.** Every Server Action validates `FormData` with a `zod` schema before destructuring. Never interpolate user input into SQL strings.
+
+4. **Parameterized SQL only.** Prisma tagged templates (`prisma.$queryRaw\`...\``) parameterize automatically. Never use `$queryRawUnsafe` or `$executeRawUnsafe` with anything that came from user input, not even "sanitized" input. If you think you need it, you don't — restructure the query.
+
+5. **Return `{ error: string }` from failed Server Actions.** Never throw raw errors to the client. Stack traces leak implementation details.
+
+6. **No secrets in code or logs.** API keys, tokens, passwords, connection strings come from `process.env.*`. If you need to log something for debugging, assume the log will be read by an attacker.
+
+7. **Strip sensitive fields from user objects.** Follow the pattern in `hle-family_manager/lib/session.ts:41` — `password` and `totpSecret` are stripped before any User object leaves the server.
+
+8. **No new `any` types.** TypeScript strict mode is a security control, not a stylistic preference. `any` in a Server Action is a CVE waiting to happen.
+
+9. **No `dangerouslySetInnerHTML`** without a zod-validated, bounded, escaped input source *and* a comment explaining the justification. CodeQL will flag it.
+
+10. **File uploads go through `lib/file-validation.ts`.** Magic-byte MIME check, extension blocklist, size cap. Do not trust client-reported Content-Type.
+
+11. **Never suppress lint or type-check rules.** Do not write `// eslint-disable`, `// eslint-disable-next-line`, `// @ts-ignore`, `// @ts-expect-error`, or `// @ts-nocheck`. Ever. Lint exists because it catches real bugs; suppressing it is how "reasonable looking" vibe code ships exploitable bugs. If a rule is wrong for a specific case, either (a) fix the underlying code so the rule no longer applies, (b) refactor so the construct isn't needed, or (c) propose a reasoned change to the shared ESLint config in a separate PR that explains why the rule is inappropriate project-wide. CI enforces this: `no-disable-smuggling` fails any PR that introduces new suppression comments in the diff. This rule is non-negotiable.
+
+### Before you open a PR
+
+Run the full pre-flight locally:
+
+```bash
+# In the app(s) you touched:
+cd hle-<app>
+npm run lint           # must pass
+npx tsc --noEmit       # must pass
+npm audit --audit-level=high --omit=dev   # must pass
+
+# Then manually verify the PR template security checklist:
+#   .github/PULL_REQUEST_TEMPLATE.md
+# Every applicable box must be honestly checkable.
+```
+
+If you are an AI assistant, you must execute the equivalent checks (Read the changed files, grep for the required patterns, verify the invariants) before declaring the change complete. "It should work" is not acceptable.
+
+### Security-sensitive change types that require extra scrutiny
+
+| Change type | Required reading | Required review |
+|-------------|------------------|------------------|
+| Authentication, session, password, MFA | ADR-0003, SECURITY_CONTROLS.md §IA | Manual re-read of `hle-family_manager/lib/session.ts` and `lib/users.ts` |
+| New Server Action touching money, health, files, or identity | ADR-0005, THREAT_MODEL.md §4 TB-1 | Verify auth + household scoping gate present |
+| New public (unauthenticated) endpoint | THREAT_MODEL.md §5 (share-link case study) | New ADR documenting the decision |
+| Database schema migration | ADR-0001, ADR-0005 | Verify `householdId` column on every new tenant-scoped table |
+| New external service integration | THREAT_MODEL.md §4 TB-5 | Update threat model with new trust boundary |
+| Dependency update (security) | — | Verify Trivy CI run is green after merge |
+
+### When you discover a security issue in existing code
+
+1. Do **not** file a public issue or mention it in a public PR description.
+2. See [`SECURITY.md`](./SECURITY.md) for the private disclosure process.
+3. If you fix it as part of another change, note it in the commit message with the `[security]` prefix and reference the specific invariant that was violated.
 
 ## Architecture
 
@@ -32,8 +112,11 @@ A multi-app family management ecosystem: 7 Next.js apps sharing a single Postgre
 | Family Finance | `hle-family_finance/` | 8082 | `family_finance` | `ff_` | Active |
 | Family Health | `hle-family_health/` | 8083 | `family_health` | `fh_` | Active |
 | Home Care | `hle-family_home_care/` | 8084 | `family_home_care` | `hc_` | Active |
-| File Server | `hle-file_server/` | 8085 | `file_server` | — | Stub |
+| File Server | `hle-file_server/` | 8085 | `file_server` | `fs_` | Active |
 | Meal Prep | `hle-meal_prep/` | 8086 | `meal_prep` | `mp_` | Active |
+| Family Wiki | `hle-family_wiki/` | 8087 | `family_wiki` | `fw_` | Active |
+| Claude API | `hle-claude_api/` | 8088 | `claude_api` | — | Active (internal AI gateway) |
+| Family Travel | `hle-family_travel/` | 8089 | `family_travel` | `ft_` | Active |
 
 ## Tech Stack
 
@@ -48,6 +131,8 @@ A multi-app family management ecosystem: 7 Next.js apps sharing a single Postgre
 - **Icons**: Lucide React
 
 ## Critical Rules
+
+> The invariants below are repeated and expanded in the [Security workflow](#security-workflow-mandatory-for-any-ai-assistant-or-contributor) section above. If there is ever a conflict, the Security workflow section wins.
 
 ### Database
 - **One database, seven schemas.** Never create a separate database per app.

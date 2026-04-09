@@ -17,9 +17,22 @@ export type User = {
 
 export type UserPublic = Omit<User, "password" | "totpSecret">;
 
-function toPublic(user: User): UserPublic {
-  const { password: _, totpSecret: __, ...rest } = user;
-  return rest;
+// Strip sensitive fields before a user object leaves the server.
+// This is the only sanctioned way to convert a User to a UserPublic —
+// do not spread/return a raw User row from any API, Server Action, or
+// session handler. See SECURITY_CONTROLS.md §IA-5.
+export function toPublic(user: User): UserPublic {
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    avatar: user.avatar,
+    role: user.role,
+    active: user.active,
+    totpEnabled: user.totpEnabled,
+    createdAt: user.createdAt,
+    updatedAt: user.updatedAt,
+  };
 }
 
 export async function getUsers(): Promise<UserPublic[]> {

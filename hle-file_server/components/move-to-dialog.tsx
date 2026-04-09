@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState, useTransition } from "react";
 import {
   Dialog,
   DialogContent,
@@ -38,18 +38,23 @@ export function MoveToDialog({
 }: Props) {
   const [folders, setFolders] = useState<FolderOption[]>([]);
   const [browseFolderId, setBrowseFolderId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, startLoadTransition] = useTransition();
 
+  // Previously flipped a manual `loading` state synchronously inside the
+  // effect, which React 19's react-hooks/set-state-in-effect rule forbids.
+  // useTransition exposes a pending flag that doesn't require synchronous
+  // setState in the effect body.
   useEffect(() => {
     if (!open) return;
-    setLoading(true);
-    fetch(`/api/files/folders?parentFolderId=${browseFolderId ?? ""}`)
-      .then((r) => r.json())
-      .then((data) => {
+    startLoadTransition(async () => {
+      try {
+        const r = await fetch(`/api/files/folders?parentFolderId=${browseFolderId ?? ""}`);
+        const data = await r.json();
         setFolders(data.folders ?? []);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
+      } catch {
+        setFolders([]);
+      }
+    });
   }, [open, browseFolderId]);
 
   const handleMove = () => {

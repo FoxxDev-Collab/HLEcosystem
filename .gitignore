@@ -86,3 +86,5 @@ HLEcosystem_Dotnet_Backup/
 **/Data/group_files/
 **/TaxDocuments/
 **/uploads/
+
+/grype-findings

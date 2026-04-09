@@ -25,7 +25,7 @@ echo "Running database migrations..."
 node node_modules/prisma/build/index.js migrate deploy
 
 echo "Checking first-run seed..."
-node prisma/seed-admin.js
+node prisma/seed-admin.mjs
 
 echo "Starting application..."
 exec node server.js

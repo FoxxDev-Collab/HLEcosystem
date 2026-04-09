@@ -137,7 +137,7 @@ export default async function RecipesPage({
   const favoriteIds = new Set(favorites.map((f) => f.mealieRecipeId));
 
   // Favorites filtering (client-side — Mealie doesn't know about our favorites)
-  let filteredItems = favoritesFilter
+  const filteredItems = favoritesFilter
     ? recipesData.items.filter((r) => favoriteIds.has(r.id))
     : recipesData.items;
 

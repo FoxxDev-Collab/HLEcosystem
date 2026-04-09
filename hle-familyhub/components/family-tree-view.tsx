@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useMemo } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   ReactFlow,
@@ -360,9 +361,9 @@ export function FamilyTreeView({
           <p className="text-lg font-medium">No family members yet</p>
           <p className="text-sm">
             Add people on the{" "}
-            <a href="/people" className="text-primary hover:underline">
+            <Link href="/people" className="text-primary hover:underline">
               People page
-            </a>{" "}
+            </Link>{" "}
             first, then connect them here.
           </p>
         </div>

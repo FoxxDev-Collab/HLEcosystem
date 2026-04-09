@@ -1,3 +1,4 @@
+import { createElement } from "react";
 import { getFileIcon, getFileCategoryColor } from "@/lib/mime-types";
 import { Folder as FolderIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -13,7 +14,13 @@ export function FileIcon({ mimeType, isFolder, className, folderColor }: FileIco
   if (isFolder) {
     return <FolderIcon className={cn("size-5", className)} style={folderColor ? { color: folderColor } : undefined} />;
   }
-  const Icon = getFileIcon(mimeType || "");
+  // Use React.createElement rather than `const Icon = ...; <Icon />`.
+  // The capitalized-variable-to-JSX pattern trips react-hooks/components
+  // ("cannot create components during render") because the static analyzer
+  // cannot prove the component reference is stable across renders.
+  // createElement with a lowercase reference makes the intent explicit:
+  // we are rendering an existing component, not defining a new one.
+  const iconComponent = getFileIcon(mimeType || "");
   const colorClass = getFileCategoryColor(mimeType || "");
-  return <Icon className={cn("size-5", colorClass, className)} />;
+  return createElement(iconComponent, { className: cn("size-5", colorClass, className) });
 }
