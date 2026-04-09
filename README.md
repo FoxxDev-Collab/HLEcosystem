@@ -14,6 +14,8 @@ A family management platform built as a set of purpose-specific web applications
 | File Server | `hle-file_server/` | 8085 | File browsing, uploads, sharing, tagging |
 | Meal Prep | `hle-meal_prep/` | 8086 | Grocery tracking, shopping list optimization |
 | Family Wiki | `hle-family_wiki/` | 8087 | Knowledge base for household reference material |
+| Claude API | `hle-claude_api/` | 8088 | Internal AI gateway: transaction categorization, financial advisor, smart-link suggestions |
+| Family Travel | `hle-family_travel/` | 8089 | Trip planning, itineraries, reservations, packing lists, travel budgets |
 
 ## Architecture
 
@@ -94,6 +96,8 @@ HLEcosystem/
 ├── hle-file_server/       # File management
 ├── hle-meal_prep/         # Grocery and meal planning
 ├── hle-family_wiki/       # Knowledge base
+├── hle-claude_api/        # Internal AI gateway (Anthropic passthrough)
+├── hle-family_travel/     # Trip planning
 ├── compose.yaml           # Podman compose definition
 ├── Containerfile.nextjs   # Shared container build
 ├── config/                # PostgreSQL init scripts, shared config
@@ -115,4 +119,4 @@ Detailed coding standards, auth patterns, and architectural rules are documented
 
 ## License
 
-Private. All rights reserved, Foxx Cyber LLC.
+MIT — see [LICENSE](./LICENSE).
