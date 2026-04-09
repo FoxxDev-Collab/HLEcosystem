@@ -47,7 +47,9 @@ Every Server Action, API route, or database query MUST satisfy the following inv
 
 10. **File uploads go through `lib/file-validation.ts`.** Magic-byte MIME check, extension blocklist, size cap. Do not trust client-reported Content-Type.
 
-11. **Never suppress lint or type-check rules.** Do not write `// eslint-disable`, `// eslint-disable-next-line`, `// @ts-ignore`, `// @ts-expect-error`, or `// @ts-nocheck`. Ever. Lint exists because it catches real bugs; suppressing it is how "reasonable looking" vibe code ships exploitable bugs. If a rule is wrong for a specific case, either (a) fix the underlying code so the rule no longer applies, (b) refactor so the construct isn't needed, or (c) propose a reasoned change to the shared ESLint config in a separate PR that explains why the rule is inappropriate project-wide. CI enforces this: `no-disable-smuggling` fails any PR that introduces new suppression comments in the diff. This rule is non-negotiable.
+11. **Never suppress lint or type-check rules.** Do not write `// eslint-disable`, `// eslint-disable-next-line`, `// @ts-ignore`, `// @ts-expect-error`, or `// @ts-nocheck`. Ever. Lint exists because it catches real bugs; suppressing it is how "reasonable looking" vibe code ships exploitable bugs. If a rule is wrong for a specific case, either (a) fix the underlying code so the rule no longer applies, (b) refactor so the construct isn't needed, or (c) propose a reasoned change to the shared ESLint config in a separate PR that explains why the rule is inappropriate project-wide. CI enforces this via the `Security invariant gate` job in `.github/workflows/security.yml`, which greps every PR diff for suppression comments, `$queryRawUnsafe`, `$executeRawUnsafe`, `dangerouslySetInnerHTML`, and explicit `: any` type annotations. Any match fails the build and the PR cannot merge. This rule is non-negotiable.
+
+12. **Add a regression test for every security fix.** If you are fixing a bug that involves authentication, authorization, tenancy, or data exposure, you must write a test that (a) fails against the pre-fix code and (b) passes against the post-fix code. The canonical example is `hle-family_finance/app/(app)/transactions/actions.test.ts`, which guards the ADR-0005 household-scoping incident. See `docs/TESTING.md` for the current test infrastructure; Vitest is configured in `hle-family_manager` and `hle-family_finance`, and other apps can adopt the same pattern.
 
 ### Before you open a PR
 
@@ -58,14 +60,21 @@ Run the full pre-flight locally:
 cd hle-<app>
 npm run lint           # must pass
 npx tsc --noEmit       # must pass
+npm test               # must pass, if vitest.config.ts exists
 npm audit --audit-level=high --omit=dev   # must pass
 
-# Then manually verify the PR template security checklist:
+# Verify no forbidden patterns were introduced (mimics the CI invariant-gate):
+git diff master --  '*.ts' '*.tsx' '*.js' '*.jsx' \
+  | grep -E '^\+' | grep -v '^\+\+\+' \
+  | grep -E 'eslint-disable|@ts-ignore|@ts-expect-error|@ts-nocheck|\$queryRawUnsafe|\$executeRawUnsafe|dangerouslySetInnerHTML|:\s*any(\s|,|\)|>|;|$)' \
+  && echo "FORBIDDEN PATTERN FOUND — fix before pushing" || echo "clean"
+
+# Then verify the PR template security checklist:
 #   .github/PULL_REQUEST_TEMPLATE.md
 # Every applicable box must be honestly checkable.
 ```
 
-If you are an AI assistant, you must execute the equivalent checks (Read the changed files, grep for the required patterns, verify the invariants) before declaring the change complete. "It should work" is not acceptable.
+If you are an AI assistant, you must execute the equivalent checks (Read the changed files, grep for the required patterns, run the tests, verify the invariants) before declaring the change complete. "It should work" is not acceptable.
 
 ### Security-sensitive change types that require extra scrutiny
 
@@ -282,15 +291,31 @@ Service names use hyphens: `hle-family-manager`, `hle-familyhub`, `hle-family-fi
 
 ## Git
 
-Single developer. Commit format:
+**Branch protection is enforced on `master`.** Direct pushes are blocked. All changes go through pull requests and must pass:
+
+- `CI passed` (lint + typecheck + Vitest per affected app)
+- `Workflow audit (zizmor)`
+- `Security invariant gate` (diff grep — see rule 11 above)
+- `Secret scan (gitleaks)`
+- `Dependency + config scan (trivy)`
+- `CodeQL (JavaScript/TypeScript)`
+- `Dependency review (PR only)`
+
+Squash or rebase merges only — no merge commits. The branch must be up-to-date with `master` before the merge button unlocks. The repository owner has bypass capability for hotfixes but should use it only when the alternative is prolonged outage or credential rotation.
+
+Commit format:
 ```
 [app] brief description
 
 [finance] Add recurring transaction scheduler
 [hub] Fix family tree relationship display
 [infra] Update compose memory limits
+[ci] Pin trivy-action to commit SHA
+[security] Fix cross-tenant account balance mutation (ADR-0005 regression)
 [all] Upgrade Next.js to 16.2
 ```
+
+For security-relevant commits, prefer the `[security]` prefix and reference the relevant invariant, ADR, or threat-model section in the body.
 
 ## What NOT To Do
 
