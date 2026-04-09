@@ -12,6 +12,7 @@ env:
 permissions:
   contents: read
   packages: write
+  security-events: write  # Trivy SARIF upload for built images
 
 jobs:
   build-and-push:
@@ -74,7 +75,47 @@ jobs:
             type=raw,value=latest
             type=sha,prefix=
 
-      - name: Build and push
+      # Build locally first so we can scan before push — prevents vulnerable
+      # images from ever reaching GHCR.
+      - name: Build (local, for scan)
+        id: build
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: Containerfile.nextjs
+          load: true
+          tags: ${{ matrix.image_name }}:scan
+          build-args: |
+            APP_DIR=${{ matrix.app_dir }}
+            NEXT_PUBLIC_APP_NAME=${{ matrix.app_name }}
+          cache-from: type=gha,scope=${{ matrix.image_name }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image_name }}
+
+      - name: Trivy image scan (SARIF)
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # master @ 2026-04-08
+        with:
+          image-ref: ${{ matrix.image_name }}:scan
+          format: sarif
+          output: trivy-image-${{ matrix.image_name }}.sarif
+          ignore-unfixed: true
+          severity: CRITICAL,HIGH,MEDIUM
+
+      - name: Upload image SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-image-${{ matrix.image_name }}.sarif
+          category: trivy-image-${{ matrix.image_name }}
+
+      - name: Trivy image scan (fail on HIGH/CRITICAL)
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # master @ 2026-04-08
+        with:
+          image-ref: ${{ matrix.image_name }}:scan
+          ignore-unfixed: true
+          severity: CRITICAL,HIGH
+          exit-code: "1"
+
+      - name: Push image
         uses: docker/build-push-action@v7
         with:
           context: .
@@ -87,3 +128,14 @@ jobs:
             NEXT_PUBLIC_APP_NAME=${{ matrix.app_name }}
           cache-from: type=gha,scope=${{ matrix.image_name }}
           cache-to: type=gha,mode=max,scope=${{ matrix.image_name }}
+
+      # CycloneDX SBOM of the built image — supply-chain provenance for
+      # NIST SR-4 / SR-11 and FOSS-consumer transparency. Attached as a
+      # workflow artifact; can later be attested via cosign.
+      - name: Generate SBOM (CycloneDX)
+        uses: anchore/sbom-action@v0
+        with:
+          image: ${{ matrix.image_name }}:scan
+          format: cyclonedx-json
+          artifact-name: sbom-${{ matrix.image_name }}.cdx.json
+          output-file: sbom-${{ matrix.image_name }}.cdx.json

@@ -92,39 +92,13 @@ jobs:
             echo "No vitest config in ${{ matrix.app }} — skipping (see docs/TESTING.md roadmap)."
           fi
 
-  no-disable-smuggling:
-    name: Reject new eslint-disable / ts-ignore / ts-expect-error
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Fail on new lint/type suppressions in the diff
-        env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: |
-          set -euo pipefail
-          # Only inspect *added* lines (starting with +, not +++ headers)
-          added=$(git diff "$BASE_SHA" "$HEAD_SHA" -- '*.ts' '*.tsx' '*.js' '*.mjs' '*.cjs' | grep -E '^\+[^+]' || true)
-          bad=$(printf '%s\n' "$added" | grep -nE 'eslint-disable|@ts-ignore|@ts-expect-error|@ts-nocheck' || true)
-          if [ -n "$bad" ]; then
-            echo "❌ New lint or type-check suppression comments were added in this PR."
-            echo "   HLEcosystem policy: no rule suppressions. Fix the underlying code instead."
-            echo "   See CLAUDE.md §Security workflow."
-            echo
-            echo "Offending lines:"
-            printf '%s\n' "$bad"
-            exit 1
-          fi
-          echo "✅ No new rule suppressions introduced."
-
-  # Summary job so branch protection can require a single check
+  # Summary job so branch protection can require a single check.
+  # Note: the lint/type suppression check (formerly no-disable-smuggling here)
+  # is now covered by the `invariant-gate` job in security.yml, which also
+  # checks for $queryRawUnsafe, dangerouslySetInnerHTML, and explicit `any`.
   ci-passed:
     name: CI passed
-    needs: [detect, build, no-disable-smuggling]
+    needs: [detect, build]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -132,10 +106,6 @@ jobs:
         run: |
           if [ "${{ needs.build.result }}" != "success" ] && [ "${{ needs.detect.outputs.apps }}" != "[]" ]; then
             echo "build job failed"
-            exit 1
-          fi
-          if [ "${{ needs.no-disable-smuggling.result }}" = "failure" ]; then
-            echo "no-disable-smuggling job failed"
             exit 1
           fi
           echo "All checks passed."

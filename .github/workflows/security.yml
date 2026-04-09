@@ -18,6 +18,86 @@ permissions:
   security-events: write  # SARIF upload to code scanning
 
 jobs:
+  # Static analysis of the workflow YAML itself — catches script-injection sinks,
+  # overly-permissive tokens, unpinned actions, etc.
+  zizmor:
+    name: Workflow audit (zizmor)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install zizmor
+        run: pipx install zizmor
+
+      - name: Run zizmor
+        run: zizmor --format sarif .github/workflows/ > zizmor.sarif || true
+
+      - name: Upload SARIF to GitHub Security
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: zizmor.sarif
+          category: zizmor
+
+  # Blocks PRs that add vulnerable or incompatibly-licensed dependencies
+  # before they reach trivy/npm-audit. Fast feedback on review.
+  dependency-review:
+    name: Dependency review (PR only)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
+          comment-summary-in-pr: on-failure
+
+  # Enforces ADR-0005 and the CLAUDE.md "Critical Rules" invariants in CI.
+  # If any of these patterns land in a PR diff, the job fails. This is the
+  # machine-checkable backstop for the rules that have already been violated once.
+  invariant-gate:
+    name: Security invariant gate
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check PR diff for forbidden patterns
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          DIFF=$(git diff "$BASE_SHA" "$HEAD_SHA" -- '*.ts' '*.tsx' '*.js' '*.jsx')
+          ADDED=$(printf '%s\n' "$DIFF" | grep -E '^\+' | grep -v '^\+\+\+' || true)
+
+          fail=0
+          check() {
+            local pattern="$1" label="$2"
+            if printf '%s\n' "$ADDED" | grep -E "$pattern" >/dev/null; then
+              echo "::error::$label — forbidden pattern introduced in this PR"
+              printf '%s\n' "$ADDED" | grep -nE "$pattern" || true
+              fail=1
+            fi
+          }
+
+          check '\$queryRawUnsafe|\$executeRawUnsafe'       'Unsafe raw SQL'
+          check 'dangerouslySetInnerHTML'                    'dangerouslySetInnerHTML'
+          check 'eslint-disable|@ts-ignore|@ts-expect-error|@ts-nocheck' 'Lint/type suppression (see CLAUDE.md §11)'
+          check ':\s*any(\s|,|\)|>|;|$)'                     'Explicit any type'
+
+          if [ "$fail" -ne 0 ]; then
+            echo ""
+            echo "One or more security invariants were violated. See CLAUDE.md 'Security workflow' section."
+            exit 1
+          fi
+          echo "All security invariants satisfied."
+
   gitleaks:
     name: Secret scan (gitleaks)
     runs-on: ubuntu-latest
@@ -37,8 +117,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Pinned to commit SHA (was @master) — trivy-action has security-events: write
+      # downstream, so a compromised master could poison SARIF or exfiltrate tokens.
       - name: Trivy filesystem scan
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # master @ 2026-04-08
         with:
           scan-type: fs
           scan-ref: .
@@ -56,7 +138,7 @@ jobs:
           category: trivy
 
       - name: Fail on critical/high findings
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # master @ 2026-04-08
         with:
           scan-type: fs
           scan-ref: .
@@ -89,6 +171,14 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: ${{ matrix.app }}/package-lock.json
+
+      # Lockfile integrity: `npm ci` fails hard if package.json and
+      # package-lock.json have drifted, preventing unreviewed dep changes.
+      - name: Verify lockfile integrity
+        working-directory: ${{ matrix.app }}
+        run: npm ci --ignore-scripts --no-audit --no-fund
 
       - name: npm audit (fail on high)
         working-directory: ${{ matrix.app }}
