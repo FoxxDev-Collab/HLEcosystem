@@ -30,19 +30,30 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // Input caps to limit prompt-injection blast radius and cost
+  const MAX_FIELD = 500;
+  const MAX_CATEGORIES = 100;
+  const safeDescription = description.slice(0, MAX_FIELD);
+  const safePayee = payee ? payee.slice(0, MAX_FIELD) : undefined;
+  const safeCategories = categories?.slice(0, MAX_CATEGORIES).map((c) => c.slice(0, 100));
+
   const model = await getDefaultModel();
   const startTime = Date.now();
 
   try {
     const client = getClient();
+    // Note: user-controlled fields are length-capped above. They are still
+    // untrusted input — any instructions embedded in them should be treated as
+    // data, not commands. The "Return ONLY valid JSON" constraint is enforced
+    // by JSON.parse() downstream.
     const prompt = `Categorize this financial transaction. Return a JSON object with: category (string), confidence (0-1), reasoning (string).
 
 Transaction:
-- Description: ${description}
-${payee ? `- Payee: ${payee}` : ""}
+- Description: ${safeDescription}
+${safePayee ? `- Payee: ${safePayee}` : ""}
 ${amount ? `- Amount: $${amount}` : ""}
 
-${categories?.length ? `Available categories: ${categories.join(", ")}` : "Use standard expense categories like: Groceries, Dining, Transportation, Entertainment, Utilities, Healthcare, Shopping, Subscriptions, Housing, Insurance, Education, Travel, Personal Care, Gifts, Other."}
+${safeCategories?.length ? `Available categories: ${safeCategories.join(", ")}` : "Use standard expense categories like: Groceries, Dining, Transportation, Entertainment, Utilities, Healthcare, Shopping, Subscriptions, Housing, Insurance, Education, Travel, Personal Care, Gifts, Other."}
 
 Return ONLY valid JSON, no markdown or explanation.`;
 

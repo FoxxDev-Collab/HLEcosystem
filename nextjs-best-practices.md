@@ -558,10 +558,10 @@ Each app connects to the same PostgreSQL instance with its own schema:
 
 ```bash
 # Finance.App
-DATABASE_URL="postgresql://finance_app:pass@postgres.foxxlab.local:5432/foxxlab?schema=finance"
+DATABASE_URL="postgresql://finance_app:CHANGE_ME@postgres.foxxlab.local:5432/foxxlab?schema=finance"
 
 # FamilyHub.App
-DATABASE_URL="postgresql://familyhub_app:pass@postgres.foxxlab.local:5432/foxxlab?schema=familyhub"
+DATABASE_URL="postgresql://familyhub_app:CHANGE_ME@postgres.foxxlab.local:5432/foxxlab?schema=familyhub"
 ```
 
 Each app gets its own database role limited to its own schema. Databasemgr provisions these.
@@ -656,7 +656,7 @@ type ExpenseWithCategory = Prisma.ExpenseGetPayload<{
 
 ```bash
 # .env.local (git-ignored)
-DATABASE_URL="postgresql://finance_app:pass@postgres.foxxlab.local:5432/foxxlab?schema=finance"
+DATABASE_URL="postgresql://finance_app:CHANGE_ME@postgres.foxxlab.local:5432/foxxlab?schema=finance"
 AUTHENTIK_CLIENT_SECRET="your-secret"
 NEXTAUTH_SECRET="random-32-char-string"
 
@@ -1052,7 +1052,7 @@ server {
 
 ```bash
 # Finance.App .env
-DATABASE_URL="postgresql://finance_app:pass@postgres.foxxlab.local:5432/foxxlab?schema=finance"
+DATABASE_URL="postgresql://finance_app:CHANGE_ME@postgres.foxxlab.local:5432/foxxlab?schema=finance"
 AUTHENTIK_CLIENT_ID="finance-app"
 AUTHENTIK_CLIENT_SECRET="..."
 AUTHENTIK_ISSUER="https://auth.foxxlab.local/application/o/finance-app/"

@@ -180,6 +180,8 @@ function formatCurrencyPlain(amount: number): string {
 }
 
 export async function archiveAccountAction(formData: FormData): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
   const householdId = await getCurrentHouseholdId();
   if (!householdId) return;
 

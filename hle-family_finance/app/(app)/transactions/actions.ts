@@ -52,6 +52,16 @@ export async function createTransactionAction(formData: FormData): Promise<void>
   const amount = Math.abs(parsed.data.amount);
   const transferToAccountId = type === "TRANSFER" ? parsed.data.transferToAccountId : null;
 
+  // Tenant scoping: verify the account(s) belong to this household before mutating balances
+  const account = await prisma.account.findFirst({ where: { id: accountId, householdId } });
+  if (!account) return;
+  if (transferToAccountId) {
+    const destAccount = await prisma.account.findFirst({
+      where: { id: transferToAccountId, householdId },
+    });
+    if (!destAccount) return;
+  }
+
   const transaction = await prisma.transaction.create({
     data: {
       householdId,
@@ -122,6 +132,8 @@ export async function updateTransactionAction(formData: FormData): Promise<void>
 }
 
 export async function deleteTransactionAction(formData: FormData): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
   const householdId = await getCurrentHouseholdId();
   if (!householdId) return;
 

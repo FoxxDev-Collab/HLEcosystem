@@ -1,5 +1,6 @@
 "use server";
 
+import { randomBytes } from "crypto";
 import { getCurrentUser } from "@/lib/auth";
 import { getCurrentHouseholdId } from "@/lib/household";
 import prisma from "@/lib/prisma";
@@ -75,9 +76,14 @@ export async function createShareLinkAction(formData: FormData) {
   });
   if (!file) return;
 
+  // Cryptographically strong token — Prisma schema default is cuid() which is
+  // collision-resistant but not CSPRNG-backed. Override with 256 bits of entropy.
+  const token = randomBytes(32).toString("base64url");
+
   const shareLink = await prisma.shareLink.create({
     data: {
       fileId,
+      token,
       permission: permission as "VIEW" | "DOWNLOAD" | "EDIT",
       createdByUserId: user.id,
       expiresAt: expiresAtStr ? new Date(expiresAtStr) : null,

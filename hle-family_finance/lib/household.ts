@@ -19,7 +19,7 @@ export async function setCurrentHousehold(householdId: string) {
   const cookieStore = await cookies();
   cookieStore.set(HOUSEHOLD_COOKIE, householdId, {
     httpOnly: true,
-    secure: process.env.SECURE_COOKIES === "true",
+    secure: process.env.SECURE_COOKIES !== "false" && process.env.NODE_ENV === "production",
     sameSite: "lax",
     maxAge: 60 * 60 * 24 * 30,
     path: "/",

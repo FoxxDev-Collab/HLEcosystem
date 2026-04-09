@@ -817,7 +817,7 @@ For running Prisma Studio, migrations during development, or manual queries:
 
 ```bash
 # Prisma Studio (from any app directory)
-DATABASE_URL="postgresql://foxxlab_admin:password@localhost:5432/foxxlab?schema=finance" npx prisma studio
+DATABASE_URL="postgresql://foxxlab_admin:CHANGE_ME@localhost:5432/foxxlab?schema=finance" npx prisma studio
 
 # psql
 psql -h localhost -U foxxlab_admin -d foxxlab
@@ -1146,7 +1146,7 @@ podman-compose up -d postgres redis authentik-server authentik-worker nginx-prox
 
 # Develop on host
 cd apps/finance-app
-DATABASE_URL="postgresql://foxxlab_admin:pass@localhost:5432/foxxlab?schema=finance" npm run dev
+DATABASE_URL="postgresql://foxxlab_admin:CHANGE_ME@localhost:5432/foxxlab?schema=finance" npm run dev
 ```
 
 This is usually simpler and faster. The compose dev override is useful when you need the full stack running with inter-service communication.

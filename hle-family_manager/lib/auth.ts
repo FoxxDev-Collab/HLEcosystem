@@ -27,7 +27,7 @@ export async function setSessionCookie(token: string): Promise<void> {
   const domain = process.env.AUTH_DOMAIN || undefined;
   cookieStore.set(SESSION_COOKIE, token, {
     httpOnly: true,
-    secure: process.env.SECURE_COOKIES === "true",
+    secure: process.env.SECURE_COOKIES !== "false" && process.env.NODE_ENV === "production",
     sameSite: "lax",
     maxAge: 60 * 60 * 24 * 30,
     path: "/",
@@ -44,7 +44,7 @@ export async function clearSession(): Promise<void> {
   const domain = process.env.AUTH_DOMAIN || undefined;
   cookieStore.set(SESSION_COOKIE, "", {
     httpOnly: true,
-    secure: process.env.SECURE_COOKIES === "true",
+    secure: process.env.SECURE_COOKIES !== "false" && process.env.NODE_ENV === "production",
     sameSite: "lax",
     maxAge: 0,
     path: "/",
