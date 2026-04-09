@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "@prisma/client": "^6.19.2",
-    "@tiptap/extension-character-count": "^2.27.2",
+    "@tiptap/extension-character-count": "^3.22.3",
     "@tiptap/extension-color": "^2.27.2",
     "@tiptap/extension-highlight": "^2.27.2",
     "@tiptap/extension-image": "^2.27.2",
