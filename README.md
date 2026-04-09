@@ -121,7 +121,8 @@ Each app follows the same internal layout: `app/` for routes and server actions,
 
 | Document | Purpose |
 |----------|---------|
-| [`CLAUDE.md`](./CLAUDE.md) | Coding standards, architectural rules, contributor conventions |
+| [`CLAUDE.md`](./CLAUDE.md) | Coding standards, architectural rules, contributor conventions, mandatory security workflow |
+| [`docs/WORKFLOW.md`](./docs/WORKFLOW.md) | **VibeSecOps** — how this project is actually built with AI-assisted development + security discipline |
 | [`CONTRIBUTING.md`](./CONTRIBUTING.md) | How to submit PRs, development workflow |
 | [`SECURITY.md`](./SECURITY.md) | Security policy, vulnerability reporting, operator duties |
 | [`docs/THREAT_MODEL.md`](./docs/THREAT_MODEL.md) | STRIDE-based threat model per trust boundary |

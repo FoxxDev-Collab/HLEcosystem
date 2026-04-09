@@ -1,5 +1,7 @@
 # HLEcosystem — Family Management Platform
 
+> **AI assistants: read [`docs/WORKFLOW.md`](./docs/WORKFLOW.md) first.** It explains the VibeSecOps collaboration model this project uses and what your responsibilities are as the executor in that model. Then read the security workflow section below.
+>
 > **Read this before touching security-relevant code.** If your change affects authentication, session handling, Server Actions, database queries, file uploads, external integrations, or role enforcement, you MUST read [`docs/THREAT_MODEL.md`](./docs/THREAT_MODEL.md) and the relevant section of [`docs/SECURITY_CONTROLS.md`](./docs/SECURITY_CONTROLS.md) before proposing changes. The failure mode documented in [`docs/adr/0005-household-scoped-tenancy.md`](./docs/adr/0005-household-scoped-tenancy.md) is the single most important rule in this codebase. It has already happened once.
 
 ## What This Is
