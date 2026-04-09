@@ -20,7 +20,7 @@ jobs:
     outputs:
       apps: ${{ steps.set.outputs.apps }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 2
 
@@ -57,7 +57,7 @@ jobs:
       matrix:
         app: ${{ fromJSON(needs.detect.outputs.apps) }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup Node
         uses: actions/setup-node@v4
