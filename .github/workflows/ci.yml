@@ -1,0 +1,98 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  detect:
+    name: Detect changed apps
+    runs-on: ubuntu-latest
+    outputs:
+      apps: ${{ steps.set.outputs.apps }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - id: set
+        name: Determine matrix
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            base="${{ github.event.pull_request.base.sha }}"
+            head="${{ github.event.pull_request.head.sha }}"
+            changed=$(git diff --name-only "$base" "$head" || true)
+          else
+            changed=$(git diff --name-only HEAD^ HEAD || true)
+          fi
+          # Always run the full matrix on shared-infra or workflow changes
+          if echo "$changed" | grep -qE '^(compose\.yaml|Containerfile\.nextjs|hle\.sh|\.github/workflows/)'; then
+            apps='["hle-claude_api","hle-family_finance","hle-family_health","hle-family_home_care","hle-family_manager","hle-family_travel","hle-family_wiki","hle-familyhub","hle-file_server","hle-meal_prep"]'
+          else
+            apps=$(echo "$changed" | awk -F/ '/^hle-/ {print $1}' | sort -u | jq -R . | jq -s -c .)
+            if [ "$apps" = "[]" ] || [ -z "$apps" ]; then
+              apps='[]'
+            fi
+          fi
+          echo "apps=$apps" >> "$GITHUB_OUTPUT"
+          echo "Matrix: $apps"
+
+  build:
+    name: lint + typecheck (${{ matrix.app }})
+    needs: detect
+    if: needs.detect.outputs.apps != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        app: ${{ fromJSON(needs.detect.outputs.apps) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: ${{ matrix.app }}/package-lock.json
+
+      - name: Install
+        working-directory: ${{ matrix.app }}
+        run: npm ci --no-audit --no-fund
+
+      - name: Generate Prisma client
+        working-directory: ${{ matrix.app }}
+        run: npx prisma generate || true
+
+      - name: Lint
+        working-directory: ${{ matrix.app }}
+        run: npm run lint
+
+      - name: Typecheck
+        working-directory: ${{ matrix.app }}
+        run: npx tsc --noEmit
+
+  # Summary job so branch protection can require a single check
+  ci-passed:
+    name: CI passed
+    needs: [detect, build]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify all jobs succeeded
+        run: |
+          if [ "${{ needs.build.result }}" != "success" ] && [ "${{ needs.detect.outputs.apps }}" != "[]" ]; then
+            echo "build job failed"
+            exit 1
+          fi
+          echo "All checks passed."

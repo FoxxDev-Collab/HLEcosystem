@@ -1,0 +1,64 @@
+name: Feature request
+description: Suggest a new feature or enhancement
+title: "[feature] "
+labels: [enhancement, triage]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        HLEcosystem is intentionally opinionated. Not every request will be accepted — we prioritize features that benefit self-hosted families and don't compromise the tenancy or security model.
+
+  - type: dropdown
+    id: app
+    attributes:
+      label: Target app
+      options:
+        - hle-family_manager
+        - hle-familyhub
+        - hle-family_finance
+        - hle-family_health
+        - hle-family_home_care
+        - hle-file_server
+        - hle-meal_prep
+        - hle-family_wiki
+        - hle-family_travel
+        - hle-claude_api
+        - New app (describe below)
+        - Cross-app / shared
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem statement
+      description: What user problem does this solve? Describe the use case, not the solution.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: How should it work? Rough UI or API sketch welcome.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: What other approaches did you think about?
+
+  - type: checkboxes
+    id: impact
+    attributes:
+      label: Impact assessment
+      description: Check any that apply — reviewers will want you to address these
+      options:
+        - label: Requires a database schema change
+        - label: Affects authentication, session, or MFA
+        - label: Introduces a new external service dependency
+        - label: Changes the tenancy / household scoping model
+        - label: Adds a public (unauthenticated) endpoint
+        - label: Touches file upload / storage

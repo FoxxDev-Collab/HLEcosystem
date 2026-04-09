@@ -46,4 +46,4 @@ You need Podman + podman-compose (not Docker) and Node 22+ locally for running P
 
 ## License
 
-By contributing, you agree that your contributions will be licensed under the MIT License (see [`LICENSE`](./LICENSE)).
+By contributing, you agree that your contributions will be licensed under the Apache License 2.0 (see [`LICENSE`](./LICENSE)). Per section 5 of the license, contributions are submitted under the same terms unless you explicitly state otherwise. There is no separate CLA — the Apache-2.0 patent grant in section 3 applies automatically to all contributions.

@@ -1,0 +1,155 @@
+version: 2
+updates:
+  # GitHub Actions workflow dependencies
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: "America/New_York"
+    open-pull-requests-limit: 5
+    labels: [dependencies, ci]
+    commit-message:
+      prefix: "[ci]"
+
+  # Per-app npm updates
+  - package-ecosystem: npm
+    directory: "/hle-claude_api"
+    schedule: { interval: weekly, day: monday }
+    open-pull-requests-limit: 5
+    labels: [dependencies, claude_api]
+    commit-message: { prefix: "[claude_api]" }
+    groups:
+      dev-dependencies:
+        dependency-type: development
+        update-types: [minor, patch]
+      security-updates:
+        applies-to: security-updates
+        patterns: ["*"]
+
+  - package-ecosystem: npm
+    directory: "/hle-family_finance"
+    schedule: { interval: weekly, day: monday }
+    open-pull-requests-limit: 5
+    labels: [dependencies, finance]
+    commit-message: { prefix: "[finance]" }
+    groups:
+      dev-dependencies:
+        dependency-type: development
+        update-types: [minor, patch]
+      security-updates:
+        applies-to: security-updates
+        patterns: ["*"]
+
+  - package-ecosystem: npm
+    directory: "/hle-family_health"
+    schedule: { interval: weekly, day: monday }
+    open-pull-requests-limit: 5
+    labels: [dependencies, health]
+    commit-message: { prefix: "[health]" }
+    groups:
+      dev-dependencies:
+        dependency-type: development
+        update-types: [minor, patch]
+      security-updates:
+        applies-to: security-updates
+        patterns: ["*"]
+
+  - package-ecosystem: npm
+    directory: "/hle-family_home_care"
+    schedule: { interval: weekly, day: monday }
+    open-pull-requests-limit: 5
+    labels: [dependencies, home_care]
+    commit-message: { prefix: "[home_care]" }
+    groups:
+      dev-dependencies:
+        dependency-type: development
+        update-types: [minor, patch]
+      security-updates:
+        applies-to: security-updates
+        patterns: ["*"]
+
+  - package-ecosystem: npm
+    directory: "/hle-family_manager"
+    schedule: { interval: weekly, day: monday }
+    open-pull-requests-limit: 5
+    labels: [dependencies, manager]
+    commit-message: { prefix: "[manager]" }
+    groups:
+      dev-dependencies:
+        dependency-type: development
+        update-types: [minor, patch]
+      security-updates:
+        applies-to: security-updates
+        patterns: ["*"]
+
+  - package-ecosystem: npm
+    directory: "/hle-family_travel"
+    schedule: { interval: weekly, day: monday }
+    open-pull-requests-limit: 5
+    labels: [dependencies, travel]
+    commit-message: { prefix: "[travel]" }
+    groups:
+      dev-dependencies:
+        dependency-type: development
+        update-types: [minor, patch]
+      security-updates:
+        applies-to: security-updates
+        patterns: ["*"]
+
+  - package-ecosystem: npm
+    directory: "/hle-family_wiki"
+    schedule: { interval: weekly, day: monday }
+    open-pull-requests-limit: 5
+    labels: [dependencies, wiki]
+    commit-message: { prefix: "[wiki]" }
+    groups:
+      dev-dependencies:
+        dependency-type: development
+        update-types: [minor, patch]
+      security-updates:
+        applies-to: security-updates
+        patterns: ["*"]
+
+  - package-ecosystem: npm
+    directory: "/hle-familyhub"
+    schedule: { interval: weekly, day: monday }
+    open-pull-requests-limit: 5
+    labels: [dependencies, hub]
+    commit-message: { prefix: "[hub]" }
+    groups:
+      dev-dependencies:
+        dependency-type: development
+        update-types: [minor, patch]
+      security-updates:
+        applies-to: security-updates
+        patterns: ["*"]
+
+  - package-ecosystem: npm
+    directory: "/hle-file_server"
+    schedule: { interval: weekly, day: monday }
+    open-pull-requests-limit: 5
+    labels: [dependencies, file_server]
+    commit-message: { prefix: "[file_server]" }
+    groups:
+      dev-dependencies:
+        dependency-type: development
+        update-types: [minor, patch]
+      security-updates:
+        applies-to: security-updates
+        patterns: ["*"]
+
+  - package-ecosystem: npm
+    directory: "/hle-meal_prep"
+    schedule: { interval: weekly, day: monday }
+    open-pull-requests-limit: 5
+    labels: [dependencies, meal_prep]
+    commit-message: { prefix: "[meal_prep]" }
+    groups:
+      dev-dependencies:
+        dependency-type: development
+        update-types: [minor, patch]
+      security-updates:
+        applies-to: security-updates
+        patterns: ["*"]

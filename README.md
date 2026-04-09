@@ -1,6 +1,15 @@
 # HLEcosystem
 
+[![CI](https://github.com/FoxxDev-Collab/HLEcosystem/actions/workflows/ci.yml/badge.svg)](https://github.com/FoxxDev-Collab/HLEcosystem/actions/workflows/ci.yml)
+[![Security](https://github.com/FoxxDev-Collab/HLEcosystem/actions/workflows/security.yml/badge.svg)](https://github.com/FoxxDev-Collab/HLEcosystem/actions/workflows/security.yml)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](./LICENSE)
+[![Next.js 16](https://img.shields.io/badge/Next.js-16-black?logo=next.js)](https://nextjs.org)
+[![PostgreSQL 16](https://img.shields.io/badge/PostgreSQL-16-336791?logo=postgresql&logoColor=white)](https://www.postgresql.org)
+[![Podman](https://img.shields.io/badge/Container-Podman-892CA0?logo=podman&logoColor=white)](https://podman.io)
+
 A family management platform built as a set of purpose-specific web applications sharing a single PostgreSQL database. Each app owns its own database schema and handles one domain — finances, health, home maintenance, meal planning, and so on. Family Manager sits at the center as the identity provider and user directory.
+
+**For security researchers and operators:** before deploying, please read [`SECURITY.md`](./SECURITY.md), [`docs/THREAT_MODEL.md`](./docs/THREAT_MODEL.md), and [`docs/SECURITY_CONTROLS.md`](./docs/SECURITY_CONTROLS.md). The threat model documents known gaps and operator responsibilities in detail.
 
 ## Applications
 
@@ -107,6 +116,19 @@ HLEcosystem/
 
 Each app follows the same internal layout: `app/` for routes and server actions, `components/` for UI, `lib/` for shared utilities (auth, Prisma client, cross-schema queries), and `prisma/` for the schema definition.
 
+## Documentation
+
+| Document | Purpose |
+|----------|---------|
+| [`CLAUDE.md`](./CLAUDE.md) | Coding standards, architectural rules, contributor conventions |
+| [`CONTRIBUTING.md`](./CONTRIBUTING.md) | How to submit PRs, development workflow |
+| [`SECURITY.md`](./SECURITY.md) | Security policy, vulnerability reporting, operator duties |
+| [`docs/THREAT_MODEL.md`](./docs/THREAT_MODEL.md) | STRIDE-based threat model per trust boundary |
+| [`docs/SECURITY_CONTROLS.md`](./docs/SECURITY_CONTROLS.md) | NIST SP 800-53 Rev 5 control traceability |
+| [`docs/adr/`](./docs/adr/) | Architecture Decision Records — the *why* behind key choices |
+| [`docs/TESTING.md`](./docs/TESTING.md) | Testing strategy and known gaps |
+| [`CODE_OF_CONDUCT.md`](./CODE_OF_CONDUCT.md) | Contributor Covenant 2.1 |
+
 ## Development Conventions
 
 Detailed coding standards, auth patterns, and architectural rules are documented in `CLAUDE.md`. The short version:
@@ -119,4 +141,6 @@ Detailed coding standards, auth patterns, and architectural rules are documented
 
 ## License
 
-MIT — see [LICENSE](./LICENSE).
+Apache License 2.0 — see [LICENSE](./LICENSE) and [NOTICE](./NOTICE).
+
+Copyright 2026 Foxx Cyber LLC.
