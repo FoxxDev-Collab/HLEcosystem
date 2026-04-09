@@ -18,10 +18,20 @@
 
 ARG APP_DIR=.
 
+# Base image pinned to a specific digest for reproducibility and audit.
+# Dependabot's docker ecosystem watches this line and auto-PRs digest
+# updates when a newer node:22-alpine is published. Pinning prevents an
+# upstream rebuild from silently changing what ships.
+#
+# Current pin: node:22-alpine @ 2026-03-26 (node 22.22.2)
+# Known accepted CVEs at this pin — see .grype.yaml and THREAT_MODEL.md §6:
+#   CVE-2026-21710, 21713, 21714, 21715, 21716, 21717  (node, upstream-gated)
+#   CVE-2026-2673                                       (openssl, upstream-gated)
+
 # ============================================
 # Stage 1: Install all dependencies (build-time)
 # ============================================
-FROM node:22-alpine AS deps
+FROM node:22-alpine@sha256:1e8b5d68cac394f76c931b266fe5c224c3fe4cdbc33131e064c83b88235fe77e AS deps
 ARG APP_DIR
 WORKDIR /app
 
@@ -36,7 +46,7 @@ RUN npm ci --ignore-scripts && \
 # ============================================
 # Stage 2: Build the application
 # ============================================
-FROM node:22-alpine AS builder
+FROM node:22-alpine@sha256:1e8b5d68cac394f76c931b266fe5c224c3fe4cdbc33131e064c83b88235fe77e AS builder
 ARG APP_DIR
 WORKDIR /app
 
@@ -58,7 +68,7 @@ RUN npm run build
 # This is what the runtime image COPYs, so vitest, vite, esbuild (Go),
 # eslint, typescript, @vitest/coverage-v8, tailwind CLI, tsx, etc. do
 # not end up on disk in the runner image and cannot be scanned as CVEs.
-FROM node:22-alpine AS prod-deps
+FROM node:22-alpine@sha256:1e8b5d68cac394f76c931b266fe5c224c3fe4cdbc33131e064c83b88235fe77e AS prod-deps
 ARG APP_DIR
 WORKDIR /app
 
@@ -71,7 +81,7 @@ RUN npm ci --omit=dev --ignore-scripts && \
 # ============================================
 # Stage 4: Production runtime (minimal)
 # ============================================
-FROM node:22-alpine AS runner
+FROM node:22-alpine@sha256:1e8b5d68cac394f76c931b266fe5c224c3fe4cdbc33131e064c83b88235fe77e AS runner
 WORKDIR /app
 
 # Apply all pending apk security updates on top of the base image.

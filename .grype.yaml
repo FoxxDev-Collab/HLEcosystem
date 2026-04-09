@@ -1,0 +1,122 @@
+# Grype scanner configuration for HLEcosystem container images.
+#
+# The `ignore` block below documents VEX (Vulnerability Exploitability
+# eXchange) acceptances — CVEs that are present in the image but cannot
+# be fixed by HLEcosystem alone because the patch is owned by an upstream
+# we do not control (Node.js, Alpine, Next.js, OpenSSL). Each entry is a
+# documented, time-bounded risk acceptance, not a suppression.
+#
+# Every entry MUST have:
+#   - The upstream CVE / GHSA identifier
+#   - The package name and affected version
+#   - A rationale referencing THREAT_MODEL.md §6 or SECURITY_CONTROLS.md
+#   - A review-by date (revisit within 30 days)
+#
+# When an upstream fix lands (typically via Dependabot for node base image
+# digest, npm deps, or a manual Next.js bump), the corresponding ignore
+# entry MUST be removed in the same PR. CI re-runs the scan and confirms
+# the finding is gone.
+#
+# Review cadence: any entry past its review-by date blocks merges until
+# the ignore is either renewed with fresh rationale or removed after fix.
+#
+# See docs/THREAT_MODEL.md §6 gaps G-9..G-12 for per-CVE details.
+
+ignore:
+  # ─── G-9: Next.js bundles an old picomatch (4.0.3) ──────────────────
+  # File: next/dist/compiled/picomatch/{package.json,index.js}
+  # Next.js uses ncc to bundle its internal glob matcher. The bundled copy
+  # is picomatch 4.0.3 and ships with the ReDoS vulnerability. As of
+  # next@16.2.3 (latest 2026-04-08) the bundled file is byte-identical to
+  # next@16.1.7.
+  # Reachability: NOT user-reachable. The bundled picomatch is used only
+  # by Next.js internals for next.config.ts glob matching and static
+  # asset resolution at build time. HLEcosystem code does not invoke it
+  # with attacker-controlled patterns; there is no network path from a
+  # user request to this regex engine.
+  # Upstream tracking: TODO file issue at vercel/next.js
+  # Review-by: 2026-05-08
+  - vulnerability: GHSA-c2c7-rcm5-vvqj
+    package:
+      name: picomatch
+      version: 4.0.3
+  - vulnerability: GHSA-3v7f-55p6-f55p
+    package:
+      name: picomatch
+      version: 4.0.3
+
+  # ─── G-10: Node 22.22.2 LTS unpatched HTTP header / V8 / perms bugs ─
+  # node:22-alpine@sha256:1e8b5d68... ships Node 22.22.2 which is the
+  # current tip of the 22.x LTS line as of 2026-03-26. Node maintainers
+  # have not yet cut 22.22.3 with the CVE fixes. The CVE advisories list
+  # fixed versions only in 20.20.2 (20.x branch) so the 22.x patch is
+  # still pending upstream.
+  #
+  # Reachability:
+  #   CVE-2026-21710 (__proto__ header): requires HTTP server to call
+  #     req.headersDistinct. HLEcosystem Next.js routes do not call this
+  #     API; Next.js framework may.
+  #   CVE-2026-21717 (V8 string hash DoS): requires JSON.parse on
+  #     attacker-controlled input. Present in Server Actions that accept
+  #     FormData (converted via zod), but mitigated by the zod length
+  #     constraints documented in CLAUDE.md §11.
+  #   CVE-2026-21713 (HMAC timing): requires an HMAC verification codepath
+  #     using non-crypto.timingSafeEqual. HLEcosystem session tokens are
+  #     opaque 64-byte values looked up directly in the DB, not HMACs.
+  #   CVE-2026-21714 (HTTP/2 leak): requires HTTP/2 server. HLEcosystem
+  #     uses HTTP/1.1 via the reverse proxy.
+  #   CVE-2026-21715, 21716 (permission model bypass): require --permission
+  #     flag. HLEcosystem containers do not use Node's permission model.
+  #
+  # Upstream tracking: https://nodejs.org/en/blog (watching for 22.22.3)
+  # Dependabot docker ecosystem auto-PRs the digest when a new 22-alpine
+  # image publishes.
+  # Review-by: 2026-05-08
+  - vulnerability: CVE-2026-21710
+    package:
+      name: node
+      version: 22.22.2
+  - vulnerability: CVE-2026-21717
+    package:
+      name: node
+      version: 22.22.2
+  - vulnerability: CVE-2026-21713
+    package:
+      name: node
+      version: 22.22.2
+  - vulnerability: CVE-2026-21714
+    package:
+      name: node
+      version: 22.22.2
+  - vulnerability: CVE-2026-21715
+    package:
+      name: node
+      version: 22.22.2
+  - vulnerability: CVE-2026-21716
+    package:
+      name: node
+      version: 22.22.2
+
+  # ─── G-11: OpenSSL 3.5.5 TLS 1.3 key exchange defect ────────────────
+  # libcrypto3 / libssl3 in alpine 3.23 ship OpenSSL 3.5.5-r0. The CVE
+  # affects TLS 1.3 *server* key exchange group negotiation when the
+  # server config uses the 'DEFAULT' keyword. HLEcosystem Next.js apps
+  # are HTTP servers behind an operator-provided reverse proxy that
+  # terminates TLS — the Next.js process does not terminate TLS itself
+  # and does not use OpenSSL for key exchange.
+  # Upstream tracking: Alpine is waiting for OpenSSL 3.5.6 release.
+  # Review-by: 2026-05-08
+  - vulnerability: CVE-2026-2673
+    package:
+      name: libcrypto3
+      version: 3.5.5-r0
+  - vulnerability: CVE-2026-2673
+    package:
+      name: libssl3
+      version: 3.5.5-r0
+
+# Severity threshold — build fails if any finding at HIGH or above
+# remains AFTER the ignore list is applied.
+fail-on-severity: high
+
+output: ["table"]

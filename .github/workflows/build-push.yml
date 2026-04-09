@@ -91,29 +91,39 @@ jobs:
           cache-from: type=gha,scope=${{ matrix.image_name }}
           cache-to: type=gha,mode=max,scope=${{ matrix.image_name }}
 
-      - name: Trivy image scan (SARIF)
-        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # master @ 2026-04-08
+      # Image scanning with Grype (Anchore) instead of Trivy.
+      # Grype consumes the .grype.yaml config at the repo root, which
+      # carries the VEX-style ignore list for upstream-gated CVEs. See
+      # docs/THREAT_MODEL.md §6 G-9..G-11 for the accepted-risk rationale.
+      # Each ignore entry has a review-by date; stale entries should be
+      # removed the same PR that lands an upstream fix.
+      #
+      # Grype replaces Trivy for IMAGE scanning here. Trivy is still
+      # used for filesystem and config scanning in security.yml where
+      # its strengths (IaC, config, OS package coverage) are better.
+      - name: Grype image scan (SARIF)
+        id: grype-sarif
+        uses: anchore/scan-action@v6
         with:
-          image-ref: ${{ matrix.image_name }}:scan
-          format: sarif
-          output: trivy-image-${{ matrix.image_name }}.sarif
-          ignore-unfixed: true
-          severity: CRITICAL,HIGH,MEDIUM
+          image: ${{ matrix.image_name }}:scan
+          fail-build: false
+          output-format: sarif
+          severity-cutoff: medium
 
       - name: Upload image SARIF
-        if: always()
+        if: always() && steps.grype-sarif.outputs.sarif != ''
         uses: github/codeql-action/upload-sarif@v3
         with:
-          sarif_file: trivy-image-${{ matrix.image_name }}.sarif
-          category: trivy-image-${{ matrix.image_name }}
+          sarif_file: ${{ steps.grype-sarif.outputs.sarif }}
+          category: grype-image-${{ matrix.image_name }}
 
-      - name: Trivy image scan (fail on HIGH/CRITICAL)
-        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # master @ 2026-04-08
+      - name: Grype image scan (fail on HIGH/CRITICAL)
+        uses: anchore/scan-action@v6
         with:
-          image-ref: ${{ matrix.image_name }}:scan
-          ignore-unfixed: true
-          severity: CRITICAL,HIGH
-          exit-code: "1"
+          image: ${{ matrix.image_name }}:scan
+          fail-build: true
+          severity-cutoff: high
+          output-format: table
 
       - name: Push image
         uses: docker/build-push-action@v7
