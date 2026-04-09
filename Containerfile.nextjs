@@ -1,13 +1,25 @@
 # Containerfile.nextjs
-# Shared multi-stage build for all HLEcosystem Next.js apps with Prisma
+# Shared multi-stage build for all HLEcosystem Next.js apps with Prisma.
 #
 # Build arg APP_DIR specifies which app to build.
 # Usage: podman-compose build hle-familyhub
+#
+# Stages:
+#   1. deps       — install ALL deps (prod + dev), needed by the builder stage
+#                   for `next build` (which requires typescript, eslint, tailwind,
+#                   vitest, etc.)
+#   2. builder    — produces the Next.js standalone output
+#   3. prod-deps  — CLEAN install of ONLY prod deps. This is what ships to the
+#                   runtime image. Keeps vitest/vite/esbuild (Go binary) and
+#                   other dev-only surfaces out of the production attack
+#                   surface. Prisma CLI stays because it is a prod dep in every
+#                   app (verified 2026-04-09).
+#   4. runner     — minimal runtime, non-root, apk upgrade for base CVEs
 
 ARG APP_DIR=.
 
 # ============================================
-# Stage 1: Install dependencies
+# Stage 1: Install all dependencies (build-time)
 # ============================================
 FROM node:22-alpine AS deps
 ARG APP_DIR
@@ -40,10 +52,34 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
 
 # ============================================
-# Stage 3: Production runtime (minimal)
+# Stage 3: Production-only dependency install
+# ============================================
+# Separate, clean `npm ci --omit=dev` — never imports dev deps.
+# This is what the runtime image COPYs, so vitest, vite, esbuild (Go),
+# eslint, typescript, @vitest/coverage-v8, tailwind CLI, tsx, etc. do
+# not end up on disk in the runner image and cannot be scanned as CVEs.
+FROM node:22-alpine AS prod-deps
+ARG APP_DIR
+WORKDIR /app
+
+COPY ${APP_DIR}/package.json ${APP_DIR}/package-lock.json ./
+COPY ${APP_DIR}/prisma ./prisma/
+
+RUN npm ci --omit=dev --ignore-scripts && \
+    npx prisma generate
+
+# ============================================
+# Stage 4: Production runtime (minimal)
 # ============================================
 FROM node:22-alpine AS runner
 WORKDIR /app
+
+# Apply all pending apk security updates on top of the base image.
+# node:22-alpine base was shipping zlib 1.3.1-r2 which is affected by
+# CVE-2026-22184 (HIGH). Upgrading here catches any similar base-image
+# CVE that lands before the base-image maintainers rebuild.
+# Must run as root — happens before the USER nextjs directive below.
+RUN apk upgrade --no-cache
 
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
@@ -55,16 +91,13 @@ COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# Prisma client for runtime (Server Actions need it)
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+# Prod-only node_modules from the dedicated prod-deps stage — NOT from
+# the builder stage, which would leak dev deps (vitest/esbuild/etc.)
+# into the runtime image.
+COPY --from=prod-deps /app/node_modules ./node_modules
 
 # Prisma schema + migrations for entrypoint migrate deploy
 COPY --from=builder /app/prisma ./prisma/
-
-# Full node_modules from builder — needed for prisma migrate deploy + seed scripts
-# The standalone output only includes server deps; we need the CLI + its transitive deps
-COPY --from=builder /app/node_modules ./node_modules
 
 COPY --from=builder --chown=nextjs:nodejs /app/entrypoint.sh ./entrypoint.sh
 RUN chmod +x entrypoint.sh
