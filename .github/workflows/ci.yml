@@ -82,6 +82,16 @@ jobs:
         working-directory: ${{ matrix.app }}
         run: npx tsc --noEmit
 
+      - name: Test (if vitest.config.ts exists)
+        working-directory: ${{ matrix.app }}
+        shell: bash
+        run: |
+          if [ -f vitest.config.ts ] || [ -f vitest.config.js ] || [ -f vitest.config.mjs ]; then
+            npm test
+          else
+            echo "No vitest config in ${{ matrix.app }} — skipping (see docs/TESTING.md roadmap)."
+          fi
+
   no-disable-smuggling:
     name: Reject new eslint-disable / ts-ignore / ts-expect-error
     runs-on: ubuntu-latest

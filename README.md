@@ -2,6 +2,7 @@
 
 [![CI](https://github.com/FoxxDev-Collab/HLEcosystem/actions/workflows/ci.yml/badge.svg)](https://github.com/FoxxDev-Collab/HLEcosystem/actions/workflows/ci.yml)
 [![Security](https://github.com/FoxxDev-Collab/HLEcosystem/actions/workflows/security.yml/badge.svg)](https://github.com/FoxxDev-Collab/HLEcosystem/actions/workflows/security.yml)
+[![Tests: Vitest](https://img.shields.io/badge/tests-vitest-6E9F18?logo=vitest&logoColor=white)](./docs/TESTING.md)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](./LICENSE)
 [![Next.js 16](https://img.shields.io/badge/Next.js-16-black?logo=next.js)](https://nextjs.org)
 [![PostgreSQL 16](https://img.shields.io/badge/PostgreSQL-16-336791?logo=postgresql&logoColor=white)](https://www.postgresql.org)
