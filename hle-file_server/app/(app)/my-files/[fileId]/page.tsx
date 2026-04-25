@@ -13,6 +13,7 @@ import { FileIcon } from "@/components/file-icon";
 import { TextPreview } from "@/components/preview/text-preview";
 import { FileTagManager } from "@/components/file-tag-manager";
 import { FileShareManager } from "@/components/file-share-manager";
+import { AiInsightsPanel } from "@/components/ai-insights-panel";
 import { deleteFileAction } from "@/app/(app)/browse/actions";
 import { moveToHouseholdAction } from "./actions";
 import {
@@ -50,6 +51,7 @@ export default async function MyFileDetailPage({
       shares: true,
       shareLinks: true,
       favorites: { where: { userId: user.id } },
+      content: { select: { fileId: true } },
     },
   });
 
@@ -208,6 +210,14 @@ export default async function MyFileDetailPage({
                   </div>
                 </>
               )}
+
+              {/* AI Insights */}
+              <Separator />
+              <AiInsightsPanel
+                fileId={file.id}
+                category={category}
+                hasContent={!!file.content}
+              />
 
               <Separator />
 
