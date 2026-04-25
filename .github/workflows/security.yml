@@ -207,3 +207,157 @@ jobs:
         uses: github/codeql-action/analyze@v3
         with:
           category: codeql-javascript
+
+  # Pulls live alert counts from GitHub's security APIs and posts a structured
+  # summary comment on every PR push. Replaces Dependabot version-update PRs —
+  # vulnerability data comes from the Dependabot alerts API (enabled in repo
+  # settings) without generating automated PRs.
+  security-report:
+    name: Security alert summary
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+      security-events: read
+      pull-requests: write
+    steps:
+      - name: Fetch alerts and post PR summary
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+
+          # ── Code scanning (CodeQL, Trivy, zizmor) ──────────────────
+          code_alerts=$(gh api --paginate \
+            "repos/$REPO/code-scanning/alerts?state=open&per_page=100" \
+            2>/dev/null || echo "[]")
+
+          cs_critical=$(printf '%s' "$code_alerts" | jq '[.[] | select(.rule.security_severity_level == "critical")] | length')
+          cs_high=$(printf '%s'     "$code_alerts" | jq '[.[] | select(.rule.security_severity_level == "high")]     | length')
+          cs_medium=$(printf '%s'   "$code_alerts" | jq '[.[] | select(.rule.security_severity_level == "medium")]   | length')
+          cs_low=$(printf '%s'      "$code_alerts" | jq '[.[] | select(.rule.security_severity_level == "low")]      | length')
+          cs_total=$(printf '%s'    "$code_alerts" | jq 'length')
+
+          # ── Dependency vulnerability alerts (replaces Dependabot PRs) ─
+          dep_alerts=$(gh api --paginate \
+            "repos/$REPO/dependabot/alerts?state=open&per_page=100" \
+            2>/dev/null || echo "[]")
+
+          dep_critical=$(printf '%s' "$dep_alerts" | jq '[.[] | select(.security_advisory.severity == "critical")] | length')
+          dep_high=$(printf '%s'     "$dep_alerts" | jq '[.[] | select(.security_advisory.severity == "high")]     | length')
+          dep_medium=$(printf '%s'   "$dep_alerts" | jq '[.[] | select(.security_advisory.severity == "medium")]   | length')
+          dep_low=$(printf '%s'      "$dep_alerts" | jq '[.[] | select(.security_advisory.severity == "low")]      | length')
+          dep_total=$(printf '%s'    "$dep_alerts" | jq 'length')
+
+          # ── Secret scanning ────────────────────────────────────────
+          ss_total=$(gh api --paginate \
+            "repos/$REPO/secret-scanning/alerts?state=open&per_page=100" \
+            2>/dev/null | jq 'length' || echo "0")
+
+          # ── Status badge ───────────────────────────────────────────
+          if [ "$ss_total" -gt 0 ] || [ "$cs_critical" -gt 0 ] || [ "$dep_critical" -gt 0 ]; then
+            badge="🔴 Critical action required"
+          elif [ "$cs_high" -gt 0 ] || [ "$dep_high" -gt 0 ]; then
+            badge="🟠 High severity findings"
+          elif [ "$cs_medium" -gt 0 ] || [ "$dep_medium" -gt 0 ]; then
+            badge="🟡 Medium severity findings"
+          elif [ "$cs_total" -gt 0 ] || [ "$dep_total" -gt 0 ]; then
+            badge="🔵 Low severity findings"
+          else
+            badge="✅ No open alerts"
+          fi
+
+          # ── Build report ───────────────────────────────────────────
+          {
+            echo "## Security Report — ${badge}"
+            echo ""
+            echo "> Snapshot of open GitHub Security alerts at the time of this push."
+            echo "> Full details → [Security tab](https://github.com/${REPO}/security)"
+            echo ""
+
+            echo "### Code Scanning — CodeQL · Trivy · zizmor"
+            echo ""
+            echo "| Severity | Count |"
+            echo "|----------|------:|"
+            echo "| 🔴 Critical | ${cs_critical} |"
+            echo "| 🟠 High     | ${cs_high}     |"
+            echo "| 🟡 Medium   | ${cs_medium}   |"
+            echo "| 🔵 Low      | ${cs_low}      |"
+            echo "| **Total open** | **${cs_total}** |"
+            echo ""
+
+            if [ "$cs_critical" -gt 0 ] || [ "$cs_high" -gt 0 ]; then
+              echo "<details><summary>Critical / High code scanning detail</summary>"
+              echo ""
+              echo "| Tool | Severity | Finding | File |"
+              echo "|------|----------|---------|------|"
+              printf '%s' "$code_alerts" | jq -r '
+                .[] | select(
+                  .rule.security_severity_level == "critical" or
+                  .rule.security_severity_level == "high"
+                ) | "| \(.tool.name) | \(.rule.security_severity_level) | \(.rule.description // .rule.id) | `\(.most_recent_instance.location.path // "—")` |"
+              ' | head -25
+              echo ""
+              echo "</details>"
+              echo ""
+            fi
+
+            echo "### Dependency Vulnerabilities"
+            echo ""
+            echo "| Severity | Count |"
+            echo "|----------|------:|"
+            echo "| 🔴 Critical | ${dep_critical} |"
+            echo "| 🟠 High     | ${dep_high}     |"
+            echo "| 🟡 Medium   | ${dep_medium}   |"
+            echo "| 🔵 Low      | ${dep_low}      |"
+            echo "| **Total open** | **${dep_total}** |"
+            echo ""
+
+            if [ "$dep_critical" -gt 0 ] || [ "$dep_high" -gt 0 ]; then
+              echo "<details><summary>Critical / High dependency detail</summary>"
+              echo ""
+              echo "| Package | Severity | CVE | Fix available |"
+              echo "|---------|----------|-----|---------------|"
+              printf '%s' "$dep_alerts" | jq -r '
+                .[] | select(
+                  .security_advisory.severity == "critical" or
+                  .security_advisory.severity == "high"
+                ) | "| `\(.dependency.package.name)` | \(.security_advisory.severity) | \(.security_advisory.cve_id // "—") | \(.security_vulnerability.first_patched_version.identifier // "No fix") |"
+              ' | head -25
+              echo ""
+              echo "</details>"
+              echo ""
+            fi
+
+            echo "### Secret Scanning"
+            echo ""
+            if [ "$ss_total" -gt 0 ]; then
+              echo "🚨 **${ss_total} open secret(s) detected.** Review immediately → [Secret scanning alerts](https://github.com/${REPO}/security/secret-scanning)"
+            else
+              echo "✅ No open secrets."
+            fi
+
+            echo ""
+            echo "---"
+            echo "*Updated on every push · [View all alerts](https://github.com/${REPO}/security)*"
+          } > /tmp/security-report.md
+
+          # ── Write to GitHub Actions job summary ───────────────────
+          cat /tmp/security-report.md >> "$GITHUB_STEP_SUMMARY"
+
+          # ── Post or update PR comment ─────────────────────────────
+          existing=$(gh api "repos/$REPO/issues/$PR_NUMBER/comments?per_page=100" \
+            --jq '[.[] | select(.body | test("^## Security Report"))] | last | .id' \
+            2>/dev/null || echo "")
+
+          body_json=$(jq -Rs '{"body": .}' /tmp/security-report.md)
+
+          if [ -n "$existing" ] && [ "$existing" != "null" ]; then
+            gh api "repos/$REPO/issues/comments/$existing" \
+              -X PATCH --input - <<< "$body_json"
+          else
+            gh api "repos/$REPO/issues/$PR_NUMBER/comments" \
+              -X POST --input - <<< "$body_json"
+          fi
