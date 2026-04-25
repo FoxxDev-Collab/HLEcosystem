@@ -726,6 +726,35 @@ cmd_restore() {
   echo -e "  ${CYAN}./hle restart all${NC}"
 }
 
+cmd_prune() {
+  local aggressive=false
+  [ "${1:-}" = "--all" ] && aggressive=true
+
+  header "Storage prune"
+
+  local before
+  before=$(df /var/lib/containers | awk 'NR==2 {used=$3; total=$2; pct=$5; printf "%s used / %s total (%s full)", used/1024/1024" GB", total/1024/1024" GB", pct}')
+  info "Before: $before"
+
+  info "Removing stopped containers..."
+  podman container prune -f
+
+  info "Pruning builder cache..."
+  podman builder prune --all -f 2>/dev/null || true
+
+  if $aggressive; then
+    info "Removing all unused images (--all)..."
+    podman image prune -a -f
+  else
+    info "Removing dangling images..."
+    podman image prune -f
+  fi
+
+  local after
+  after=$(df /var/lib/containers | awk 'NR==2 {used=$3; total=$2; pct=$5; printf "%s used / %s total (%s full)", used/1024/1024" GB", total/1024/1024" GB", pct}')
+  success "After:  $after"
+}
+
 cmd_nuke() {
   header "Full teardown"
   warn "This will stop all containers, remove images, and delete volumes."
@@ -762,6 +791,7 @@ ${BOLD}COMMANDS${NC}
   ${GREEN}backup${NC}                                 Full backup: database + upload volumes
   ${GREEN}restore${NC}  [tag]                          Restore from backup (list if no tag given)
   ${GREEN}clean${NC}                                  Remove stopped containers & dangling images
+  ${GREEN}prune${NC}          [--all]                 Deep storage prune (--all removes unused images too)
   ${GREEN}nuke${NC}                                   Full teardown (containers, images, volumes)
 
 ${BOLD}SERVICES${NC} (${#SERVICES[@]} apps)
@@ -800,6 +830,7 @@ case "${1:-}" in
   backup)   cmd_backup ;;
   restore)  cmd_restore "${2:-}" ;;
   clean)    cmd_clean ;;
+  prune)    cmd_prune "${2:-}" ;;
   nuke)     cmd_nuke ;;
   *)        usage ;;
 esac
