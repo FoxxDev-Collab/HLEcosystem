@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +14,7 @@ import {
   ZoomIn,
   ZoomOut,
   RotateCw,
+  Camera,
 } from "lucide-react";
 
 type LightboxFile = {
@@ -22,6 +23,12 @@ type LightboxFile = {
   mimeType: string;
   size?: string;
   createdAt?: string;
+  effectiveDate?: string;
+  dateTaken?: string | null;
+  cameraMake?: string | null;
+  cameraModel?: string | null;
+  width?: number | null;
+  height?: number | null;
 };
 
 type PhotoLightboxProps = {
@@ -36,6 +43,9 @@ export function PhotoLightbox({ files, initialIndex, open, onClose }: PhotoLight
   const [showInfo, setShowInfo] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [rotation, setRotation] = useState(0);
+
+  const touchStartX = useRef<number | null>(null);
+  const touchStartY = useRef<number | null>(null);
 
   const file = files[currentIndex];
   const isVideo = file?.mimeType.startsWith("video/");
@@ -101,10 +111,49 @@ export function PhotoLightbox({ files, initialIndex, open, onClose }: PhotoLight
     };
   }, [open, goNext, goPrev, onClose]);
 
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+  }, []);
+
+  const handleTouchEnd = useCallback(
+    (e: React.TouchEvent) => {
+      if (touchStartX.current === null || touchStartY.current === null) return;
+      const dx = e.changedTouches[0].clientX - touchStartX.current;
+      const dy = e.changedTouches[0].clientY - touchStartY.current;
+      touchStartX.current = null;
+      touchStartY.current = null;
+
+      // Only treat as horizontal swipe if horizontal movement dominates
+      if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy)) return;
+      if (dx < 0) goNext();
+      else goPrev();
+    },
+    [goNext, goPrev]
+  );
+
   if (!open || !file) return null;
 
+  const displayDate = file.dateTaken ?? file.effectiveDate ?? file.createdAt;
+  const cameraLabel = [file.cameraMake, file.cameraModel].filter(Boolean).join(" ") || null;
+
+  const infoRows: { label: string; value: string }[] = [
+    { label: "Filename", value: file.name },
+    ...(file.size ? [{ label: "Size", value: formatFileSize(BigInt(file.size)) }] : []),
+    { label: "Type", value: file.mimeType },
+    ...(displayDate ? [{ label: file.dateTaken ? "Date taken" : "Uploaded", value: formatDateLong(displayDate) }] : []),
+    ...(file.createdAt && file.dateTaken ? [{ label: "Uploaded", value: formatDateLong(file.createdAt) }] : []),
+    ...(cameraLabel ? [{ label: "Camera", value: cameraLabel }] : []),
+    ...(file.width && file.height ? [{ label: "Dimensions", value: `${file.width} × ${file.height}` }] : []),
+  ];
+
   const content = (
-    <div className="fixed inset-0 z-50 lightbox-backdrop flex flex-col" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-50 lightbox-backdrop flex flex-col"
+      onClick={onClose}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
       {/* Top bar */}
       <div
         className="flex items-center justify-between px-4 py-3 shrink-0"
@@ -121,8 +170,8 @@ export function PhotoLightbox({ files, initialIndex, open, onClose }: PhotoLight
           </Button>
           <div className="min-w-0">
             <p className="text-white/90 text-sm font-medium truncate">{file.name}</p>
-            {file.createdAt && (
-              <p className="text-white/50 text-xs">{formatDateLong(file.createdAt)}</p>
+            {displayDate && (
+              <p className="text-white/50 text-xs">{formatDateLong(displayDate)}</p>
             )}
           </div>
         </div>
@@ -133,7 +182,7 @@ export function PhotoLightbox({ files, initialIndex, open, onClose }: PhotoLight
               <Button
                 variant="ghost"
                 size="icon"
-                className="text-white/70 hover:text-white hover:bg-white/10"
+                className="text-white/70 hover:text-white hover:bg-white/10 hidden sm:flex"
                 onClick={() => setZoom((z) => Math.min(z + 0.25, 4))}
               >
                 <ZoomIn className="size-4" />
@@ -141,7 +190,7 @@ export function PhotoLightbox({ files, initialIndex, open, onClose }: PhotoLight
               <Button
                 variant="ghost"
                 size="icon"
-                className="text-white/70 hover:text-white hover:bg-white/10"
+                className="text-white/70 hover:text-white hover:bg-white/10 hidden sm:flex"
                 onClick={() => setZoom((z) => Math.max(z - 0.25, 0.5))}
               >
                 <ZoomOut className="size-4" />
@@ -149,7 +198,7 @@ export function PhotoLightbox({ files, initialIndex, open, onClose }: PhotoLight
               <Button
                 variant="ghost"
                 size="icon"
-                className="text-white/70 hover:text-white hover:bg-white/10"
+                className="text-white/70 hover:text-white hover:bg-white/10 hidden sm:flex"
                 onClick={() => setRotation((r) => (r + 90) % 360)}
               >
                 <RotateCw className="size-4" />
@@ -237,36 +286,36 @@ export function PhotoLightbox({ files, initialIndex, open, onClose }: PhotoLight
           </button>
         )}
 
-        {/* Info panel */}
+        {/* Info panel — side panel on md+, bottom sheet on mobile */}
         {showInfo && (
-          <div
-            className="absolute right-0 top-0 bottom-0 w-80 bg-black/60 backdrop-blur-xl border-l border-white/10 p-6 overflow-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 className="text-white/90 font-semibold text-sm mb-4">Details</h3>
-            <div className="space-y-3 text-sm">
-              <div>
-                <p className="text-white/40 text-xs uppercase tracking-wider mb-0.5">Filename</p>
-                <p className="text-white/80 break-all">{file.name}</p>
-              </div>
-              {file.size && (
-                <div>
-                  <p className="text-white/40 text-xs uppercase tracking-wider mb-0.5">Size</p>
-                  <p className="text-white/80">{formatFileSize(BigInt(file.size))}</p>
-                </div>
-              )}
-              <div>
-                <p className="text-white/40 text-xs uppercase tracking-wider mb-0.5">Type</p>
-                <p className="text-white/80">{file.mimeType}</p>
-              </div>
-              {file.createdAt && (
-                <div>
-                  <p className="text-white/40 text-xs uppercase tracking-wider mb-0.5">Uploaded</p>
-                  <p className="text-white/80">{formatDateLong(file.createdAt)}</p>
-                </div>
-              )}
+          <>
+            {/* Desktop: right side panel */}
+            <div
+              className="hidden md:block absolute right-0 top-0 bottom-0 w-72 bg-black/70 backdrop-blur-xl border-l border-white/10 p-5 overflow-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <InfoContent infoRows={infoRows} cameraLabel={cameraLabel} />
             </div>
-          </div>
+
+            {/* Mobile: bottom sheet */}
+            <div
+              className="md:hidden absolute left-0 right-0 bottom-0 bg-black/80 backdrop-blur-xl border-t border-white/10 rounded-t-2xl p-5 max-h-[60vh] overflow-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-white/90 font-semibold text-sm">Details</h3>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-7 text-white/60 hover:text-white hover:bg-white/10"
+                  onClick={() => setShowInfo(false)}
+                >
+                  <X className="size-4" />
+                </Button>
+              </div>
+              <InfoContent infoRows={infoRows} cameraLabel={cameraLabel} />
+            </div>
+          </>
         )}
       </div>
 
@@ -281,4 +330,29 @@ export function PhotoLightbox({ files, initialIndex, open, onClose }: PhotoLight
 
   if (typeof window === "undefined") return null;
   return createPortal(content, document.body);
+}
+
+function InfoContent({
+  infoRows,
+  cameraLabel,
+}: {
+  infoRows: { label: string; value: string }[];
+  cameraLabel: string | null;
+}) {
+  return (
+    <div className="space-y-3 text-sm">
+      {infoRows.map((row) => (
+        <div key={row.label}>
+          <p className="text-white/40 text-xs uppercase tracking-wider mb-0.5">{row.label}</p>
+          <p className="text-white/80 break-all flex items-center gap-1.5">
+            {row.label === "Camera" && <Camera className="size-3 shrink-0 text-white/40" />}
+            {row.value}
+          </p>
+        </div>
+      ))}
+      {!cameraLabel && (
+        <p className="text-white/30 text-xs italic">No EXIF metadata available</p>
+      )}
+    </div>
+  );
 }

@@ -10,6 +10,11 @@ import {
   Settings,
   LogOut,
   ChevronDown,
+  Calendar,
+  Package,
+  DollarSign,
+  Users,
+  CalendarDays,
 } from "lucide-react";
 import {
   Sidebar,
@@ -35,6 +40,14 @@ import { ThemeToggle } from "@/components/theme-toggle";
 const overviewNav = [
   { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { title: "Trips", href: "/trips", icon: Plane },
+];
+
+const planningNav = [
+  { title: "Itinerary", href: "/itinerary", icon: CalendarDays },
+  { title: "Reservations", href: "/reservations", icon: Calendar },
+  { title: "Packing", href: "/packing", icon: Package },
+  { title: "Budget", href: "/budget", icon: DollarSign },
+  { title: "Contacts", href: "/contacts", icon: Users },
 ];
 
 const managementNav = [
@@ -131,6 +144,7 @@ export function AppSidebar({
 
       <SidebarContent>
         <NavGroup label="Overview" items={overviewNav} pathname={pathname} />
+        <NavGroup label="Planning" items={planningNav} pathname={pathname} />
         <NavGroup label="Management" items={managementNav} pathname={pathname} />
         <NavGroup label="Account" items={accountNav} pathname={pathname} />
         <SidebarGroup>

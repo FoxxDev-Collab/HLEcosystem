@@ -20,6 +20,127 @@ function countWords(text: string): number {
   return text.trim().split(/\s+/).filter(Boolean).length;
 }
 
+// ── Page templates ───────────────────────────────────────────────────────────
+// Each template defines TipTap ProseMirror JSON content and a plain-text
+// excerpt that populates contentText for search indexing.
+
+type Template = { content: object; contentText: string };
+
+const TEMPLATES: Record<string, Template> = {
+  "meeting-notes": {
+    contentText: "Attendees Agenda Notes Action Items",
+    content: {
+      type: "doc",
+      content: [
+        { type: "heading", attrs: { level: 2 }, content: [{ type: "text", text: "Attendees" }] },
+        { type: "bulletList", content: [{ type: "listItem", content: [{ type: "paragraph", content: [] }] }] },
+        { type: "heading", attrs: { level: 2 }, content: [{ type: "text", text: "Agenda" }] },
+        { type: "orderedList", attrs: { start: 1 }, content: [{ type: "listItem", content: [{ type: "paragraph", content: [] }] }] },
+        { type: "heading", attrs: { level: 2 }, content: [{ type: "text", text: "Notes" }] },
+        { type: "paragraph", content: [] },
+        { type: "heading", attrs: { level: 2 }, content: [{ type: "text", text: "Action Items" }] },
+        { type: "taskList", content: [{ type: "taskItem", attrs: { checked: false }, content: [{ type: "paragraph", content: [] }] }] },
+      ],
+    },
+  },
+  "how-to": {
+    contentText: "Overview Prerequisites Steps Notes",
+    content: {
+      type: "doc",
+      content: [
+        { type: "heading", attrs: { level: 2 }, content: [{ type: "text", text: "Overview" }] },
+        { type: "paragraph", content: [] },
+        { type: "heading", attrs: { level: 2 }, content: [{ type: "text", text: "Prerequisites" }] },
+        { type: "bulletList", content: [{ type: "listItem", content: [{ type: "paragraph", content: [] }] }] },
+        { type: "heading", attrs: { level: 2 }, content: [{ type: "text", text: "Steps" }] },
+        { type: "orderedList", attrs: { start: 1 }, content: [
+          { type: "listItem", content: [{ type: "paragraph", content: [] }] },
+          { type: "listItem", content: [{ type: "paragraph", content: [] }] },
+          { type: "listItem", content: [{ type: "paragraph", content: [] }] },
+        ]},
+        { type: "heading", attrs: { level: 2 }, content: [{ type: "text", text: "Notes" }] },
+        { type: "paragraph", content: [] },
+      ],
+    },
+  },
+  "emergency": {
+    contentText: "Emergency Procedures Location Contacts Steps",
+    content: {
+      type: "doc",
+      content: [
+        { type: "heading", attrs: { level: 2 }, content: [{ type: "text", text: "Location & Access" }] },
+        { type: "paragraph", content: [] },
+        { type: "heading", attrs: { level: 2 }, content: [{ type: "text", text: "Emergency Contacts" }] },
+        { type: "bulletList", content: [
+          { type: "listItem", content: [{ type: "paragraph", content: [{ type: "text", text: "911 — Police / Fire / Medical" }] }] },
+          { type: "listItem", content: [{ type: "paragraph", content: [] }] },
+        ]},
+        { type: "heading", attrs: { level: 2 }, content: [{ type: "text", text: "Procedure" }] },
+        { type: "orderedList", attrs: { start: 1 }, content: [
+          { type: "listItem", content: [{ type: "paragraph", content: [] }] },
+          { type: "listItem", content: [{ type: "paragraph", content: [] }] },
+          { type: "listItem", content: [{ type: "paragraph", content: [] }] },
+        ]},
+        { type: "heading", attrs: { level: 2 }, content: [{ type: "text", text: "Important Locations" }] },
+        { type: "bulletList", content: [
+          { type: "listItem", content: [{ type: "paragraph", content: [{ type: "text", text: "Breaker panel: " }] }] },
+          { type: "listItem", content: [{ type: "paragraph", content: [{ type: "text", text: "Water shutoff: " }] }] },
+          { type: "listItem", content: [{ type: "paragraph", content: [{ type: "text", text: "Gas shutoff: " }] }] },
+        ]},
+      ],
+    },
+  },
+  "contacts": {
+    contentText: "Name Role Phone Email Notes",
+    content: {
+      type: "doc",
+      content: [
+        {
+          type: "table",
+          content: [
+            { type: "tableRow", content: [
+              { type: "tableHeader", attrs: { colspan: 1, rowspan: 1, colwidth: null }, content: [{ type: "paragraph", content: [{ type: "text", text: "Name" }] }] },
+              { type: "tableHeader", attrs: { colspan: 1, rowspan: 1, colwidth: null }, content: [{ type: "paragraph", content: [{ type: "text", text: "Role" }] }] },
+              { type: "tableHeader", attrs: { colspan: 1, rowspan: 1, colwidth: null }, content: [{ type: "paragraph", content: [{ type: "text", text: "Phone" }] }] },
+              { type: "tableHeader", attrs: { colspan: 1, rowspan: 1, colwidth: null }, content: [{ type: "paragraph", content: [{ type: "text", text: "Email" }] }] },
+              { type: "tableHeader", attrs: { colspan: 1, rowspan: 1, colwidth: null }, content: [{ type: "paragraph", content: [{ type: "text", text: "Notes" }] }] },
+            ]},
+            { type: "tableRow", content: [
+              { type: "tableCell", attrs: { colspan: 1, rowspan: 1, colwidth: null }, content: [{ type: "paragraph", content: [] }] },
+              { type: "tableCell", attrs: { colspan: 1, rowspan: 1, colwidth: null }, content: [{ type: "paragraph", content: [] }] },
+              { type: "tableCell", attrs: { colspan: 1, rowspan: 1, colwidth: null }, content: [{ type: "paragraph", content: [] }] },
+              { type: "tableCell", attrs: { colspan: 1, rowspan: 1, colwidth: null }, content: [{ type: "paragraph", content: [] }] },
+              { type: "tableCell", attrs: { colspan: 1, rowspan: 1, colwidth: null }, content: [{ type: "paragraph", content: [] }] },
+            ]},
+          ],
+        },
+      ],
+    },
+  },
+  "recipe": {
+    contentText: "Ingredients Instructions Notes",
+    content: {
+      type: "doc",
+      content: [
+        { type: "heading", attrs: { level: 2 }, content: [{ type: "text", text: "Ingredients" }] },
+        { type: "bulletList", content: [
+          { type: "listItem", content: [{ type: "paragraph", content: [] }] },
+          { type: "listItem", content: [{ type: "paragraph", content: [] }] },
+          { type: "listItem", content: [{ type: "paragraph", content: [] }] },
+        ]},
+        { type: "heading", attrs: { level: 2 }, content: [{ type: "text", text: "Instructions" }] },
+        { type: "orderedList", attrs: { start: 1 }, content: [
+          { type: "listItem", content: [{ type: "paragraph", content: [] }] },
+          { type: "listItem", content: [{ type: "paragraph", content: [] }] },
+          { type: "listItem", content: [{ type: "paragraph", content: [] }] },
+        ]},
+        { type: "heading", attrs: { level: 2 }, content: [{ type: "text", text: "Notes" }] },
+        { type: "paragraph", content: [] },
+      ],
+    },
+  },
+};
+
 export async function createPageAction(formData: FormData) {
   const user = await getCurrentUser();
   if (!user) return;
@@ -31,6 +152,7 @@ export async function createPageAction(formData: FormData) {
 
   const visibility = (formData.get("visibility") as PageVisibility) || "HOUSEHOLD";
   const parentId = (formData.get("parentId") as string) || null;
+  const templateKey = (formData.get("template") as string) || null;
   const ownerId = visibility === "PRIVATE" ? user.id : householdId;
 
   if (parentId) {
@@ -45,8 +167,17 @@ export async function createPageAction(formData: FormData) {
   const existing = await prisma.wikiPage.findFirst({ where: { ownerId, parentId, slug } });
   if (existing) slug = `${slug}-${Date.now().toString(36)}`;
 
+  const tpl = templateKey ? TEMPLATES[templateKey] : null;
+
   const page = await prisma.wikiPage.create({
-    data: { ownerId, visibility, parentId, title, slug, content: {}, contentText: "", wordCount: 0, createdBy: user.id, updatedBy: user.id },
+    data: {
+      ownerId, visibility, parentId, title, slug,
+      content: tpl?.content ?? {},
+      contentText: tpl?.contentText ?? "",
+      wordCount: tpl ? countWords(tpl.contentText) : 0,
+      createdBy: user.id,
+      updatedBy: user.id,
+    },
   });
 
   redirect(`/wiki/${page.id}/edit`);

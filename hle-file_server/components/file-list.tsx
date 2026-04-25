@@ -539,7 +539,7 @@ export function FileList({
         {/* Virtualized rows */}
         <div
           ref={scrollRef}
-          className="h-[calc(100vh-340px)] overflow-auto"
+          className="h-[calc(100svh-240px)] sm:h-[calc(100vh-300px)] md:h-[calc(100vh-340px)] overflow-auto"
         >
           <div
             style={{

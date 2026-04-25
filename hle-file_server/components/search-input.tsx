@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Search, X } from "lucide-react";
 
-export function SearchInput({ baseUrl }: { baseUrl: string }) {
+export function SearchInput({ baseUrl, className }: { baseUrl: string; className?: string }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [query, setQuery] = useState(searchParams.get("q") || "");
@@ -47,13 +47,13 @@ export function SearchInput({ baseUrl }: { baseUrl: string }) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="relative">
+    <form onSubmit={handleSubmit} className={`relative ${className ?? ""}`}>
       <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
       <Input
         value={query}
         onChange={handleChange}
         placeholder="Search files & content..."
-        className="pl-9 pr-8 w-64"
+        className="pl-9 pr-8 w-full"
       />
       {query && (
         <button
