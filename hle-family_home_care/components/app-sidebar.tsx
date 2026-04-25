@@ -27,6 +27,7 @@ import {
   Package,
   FileKey,
   Zap,
+  ShieldCheck,
 } from "lucide-react";
 import {
   Sidebar,
@@ -57,6 +58,7 @@ const overviewNav = [
 const homeNav = [
   { title: "Rooms", href: "/rooms", icon: Home },
   { title: "Items & Appliances", href: "/items", icon: Refrigerator },
+  { title: "Warranties", href: "/warranties", icon: ShieldCheck },
   { title: "Documents", href: "/documents", icon: FileText },
   { title: "Service Providers", href: "/providers", icon: HardHat },
 ];

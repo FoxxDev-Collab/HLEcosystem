@@ -14,8 +14,45 @@ import {
   ListTodo,
   Film,
   Plus,
+  Stethoscope,
+  Plane,
+  Wrench,
+  UtensilsCrossed,
+  Clock,
 } from "lucide-react";
 import { formatDateShort } from "@/lib/format";
+
+// ── Cross-schema types ────────────────────────────────────────────────────────
+
+type CrossHealthAppt = {
+  id: string;
+  appointmentDateTime: Date;
+  appointmentType: string;
+  status: string;
+  location: string | null;
+  firstName: string;
+  lastName: string;
+};
+
+type CrossActiveTrip = {
+  id: string;
+  name: string;
+  destination: string | null;
+  daysLeft: number;
+  dayTitle: string | null;
+};
+
+type CrossMaintenance = {
+  id: string;
+  title: string;
+  nextDueDate: Date;
+};
+
+type CrossMealEntry = {
+  entryType: string;
+  title: string | null;
+  recipeName: string | null;
+};
 
 function getNextOccurrence(date: Date): Date {
   const today = new Date();
@@ -47,7 +84,16 @@ export default async function DashboardPage() {
   const householdId = (await getCurrentHouseholdId())!;
   const user = await getCurrentUser();
 
-  const [spouse, household, memberCount, importantDates, activeIdeas, giftsGiven, recentGifts, todoListCount, mediaRequestCount] = await Promise.all([
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const todayEnd = new Date();
+  todayEnd.setHours(23, 59, 59, 999);
+
+  const [
+    spouse, household, memberCount, importantDates, activeIdeas, giftsGiven,
+    recentGifts, todoListCount, mediaRequestCount,
+    todayAppointments, activeTrips, overdueMaintenace, todayMeals,
+  ] = await Promise.all([
     user ? getSpouseForUser(householdId, user.id) : null,
     getHouseholdById(householdId),
     prisma.familyMember.count({ where: { householdId, isActive: true } }),
@@ -66,7 +112,68 @@ export default async function DashboardPage() {
     }),
     prisma.todoList.count({ where: { householdId } }),
     prisma.mediaRequest.count({ where: { status: "REQUESTED" } }),
+
+    // Cross-schema: health appointments today
+    prisma.$queryRaw<CrossHealthAppt[]>`
+      SELECT a."id", a."appointmentDateTime", a."appointmentType", a."status", a."location",
+             fm."firstName", fm."lastName"
+      FROM family_health."Appointment" a
+      JOIN family_health."FamilyMember" fm ON fm."id" = a."familyMemberId"
+      WHERE fm."householdId" = ${householdId}
+        AND a."appointmentDateTime" >= ${todayStart}
+        AND a."appointmentDateTime" <= ${todayEnd}
+        AND a."status" NOT IN ('CANCELLED', 'NO_SHOW')
+      ORDER BY a."appointmentDateTime" ASC
+    `,
+
+    // Cross-schema: trips currently in progress
+    prisma.$queryRaw<CrossActiveTrip[]>`
+      SELECT t."id", t."name", t."destination",
+             EXTRACT(DAY FROM t."endDate"::timestamp - CURRENT_TIMESTAMP)::int + 1 AS "daysLeft",
+             d."title" as "dayTitle"
+      FROM family_travel."Trip" t
+      LEFT JOIN family_travel."ItineraryDay" d
+        ON d."tripId" = t."id" AND d."date" = CURRENT_DATE
+      WHERE t."householdId" = ${householdId}
+        AND t."startDate" <= CURRENT_DATE
+        AND t."endDate" >= CURRENT_DATE
+        AND t."status"::text = 'IN_PROGRESS'
+      LIMIT 1
+    `,
+
+    // Cross-schema: overdue/due-today maintenance
+    prisma.$queryRaw<CrossMaintenance[]>`
+      SELECT "id", "title", "nextDueDate"
+      FROM family_home_care."MaintenanceSchedule"
+      WHERE "householdId" = ${householdId}
+        AND "isActive" = true
+        AND "nextDueDate" IS NOT NULL
+        AND "nextDueDate" <= CURRENT_DATE
+      ORDER BY "nextDueDate" ASC
+      LIMIT 5
+    `,
+
+    // Cross-schema: today's meal plan
+    prisma.$queryRaw<{ data: { entryType: string; title: string | null; recipe: { name: string } | null } }[]>`
+      SELECT "data"
+      FROM meal_prep."CachedMealieMealPlan"
+      WHERE "householdId" = ${householdId}
+        AND "date" = TO_CHAR(CURRENT_DATE, 'YYYY-MM-DD')
+      ORDER BY ("data"->>'entryType') ASC
+    `,
   ]);
+
+  const meals: CrossMealEntry[] = todayMeals.map((row) => ({
+    entryType: row.data.entryType,
+    title: row.data.title ?? null,
+    recipeName: row.data.recipe?.name ?? null,
+  }));
+
+  const hasTodayData =
+    todayAppointments.length > 0 ||
+    activeTrips.length > 0 ||
+    overdueMaintenace.length > 0 ||
+    meals.length > 0;
 
   const upcomingEvents = importantDates
     .map((d) => {
@@ -112,6 +219,94 @@ export default async function DashboardPage() {
           })}
         </p>
       </div>
+
+      {/* Today at a Glance */}
+      {hasTodayData && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <Clock className="size-4 text-muted-foreground" />
+              Today at a Glance
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 pt-0">
+            {/* Active trip */}
+            {activeTrips.map((trip) => {
+              const travelUrl = process.env.NEXT_PUBLIC_APP_URL_TRAVEL ?? "http://localhost:8089";
+              return (
+                <a key={trip.id} href={`${travelUrl}/dashboard`} className="flex items-center gap-3 p-2.5 rounded-lg bg-primary/5 hover:bg-primary/10 transition-colors">
+                  <Plane className="size-4 text-primary shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium">{trip.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {trip.destination && `${trip.destination} · `}
+                      {trip.dayTitle ? trip.dayTitle : "In progress"}
+                      {trip.daysLeft > 0 && ` · ${trip.daysLeft}d left`}
+                    </p>
+                  </div>
+                  <Badge variant="default" className="text-[10px] shrink-0">Traveling</Badge>
+                </a>
+              );
+            })}
+
+            {/* Health appointments */}
+            {todayAppointments.map((appt) => (
+              <div key={appt.id} className="flex items-center gap-3 p-2.5 rounded-lg bg-muted/40">
+                <Stethoscope className="size-4 text-blue-600 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium">
+                    {appt.firstName} {appt.lastName}
+                    <span className="text-muted-foreground font-normal text-xs ml-1.5">
+                      {appt.appointmentType.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
+                    </span>
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {new Date(appt.appointmentDateTime).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
+                    {appt.location && ` · ${appt.location}`}
+                  </p>
+                </div>
+                <Badge variant="secondary" className="text-[10px] shrink-0">{appt.status}</Badge>
+              </div>
+            ))}
+
+            {/* Today's meals */}
+            {meals.length > 0 && (
+              <div className="flex items-start gap-3 p-2.5 rounded-lg bg-muted/40">
+                <UtensilsCrossed className="size-4 text-orange-600 shrink-0 mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium text-muted-foreground mb-1">Today&apos;s Meals</p>
+                  <div className="space-y-0.5">
+                    {meals.map((meal, i) => (
+                      <p key={i} className="text-sm">
+                        <span className="text-muted-foreground text-xs capitalize">{meal.entryType}: </span>
+                        {meal.recipeName ?? meal.title ?? "Planned"}
+                      </p>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Overdue maintenance */}
+            {overdueMaintenace.length > 0 && (
+              <div className="flex items-start gap-3 p-2.5 rounded-lg bg-yellow-50/60 dark:bg-yellow-950/20">
+                <Wrench className="size-4 text-yellow-700 dark:text-yellow-400 shrink-0 mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium text-yellow-800 dark:text-yellow-300 mb-1">
+                    {overdueMaintenace.length} Overdue Maintenance Task{overdueMaintenace.length !== 1 ? "s" : ""}
+                  </p>
+                  {overdueMaintenace.slice(0, 3).map((task) => (
+                    <p key={task.id} className="text-xs text-muted-foreground">{task.title}</p>
+                  ))}
+                  {overdueMaintenace.length > 3 && (
+                    <p className="text-xs text-muted-foreground">+{overdueMaintenace.length - 3} more</p>
+                  )}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Marriage hero card */}
       {spouse && (
