@@ -33,14 +33,16 @@ export async function createProjectAction(formData: FormData): Promise<void> {
 }
 
 export async function updateProjectStatusAction(formData: FormData): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
   const householdId = await getCurrentHouseholdId();
-  if (!householdId) return;
+  if (!householdId) redirect("/setup");
 
   const id = formData.get("id") as string;
   const status = formData.get("status") as BudgetPlannerProjectStatus;
 
   await prisma.budgetPlannerProject.update({
-    where: { id },
+    where: { id, householdId },
     data: { status },
   });
 
@@ -48,11 +50,21 @@ export async function updateProjectStatusAction(formData: FormData): Promise<voi
 }
 
 export async function addItemAction(formData: FormData): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) redirect("/setup");
+
   const projectId = formData.get("projectId") as string;
   const name = formData.get("name") as string;
   const quantity = parseInt(formData.get("quantity") as string || "1");
   const unitCost = parseFloat(formData.get("unitCost") as string);
   const referenceUrl = formData.get("referenceUrl") as string || null;
+
+  const project = await prisma.budgetPlannerProject.findFirst({
+    where: { id: projectId, householdId },
+  });
+  if (!project) return;
 
   const lineTotal = quantity * unitCost;
 
@@ -73,8 +85,18 @@ export async function addItemAction(formData: FormData): Promise<void> {
 }
 
 export async function toggleItemPurchasedAction(formData: FormData): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) redirect("/setup");
+
   const id = formData.get("id") as string;
   const isPurchased = formData.get("isPurchased") === "true";
+
+  const existing = await prisma.budgetPlannerItem.findFirst({
+    where: { id, project: { householdId } },
+  });
+  if (!existing) return;
 
   const item = await prisma.budgetPlannerItem.update({
     where: { id },
@@ -85,12 +107,14 @@ export async function toggleItemPurchasedAction(formData: FormData): Promise<voi
 }
 
 export async function duplicateProjectAction(formData: FormData): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
   const householdId = await getCurrentHouseholdId();
-  if (!householdId) return;
+  if (!householdId) redirect("/setup");
 
   const sourceId = formData.get("id") as string;
-  const source = await prisma.budgetPlannerProject.findUnique({
-    where: { id: sourceId },
+  const source = await prisma.budgetPlannerProject.findFirst({
+    where: { id: sourceId, householdId },
     include: { items: true },
   });
   if (!source) return;
@@ -106,27 +130,35 @@ export async function duplicateProjectAction(formData: FormData): Promise<void> 
     },
   });
 
-  for (const item of source.items) {
-    await prisma.budgetPlannerItem.create({
-      data: {
-        projectId: newProject.id,
-        name: item.name,
-        quantity: item.quantity,
-        unitCost: item.unitCost,
-        lineTotal: item.lineTotal,
-        referenceUrl: item.referenceUrl,
-        description: item.description,
-        sortOrder: item.sortOrder,
-      },
-    });
-  }
+  await prisma.budgetPlannerItem.createMany({
+    data: source.items.map((item) => ({
+      projectId: newProject.id,
+      name: item.name,
+      quantity: item.quantity,
+      unitCost: item.unitCost,
+      lineTotal: item.lineTotal,
+      referenceUrl: item.referenceUrl,
+      description: item.description,
+      sortOrder: item.sortOrder,
+    })),
+  });
 
   revalidatePath("/budget-planner");
   redirect(`/budget-planner/${newProject.id}`);
 }
 
 export async function deleteItemAction(formData: FormData): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) redirect("/setup");
+
   const id = formData.get("id") as string;
+
+  const existing = await prisma.budgetPlannerItem.findFirst({
+    where: { id, project: { householdId } },
+  });
+  if (!existing) return;
 
   const item = await prisma.budgetPlannerItem.delete({ where: { id } });
 
@@ -206,6 +238,11 @@ export async function updateItemAction(formData: FormData): Promise<{ error?: st
   const referenceUrl = (formData.get("referenceUrl") as string) || null;
   const description = (formData.get("description") as string) || null;
   const lineTotal = quantity * unitCost;
+
+  const existing = await prisma.budgetPlannerItem.findFirst({
+    where: { id, project: { householdId } },
+  });
+  if (!existing) return { error: "Item not found" };
 
   const item = await prisma.budgetPlannerItem.update({
     where: { id },

@@ -49,11 +49,16 @@ export async function createRecurringAction(formData: FormData): Promise<void> {
 }
 
 export async function toggleRecurringActiveAction(formData: FormData): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) redirect("/setup");
+
   const id = formData.get("id") as string;
   const isActive = formData.get("isActive") === "true";
 
   await prisma.recurringTransaction.update({
-    where: { id },
+    where: { id, householdId },
     data: { isActive: !isActive },
   });
 
@@ -61,9 +66,14 @@ export async function toggleRecurringActiveAction(formData: FormData): Promise<v
 }
 
 export async function skipNextOccurrenceAction(formData: FormData): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) redirect("/setup");
+
   const id = formData.get("id") as string;
 
-  const recurring = await prisma.recurringTransaction.findUnique({ where: { id } });
+  const recurring = await prisma.recurringTransaction.findFirst({ where: { id, householdId } });
   if (!recurring || !recurring.nextOccurrence) return;
 
   const nextOccurrence = calculateNextOccurrence(
@@ -76,12 +86,12 @@ export async function skipNextOccurrenceAction(formData: FormData): Promise<void
   // Don't go past end date
   if (recurring.endDate && nextOccurrence > recurring.endDate) {
     await prisma.recurringTransaction.update({
-      where: { id },
+      where: { id, householdId },
       data: { isActive: false, nextOccurrence: null },
     });
   } else {
     await prisma.recurringTransaction.update({
-      where: { id },
+      where: { id, householdId },
       data: { nextOccurrence },
     });
   }
@@ -90,8 +100,13 @@ export async function skipNextOccurrenceAction(formData: FormData): Promise<void
 }
 
 export async function deleteRecurringAction(formData: FormData): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) redirect("/setup");
+
   const id = formData.get("id") as string;
-  await prisma.recurringTransaction.delete({ where: { id } });
+  await prisma.recurringTransaction.delete({ where: { id, householdId } });
   revalidatePath("/recurring");
 }
 
@@ -133,16 +148,16 @@ export async function processDueRecurringAction(): Promise<void> {
       },
     });
 
-    // Update account balance
+    // Update account balance — householdId included to enforce ownership at DB layer
     const amount = Number(recurring.amount);
     if (recurring.type === "EXPENSE") {
       await prisma.account.update({
-        where: { id: recurring.accountId },
+        where: { id: recurring.accountId, householdId },
         data: { currentBalance: { decrement: amount } },
       });
     } else if (recurring.type === "INCOME") {
       await prisma.account.update({
-        where: { id: recurring.accountId },
+        where: { id: recurring.accountId, householdId },
         data: { currentBalance: { increment: amount } },
       });
     }

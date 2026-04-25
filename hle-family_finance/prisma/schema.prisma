@@ -233,6 +233,8 @@ model Transaction {
   @@index([householdId, date])
   @@index([accountId])
   @@index([categoryId])
+  @@index([transferToAccountId])
+  @@index([recurringTransactionId])
   @@index([externalId])
 }
 
@@ -263,6 +265,10 @@ model RecurringTransaction {
   category          Category?     @relation(fields: [categoryId], references: [id])
   transferToAccount Account?      @relation("RecurringTransferTo", fields: [transferToAccountId], references: [id])
   generatedTransactions Transaction[]
+
+  @@index([householdId, isActive, nextOccurrence])
+  @@index([categoryId])
+  @@index([transferToAccountId])
 }
 
 // ============================================================================
@@ -351,6 +357,8 @@ model BudgetPlannerProject {
 
   items     BudgetPlannerItem[]
   trips     Trip[]
+
+  @@index([householdId])
 }
 
 model BudgetPlannerItem {
@@ -485,6 +493,7 @@ model DebtPayment {
   linkedTransaction Transaction? @relation(fields: [linkedTransactionId], references: [id])
 
   @@index([debtId, paymentDate])
+  @@index([linkedTransactionId])
 }
 
 // ============================================================================
@@ -536,6 +545,7 @@ model BillPayment {
   linkedTransaction Transaction? @relation(fields: [linkedTransactionId], references: [id])
 
   @@index([monthlyBillId, dueDate])
+  @@index([linkedTransactionId])
 }
 
 // ============================================================================
@@ -639,6 +649,11 @@ model ImportedTransaction {
   matchedTransaction Transaction? @relation("MatchedTransaction", fields: [matchedTransactionId], references: [id])
   suggestedCategory  Category?    @relation(fields: [suggestedCategoryId], references: [id])
   createdTransaction Transaction? @relation("CreatedTransaction", fields: [createdTransactionId], references: [id])
+
+  @@index([importBatchId])
+  @@index([matchedTransactionId])
+  @@index([suggestedCategoryId])
+  @@index([createdTransactionId])
 }
 
 // ============================================================================
