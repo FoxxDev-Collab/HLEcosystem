@@ -46,7 +46,6 @@ export default async function PackingPage() {
     (sum, t) => sum + t.packingLists.reduce((s, l) => s + l.items.filter((i) => i.isPacked).length, 0),
     0
   );
-  const overallPct = totalItems > 0 ? Math.round((totalPacked / totalItems) * 100) : 0;
 
   return (
     <div className="space-y-6">
@@ -57,11 +56,11 @@ export default async function PackingPage() {
         </p>
       </div>
 
-      {trips.length > 0 && (
+      {totalItems > 0 && (
         <div className="flex items-center gap-3">
-          <Progress value={overallPct} className="h-2 flex-1" />
+          <Progress value={Math.round((totalPacked / totalItems) * 100)} className="h-2 flex-1" />
           <span className="text-sm text-muted-foreground shrink-0">
-            {overallPct}% overall
+            {Math.round((totalPacked / totalItems) * 100)}% overall
           </span>
         </div>
       )}
