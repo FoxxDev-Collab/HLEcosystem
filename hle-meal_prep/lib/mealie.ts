@@ -1,4 +1,12 @@
 import prisma from "./prisma";
+import {
+  getCachedRecipes,
+  getCachedRecipeDetail,
+  getCachedMealPlan,
+  upsertCachedRecipes,
+  upsertCachedRecipeDetail,
+  upsertCachedMealPlan,
+} from "./mealie-cache";
 
 // ── Types ───────────────────────────────────────────────────────
 
@@ -79,9 +87,9 @@ export async function getMealieConfig(householdId: string): Promise<MealieConfig
 
 // ── API Client ──────────────────────────────────────────────────
 
-async function mealieFetch<T>(config: MealieConfigData, path: string): Promise<T> {
+export async function mealieFetch<T>(config: MealieConfigData, path: string): Promise<T> {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 30000); // 30s timeout
+  const timeout = setTimeout(() => controller.abort(), 30000);
 
   try {
     const res = await fetch(`${config.apiUrl}${path}`, {
@@ -90,7 +98,7 @@ async function mealieFetch<T>(config: MealieConfigData, path: string): Promise<T
         Accept: "application/json",
       },
       signal: controller.signal,
-      next: { revalidate: 60 },
+      cache: "no-store",
     });
 
     if (!res.ok) {
@@ -111,9 +119,8 @@ async function mealieFetch<T>(config: MealieConfigData, path: string): Promise<T
 // ── Public API ──────────────────────────────────────────────────
 
 export async function getTodaysMealPlan(householdId: string): Promise<MealieMealPlanEntry[]> {
-  const config = await getMealieConfig(householdId);
-  if (!config) return [];
-  return mealieFetch<MealieMealPlanEntry[]>(config, "/api/households/mealplans/today");
+  const today = new Date().toISOString().split("T")[0];
+  return getMealPlan(householdId, today, today);
 }
 
 export async function getMealPlan(
@@ -124,17 +131,38 @@ export async function getMealPlan(
   const config = await getMealieConfig(householdId);
   if (!config) return [];
 
-  const data = await mealieFetch<MealieMealPlanEntry[] | { items: MealieMealPlanEntry[] }>(
-    config,
-    `/api/households/mealplans?start_date=${startDate}&end_date=${endDate}`
-  );
-  return Array.isArray(data) ? data : data.items;
+  // DB-first with 15-min hard TTL
+  const cached = await getCachedMealPlan(householdId, startDate, endDate);
+  if (cached !== null) return cached;
+
+  try {
+    const data = await mealieFetch<MealieMealPlanEntry[] | { items: MealieMealPlanEntry[] }>(
+      config,
+      `/api/households/mealplans?start_date=${startDate}&end_date=${endDate}`
+    );
+    const entries = Array.isArray(data) ? data : data.items;
+    // Cache in background — don't block the response
+    upsertCachedMealPlan(householdId, entries).catch(() => {});
+    return entries;
+  } catch {
+    // Mealie unreachable — return whatever stale data we have
+    const stale = await getCachedMealPlan(householdId, startDate, endDate).catch(() => null);
+    return stale ?? [];
+  }
 }
 
 export async function getRecipe(householdId: string, slugOrId: string): Promise<MealieRecipe> {
   const config = await getMealieConfig(householdId);
   if (!config) throw new Error("Mealie is not configured for this household");
-  return mealieFetch<MealieRecipe>(config, `/api/recipes/${slugOrId}`);
+
+  // DB-first for recipe detail (no TTL — fresh detail is populated by sync)
+  const cached = await getCachedRecipeDetail(householdId, slugOrId);
+  if (cached) return cached;
+
+  const recipe = await mealieFetch<MealieRecipe>(config, `/api/recipes/${slugOrId}`);
+  // Cache in background
+  upsertCachedRecipeDetail(householdId, recipe).catch(() => {});
+  return recipe;
 }
 
 export async function testMealieConnection(apiUrl: string, apiToken: string): Promise<{ ok: boolean; error?: string }> {
@@ -179,26 +207,54 @@ export async function getRecipes(
   const config = await getMealieConfig(householdId);
   if (!config) return { items: [], total: 0, totalPages: 0 };
 
-  const params = new URLSearchParams({
-    page: String(page),
-    perPage: String(perPage),
-  });
-  if (search) params.set("search", search);
-  if (options?.categories) params.set("categories", options.categories);
-  if (options?.tags) params.set("tags", options.tags);
-  if (options?.foods) params.set("foods", options.foods);
-  if (options?.orderBy) params.set("orderBy", options.orderBy);
-  if (options?.orderDirection) params.set("orderDirection", options.orderDirection);
+  // Serve from DB cache for unfiltered or name-search requests.
+  // Category/tag/food filters require Mealie's server-side filtering — bypass cache.
+  const canUseCache = !options?.categories && !options?.tags && !options?.foods;
 
-  const data = await mealieFetch<{
-    items: MealieRecipeSummary[];
-    total: number;
-    total_pages: number;
-    page: number;
-    per_page: number;
-  }>(config, `/api/recipes?${params.toString()}`);
+  if (canUseCache) {
+    const cached = await getCachedRecipes(householdId, search || undefined);
+    if (cached) {
+      const allItems = cached.recipes;
+      const start = (page - 1) * perPage;
+      const items = allItems.slice(start, start + perPage);
+      return { items, total: allItems.length, totalPages: Math.ceil(allItems.length / perPage) };
+    }
+  }
 
-  return { items: data.items, total: data.total, totalPages: data.total_pages };
+  // Cache miss or filtered request — hit Mealie
+  try {
+    const params = new URLSearchParams({ page: String(page), perPage: String(perPage) });
+    if (search) params.set("search", search);
+    if (options?.categories) params.set("categories", options.categories);
+    if (options?.tags) params.set("tags", options.tags);
+    if (options?.foods) params.set("foods", options.foods);
+    if (options?.orderBy) params.set("orderBy", options.orderBy);
+    if (options?.orderDirection) params.set("orderDirection", options.orderDirection);
+
+    const data = await mealieFetch<{
+      items: MealieRecipeSummary[];
+      total: number;
+      total_pages: number;
+    }>(config, `/api/recipes?${params.toString()}`);
+
+    // Cache summaries in background (only for unfiltered page fetches)
+    if (canUseCache) {
+      upsertCachedRecipes(householdId, data.items).catch(() => {});
+    }
+
+    return { items: data.items, total: data.total, totalPages: data.total_pages };
+  } catch {
+    // Mealie unreachable — fall back to whatever is in DB
+    if (canUseCache) {
+      const fallback = await getCachedRecipes(householdId, search || undefined).catch(() => null);
+      if (fallback) {
+        const start = (page - 1) * perPage;
+        const items = fallback.recipes.slice(start, start + perPage);
+        return { items, total: fallback.recipes.length, totalPages: Math.ceil(fallback.recipes.length / perPage) };
+      }
+    }
+    return { items: [], total: 0, totalPages: 0 };
+  }
 }
 
 export async function getRecipeCategories(

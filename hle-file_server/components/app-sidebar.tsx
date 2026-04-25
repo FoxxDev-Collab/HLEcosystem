@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useSidebar } from "@/components/ui/sidebar";
 import { AppSwitcher, type AppUrls } from "@/components/app-switcher";
 import {
   LayoutDashboard,
@@ -80,6 +81,8 @@ function NavGroup({
   items: typeof mainNav;
   pathname: string;
 }) {
+  const { setOpenMobile } = useSidebar();
+
   return (
     <SidebarGroup>
       <SidebarGroupLabel className="text-[10px] uppercase tracking-[0.08em] font-semibold text-muted-foreground/70">
@@ -93,7 +96,7 @@ function NavGroup({
                 asChild
                 isActive={pathname === item.href || pathname.startsWith(item.href + "/")}
               >
-                <Link href={item.href}>
+                <Link href={item.href} onClick={() => setOpenMobile(false)}>
                   <item.icon className="size-4" />
                   <span>{item.title}</span>
                 </Link>

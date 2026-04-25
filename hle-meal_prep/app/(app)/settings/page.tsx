@@ -7,8 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { ChefHat, CheckCircle, XCircle, Unplug } from "lucide-react";
-import { saveMealieConfigAction, testMealieConfigAction, disconnectMealieAction } from "./actions";
+import { ChefHat, CheckCircle, XCircle, Unplug, RefreshCw, Database } from "lucide-react";
+import { saveMealieConfigAction, testMealieConfigAction, disconnectMealieAction, syncNowAction } from "./actions";
+import { getSyncState } from "@/lib/mealie-cache";
 
 export default async function SettingsPage({
   searchParams,
@@ -22,9 +23,10 @@ export default async function SettingsPage({
 
   const { mealie_test } = await searchParams;
 
-  const config = await prisma.mealieConfig.findUnique({
-    where: { householdId },
-  });
+  const [config, syncState] = await Promise.all([
+    prisma.mealieConfig.findUnique({ where: { householdId } }),
+    getSyncState(householdId),
+  ]);
 
   const testResult = mealie_test
     ? mealie_test === "ok"
@@ -134,6 +136,31 @@ export default async function SettingsPage({
               </Button>
             </div>
           </form>
+
+          {config && config.isActive && (
+            <div className="pt-4 border-t space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-sm">
+                  <Database className="size-4 text-muted-foreground" />
+                  <span className="text-muted-foreground">Local cache:</span>
+                  {syncState?.recipesSyncedAt ? (
+                    <span className="font-medium">
+                      {syncState.recipeTotalCount} recipes · last synced{" "}
+                      {new Date(syncState.recipesSyncedAt).toLocaleString()}
+                    </span>
+                  ) : (
+                    <span className="text-muted-foreground">Not synced yet</span>
+                  )}
+                </div>
+                <form action={syncNowAction}>
+                  <Button type="submit" variant="outline" size="sm" className="gap-1.5">
+                    <RefreshCw className="size-3.5" />
+                    Sync Now
+                  </Button>
+                </form>
+              </div>
+            </div>
+          )}
 
           {config && (
             <div className="pt-4 border-t">

@@ -417,7 +417,7 @@ export function FileGrid({
     <>
       <div
         ref={scrollRef}
-        className={`h-[calc(100vh-280px)] overflow-auto fs-scroll ${
+        className={`h-[calc(100svh-220px)] sm:h-[calc(100vh-250px)] md:h-[calc(100vh-280px)] overflow-auto fs-scroll ${
           isPending ? "opacity-60 pointer-events-none" : ""
         }`}
       >

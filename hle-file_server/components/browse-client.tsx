@@ -107,13 +107,13 @@ export function BrowseClient({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">{displayTitle}</h1>
           <p className="text-muted-foreground">{displaySubtitle}</p>
         </div>
         <div className="flex items-center gap-2">
-          {showSearch && <SearchInput baseUrl={baseUrl} />}
+          {showSearch && <SearchInput baseUrl={baseUrl} className="w-full sm:w-64" />}
           <CreateFolderDialog
             parentFolderId={folderId}
             isPersonal={isPersonal}

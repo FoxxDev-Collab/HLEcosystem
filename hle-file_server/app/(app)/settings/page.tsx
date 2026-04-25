@@ -5,7 +5,8 @@ import prisma from "@/lib/prisma";
 import { formatFileSize, formatStoragePercent } from "@/lib/format";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Settings, HardDrive } from "lucide-react";
+import { Settings, HardDrive, Search } from "lucide-react";
+import { ReindexButton } from "@/components/reindex-button";
 
 export default async function SettingsPage() {
   const user = await getCurrentUser();
@@ -25,6 +26,16 @@ export default async function SettingsPage() {
   const usedBytes = totalSizeResult._sum.size ?? BigInt(0);
   const maxBytes = storageQuota?.maxStorageBytes ?? BigInt(5368709120);
   const usagePercent = formatStoragePercent(usedBytes, maxBytes);
+
+  const [totalIndexable, indexedCount] = await Promise.all([
+    prisma.file.count({
+      where: { householdId, status: "ACTIVE", deletedAt: null },
+    }),
+    prisma.fileContent.count({
+      where: { file: { householdId, status: "ACTIVE", deletedAt: null } },
+    }),
+  ]);
+  const unindexedCount = totalIndexable - indexedCount;
 
   return (
     <div className="space-y-6">
@@ -54,6 +65,31 @@ export default async function SettingsPage() {
               {usagePercent}% of storage used
             </p>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Search className="size-5" />
+            Search Index
+          </CardTitle>
+          <CardDescription>
+            Full-text index for document content search (PDF, DOCX, XLSX, text files)
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">Indexed documents</span>
+            <span className="font-medium tabular-nums">{indexedCount} / {totalIndexable}</span>
+          </div>
+          {unindexedCount > 0 && (
+            <p className="text-xs text-muted-foreground">
+              {unindexedCount} file{unindexedCount !== 1 ? "s" : ""} not yet indexed — click Re-index to process them.
+              Files uploaded before indexing was enabled, or non-text formats (images, video), are skipped automatically.
+            </p>
+          )}
+          <ReindexButton unindexedCount={unindexedCount} />
         </CardContent>
       </Card>
 

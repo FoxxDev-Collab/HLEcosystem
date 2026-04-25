@@ -61,25 +61,25 @@ export async function generateInsightsAction(): Promise<AdvisorResult> {
   const totalAssets = Number(assets._sum.currentValue || 0);
   const netWorth = totalCash + totalAssets - totalDebts;
 
-  // Get actual spending per budget category
-  const budgetData = await Promise.all(
-    budgets.map(async (b) => {
-      const actual = await prisma.transaction.aggregate({
-        where: {
-          householdId,
-          categoryId: b.categoryId,
-          type: "EXPENSE",
-          date: { gte: firstOfMonth, lte: lastOfMonth },
-        },
-        _sum: { amount: true },
-      });
-      return {
-        category: b.category.name,
-        budgeted: Number(b.amount),
-        actual: Math.abs(Number(actual._sum.amount || 0)),
-      };
-    })
-  );
+  // Get actual spending per budget category — one GROUP BY instead of N aggregates
+  type ActualRow = { categoryId: string | null; actual: number };
+  const actualRows = await prisma.$queryRaw<ActualRow[]>`
+    SELECT "categoryId", COALESCE(SUM(amount)::float, 0) AS actual
+    FROM family_finance."Transaction"
+    WHERE "householdId" = ${householdId}
+      AND type = 'EXPENSE'
+      AND "isBalanceAdjustment" = false
+      AND date >= ${firstOfMonth}
+      AND date <= ${lastOfMonth}
+    GROUP BY "categoryId"
+  `;
+  const actualMap = new Map(actualRows.map((r) => [r.categoryId, r.actual]));
+
+  const budgetData = budgets.map((b) => ({
+    category: b.category.name,
+    budgeted: Number(b.amount),
+    actual:   Math.abs(actualMap.get(b.categoryId) ?? 0),
+  }));
 
   const snapshot = {
     accounts: accounts.map((a) => ({
@@ -154,26 +154,36 @@ export async function getCachedReportAction(): Promise<AdvisorResult | null> {
 }
 
 async function getMonthSummary(householdId: string, start: Date, end: Date) {
-  const transactions = await prisma.transaction.findMany({
-    where: {
-      householdId,
-      date: { gte: start, lte: end },
-      isBalanceAdjustment: false,
-    },
-    include: { category: { select: { name: true } } },
-  });
+  type SummaryRow = { type: string; categoryName: string | null; total: number };
 
-  const income = transactions
-    .filter((t) => t.type === "INCOME")
-    .reduce((s, t) => s + Math.abs(Number(t.amount)), 0);
-  const expenses = transactions
-    .filter((t) => t.type === "EXPENSE")
-    .reduce((s, t) => s + Math.abs(Number(t.amount)), 0);
+  const rows = await prisma.$queryRaw<SummaryRow[]>`
+    SELECT
+      t.type,
+      c.name                            AS "categoryName",
+      COALESCE(SUM(t.amount)::float, 0) AS total
+    FROM family_finance."Transaction" t
+    LEFT JOIN family_finance."Category" c ON c.id = t."categoryId"
+    WHERE t."householdId" = ${householdId}
+      AND t.date >= ${start}
+      AND t.date <= ${end}
+      AND t."isBalanceAdjustment" = false
+      AND t.type IN ('INCOME', 'EXPENSE')
+    GROUP BY t.type, c.name
+  `;
 
+  let income = 0;
+  let expenses = 0;
   const byCategory: Record<string, number> = {};
-  for (const t of transactions.filter((t) => t.type === "EXPENSE")) {
-    const cat = t.category?.name || "Uncategorized";
-    byCategory[cat] = (byCategory[cat] || 0) + Math.abs(Number(t.amount));
+
+  for (const row of rows) {
+    const abs = Math.abs(row.total);
+    if (row.type === "INCOME") {
+      income += abs;
+    } else {
+      expenses += abs;
+      const cat = row.categoryName ?? "Uncategorized";
+      byCategory[cat] = (byCategory[cat] ?? 0) + abs;
+    }
   }
 
   return {

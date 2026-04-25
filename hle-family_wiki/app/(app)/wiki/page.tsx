@@ -10,7 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Plus, Pin, FileText, Lock, Users, Globe, Share2, ChevronRight,
-  BookOpen, Clock, MessageSquare,
+  BookOpen, Clock, MessageSquare, LayoutTemplate,
+  ClipboardList, BookMarked, AlertTriangle, Phone, ChefHat,
 } from "lucide-react";
 import { createPageAction } from "./actions";
 import type { WikiPage as WikiPageModel } from "@prisma/client";
@@ -20,6 +21,14 @@ type PageWithMeta = WikiPageModel & {
   tags: { tag: string }[];
   _count: { comments: number };
 };
+
+const TEMPLATE_CARDS = [
+  { key: "meeting-notes", label: "Meeting Notes",        defaultTitle: "Meeting Notes",        icon: ClipboardList },
+  { key: "how-to",        label: "How-To Guide",         defaultTitle: "How-To Guide",         icon: BookMarked },
+  { key: "emergency",     label: "Emergency Procedures", defaultTitle: "Emergency Procedures", icon: AlertTriangle },
+  { key: "contacts",      label: "Contact Sheet",        defaultTitle: "Contact Sheet",        icon: Phone },
+  { key: "recipe",        label: "Recipe",               defaultTitle: "New Recipe",           icon: ChefHat },
+];
 
 const VIS: Record<string, { icon: typeof Lock; label: string; color: string }> = {
   PRIVATE: { icon: Lock, label: "Private", color: "bg-muted text-muted-foreground" },
@@ -82,7 +91,7 @@ export default async function WikiPage() {
       </div>
 
       {/* Create new page */}
-      <div className="rounded-lg border border-border/60 bg-card p-5">
+      <div className="rounded-lg border border-border/60 bg-card p-5 space-y-4">
         <form action={createPageAction} className="flex items-end gap-4">
           <div className="flex-1 space-y-1.5">
             <Label htmlFor="title" className="text-xs font-medium text-muted-foreground">New Page</Label>
@@ -98,6 +107,29 @@ export default async function WikiPage() {
           </div>
           <Button type="submit" className="h-10"><Plus className="size-4 mr-1.5" />Create</Button>
         </form>
+
+        {/* Template quick-start */}
+        <div className="border-t pt-4 space-y-2">
+          <p className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+            <LayoutTemplate className="size-3" /> Start from a template
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {TEMPLATE_CARDS.map((tpl) => (
+              <form key={tpl.key} action={createPageAction}>
+                <input type="hidden" name="title" value={tpl.defaultTitle} />
+                <input type="hidden" name="visibility" value="HOUSEHOLD" />
+                <input type="hidden" name="template" value={tpl.key} />
+                <button
+                  type="submit"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border/60 bg-muted/40 hover:bg-muted hover:border-primary/30 text-xs text-muted-foreground hover:text-foreground transition-all"
+                >
+                  <tpl.icon className="size-3.5 shrink-0" />
+                  {tpl.label}
+                </button>
+              </form>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* Pinned pages */}

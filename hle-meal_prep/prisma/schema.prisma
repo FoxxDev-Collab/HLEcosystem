@@ -190,6 +190,45 @@ model FavoriteRecipe {
   @@index([householdId])
 }
 
+// ── Mealie cache: recipe summaries + optionally full detail ──────────────────
+model CachedMealieRecipe {
+  id             String    @id                   // Mealie recipe UUID
+  householdId    String
+  slug           String
+  name           String
+  summaryData    Json                             // MealieRecipeSummary blob
+  detailData     Json?                            // MealieRecipe blob (null until fetched)
+  detailCachedAt DateTime?
+  cachedAt       DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@unique([householdId, slug])
+  @@index([householdId])
+  @@index([householdId, name])
+}
+
+// ── Mealie cache: meal plan entries keyed by Mealie's numeric entry ID ───────
+model CachedMealieMealPlan {
+  householdId String
+  entryId     Int                                 // Mealie's numeric entry ID
+  date        String                              // YYYY-MM-DD
+  data        Json                                // MealieMealPlanEntry blob
+  cachedAt    DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@id([householdId, entryId])
+  @@index([householdId, date])
+}
+
+// ── Mealie sync state: tracks last successful sync timestamps ─────────────────
+model MealieSyncState {
+  householdId      String    @id
+  recipesSyncedAt  DateTime?
+  planSyncedAt     DateTime?
+  recipeTotalCount Int       @default(0)
+  updatedAt        DateTime  @updatedAt
+}
+
 model ShoppingListItem {
   id        String       @id @default(cuid())
   listId    String

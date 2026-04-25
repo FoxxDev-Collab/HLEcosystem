@@ -22,7 +22,6 @@ export type UploadItem = {
   error?: string;
   speed?: number;
   startedAt?: number;
-  // Internal — not exposed to UI
   _abort?: AbortController;
   _xhr?: XMLHttpRequest;
 };
@@ -45,44 +44,148 @@ export function useUpload() {
   return ctx;
 }
 
-const MAX_CONCURRENT = 2;
-// Files above this threshold use chunked upload
-const CHUNK_THRESHOLD = 10 * 1024 * 1024; // 10MB — lower threshold avoids memory issues with formData()
-const CHUNK_SIZE = 5 * 1024 * 1024; // 5MB per chunk
+const MAX_CONCURRENT = 3;           // files uploading simultaneously
+const CHUNK_THRESHOLD = 10 * 1024 * 1024;  // files above this use chunked upload
+const CHUNK_SIZE = 5 * 1024 * 1024;        // 5 MB per chunk
+const CONCURRENT_CHUNKS = 4;        // parallel chunk requests per file
 const MAX_RETRIES = 2;
 const RETRY_DELAY_MS = 1500;
 
-function generateId() {
+function generateId(): string {
   return Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
 }
 
+function sleep(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+// ---------------------------------------------------------------------------
+// Parallel chunk upload — runs CONCURRENT_CHUNKS workers simultaneously.
+// Each worker claims the next unstarted chunk index via a shared cursor.
+// The cursor increment is synchronous (before any await), so there are no
+// races despite the workers running concurrently as async functions.
+// The server writes each chunk to its own file (chunk_000000, chunk_000001…)
+// and assembles them in order, so arrival order does not matter.
+// ---------------------------------------------------------------------------
+async function uploadChunksParallel(
+  file: File,
+  uploadId: string,
+  signal: AbortSignal,
+  onChunkDone: (cumulativeBytes: number) => void
+): Promise<void> {
+  const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+  let cursor = 0;
+  let uploadedBytes = 0;
+
+  const worker = async (): Promise<void> => {
+    while (cursor < totalChunks) {
+      if (signal.aborted) throw new DOMException("Aborted", "AbortError");
+      const i = cursor++; // claim this index before the first await
+      const start = i * CHUNK_SIZE;
+      const end = Math.min(start + CHUNK_SIZE, file.size);
+
+      for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+        if (signal.aborted) throw new DOMException("Aborted", "AbortError");
+        try {
+          const res = await fetch("/api/files/upload/chunked", {
+            method: "PUT",
+            headers: {
+              "x-upload-id": uploadId,
+              "x-chunk-index": String(i),
+            },
+            body: file.slice(start, end),
+            signal,
+          });
+          if (res.ok) break;
+          if (attempt === MAX_RETRIES) {
+            const body = await res.json().catch(() => ({})) as { error?: string };
+            throw new Error(body.error ?? `Chunk ${i} failed (${res.status})`);
+          }
+        } catch (err) {
+          if (signal.aborted) throw err;
+          if (attempt === MAX_RETRIES) throw err;
+          await sleep(RETRY_DELAY_MS * Math.pow(2, attempt));
+        }
+      }
+
+      uploadedBytes += end - start;
+      onChunkDone(uploadedBytes);
+    }
+  };
+
+  const concurrency = Math.min(CONCURRENT_CHUNKS, totalChunks);
+  await Promise.all(Array.from({ length: concurrency }, worker));
+}
+
+// ---------------------------------------------------------------------------
+// UploadProvider
+// ---------------------------------------------------------------------------
 export function UploadProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const [uploads, setUploads] = useState<UploadItem[]>([]);
   const activeCount = useRef(0);
   const queueRef = useRef<UploadItem[]>([]);
-  const completedSinceLastInvalidate = useRef(0);
 
-  const updateUpload = useCallback(
+  // ── Batched rAF updates ────────────────────────────────────────────────
+  // Progress events arrive many times per second per file. Collecting all
+  // patches for a single requestAnimationFrame and flushing them in one
+  // setUploads call keeps the render rate at ~60fps regardless of upload
+  // speed or number of concurrent files.
+  const pendingPatches = useRef<Map<string, Partial<UploadItem>>>(new Map());
+  const rafPending = useRef(false);
+
+  const flushPatches = useCallback(() => {
+    rafPending.current = false;
+    const patches = new Map(pendingPatches.current);
+    pendingPatches.current.clear();
+    setUploads((prev) =>
+      prev.map((u) => {
+        const patch = patches.get(u.id);
+        return patch ? { ...u, ...patch } : u;
+      })
+    );
+  }, []);
+
+  // For progress-only updates (many per second) — deferred to next frame.
+  const scheduleUpdate = useCallback(
     (id: string, patch: Partial<UploadItem>) => {
-      setUploads((prev) =>
-        prev.map((u) => (u.id === id ? { ...u, ...patch } : u))
-      );
+      pendingPatches.current.set(id, {
+        ...pendingPatches.current.get(id),
+        ...patch,
+      });
+      if (!rafPending.current) {
+        rafPending.current = true;
+        requestAnimationFrame(flushPatches);
+      }
     },
-    []
+    [flushPatches]
   );
 
+  // For status transitions (queued→uploading, uploading→done/error/cancelled)
+  // — applied immediately so the UI responds without waiting for the next frame.
+  const updateUpload = useCallback((id: string, patch: Partial<UploadItem>) => {
+    setUploads((prev) => prev.map((u) => (u.id === id ? { ...u, ...patch } : u)));
+  }, []);
+
+  // ── Debounced invalidation ─────────────────────────────────────────────
+  // Called per-completion so files appear in the browser shortly after they
+  // land. Debounced to avoid N sequential React Query refetches when N files
+  // finish in a burst.
+  const invalidateTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const invalidateFiles = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: ["files"] });
-    completedSinceLastInvalidate.current = 0;
+    if (invalidateTimer.current) clearTimeout(invalidateTimer.current);
+    invalidateTimer.current = setTimeout(() => {
+      queryClient.invalidateQueries({ queryKey: ["files"] });
+      invalidateTimer.current = null;
+    }, 400);
   }, [queryClient]);
 
-  // ── Chunked upload (for large files) ──
+  // ── Chunked upload ─────────────────────────────────────────────────────
   const uploadChunked = useCallback(
     async (item: UploadItem) => {
-      const abortController = new AbortController();
-      item._abort = abortController;
-      updateUpload(item.id, { _abort: abortController });
+      const abort = new AbortController();
+      item._abort = abort;
+      updateUpload(item.id, { _abort: abort });
 
       try {
         // 1. Init
@@ -94,85 +197,37 @@ export function UploadProvider({ children }: { children: ReactNode }) {
             fileName: item.file.name,
             fileSize: item.file.size,
           }),
-          signal: abortController.signal,
+          signal: abort.signal,
         });
-
         if (!initRes.ok) {
-          const body = await initRes.json().catch(() => ({}));
-          throw new Error(body.error || `Init failed (${initRes.status})`);
+          const body = await initRes.json().catch(() => ({})) as { error?: string };
+          throw new Error(body.error ?? `Init failed (${initRes.status})`);
         }
+        const { uploadId } = (await initRes.json()) as { uploadId: string };
 
-        const { uploadId } = await initRes.json();
-        const totalChunks = Math.ceil(item.file.size / CHUNK_SIZE);
-        let uploadedBytes = 0;
-        let lastTime = Date.now();
-        let lastBytes = 0;
+        // 2. Upload all chunks in parallel
+        let lastSpeedBytes = 0;
+        let lastSpeedTime = Date.now();
 
-        // 2. Upload chunks sequentially with retry
-        for (let i = 0; i < totalChunks; i++) {
-          if (abortController.signal.aborted) throw new Error("Cancelled");
-
-          const start = i * CHUNK_SIZE;
-          const end = Math.min(start + CHUNK_SIZE, item.file.size);
-
-          let chunkSuccess = false;
-          for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-            if (abortController.signal.aborted) throw new Error("Cancelled");
-
-            const chunk = item.file.slice(start, end);
-
-            try {
-              const chunkRes = await fetch("/api/files/upload/chunked", {
-                method: "PUT",
-                headers: {
-                  "x-upload-id": uploadId,
-                  "x-chunk-index": String(i),
-                  "Content-Type": "application/octet-stream",
-                },
-                body: chunk,
-                signal: abortController.signal,
-              });
-
-              if (chunkRes.ok) {
-                chunkSuccess = true;
-                break;
-              }
-
-              if (attempt === MAX_RETRIES) {
-                const body = await chunkRes.json().catch(() => ({}));
-                throw new Error(body.error || `Chunk ${i} failed (${chunkRes.status})`);
-              }
-            } catch (err) {
-              if (abortController.signal.aborted) throw new Error("Cancelled");
-              if (attempt === MAX_RETRIES) throw err;
+        await uploadChunksParallel(
+          item.file,
+          uploadId,
+          abort.signal,
+          (cumulativeBytes) => {
+            const progress = Math.round((cumulativeBytes / item.file.size) * 100);
+            const now = Date.now();
+            const elapsed = (now - lastSpeedTime) / 1000;
+            let speed: number | undefined;
+            if (elapsed >= 0.5) {
+              speed = (cumulativeBytes - lastSpeedBytes) / elapsed;
+              lastSpeedBytes = cumulativeBytes;
+              lastSpeedTime = now;
             }
-
-            // Wait before retry
-            await new Promise((r) => setTimeout(r, RETRY_DELAY_MS * Math.pow(2, attempt)));
+            scheduleUpdate(item.id, { progress, ...(speed !== undefined ? { speed } : {}) });
           }
+        );
 
-          if (!chunkSuccess) throw new Error(`Chunk ${i} failed after retries`);
-
-          uploadedBytes += (end - start);
-          const progress = Math.round((uploadedBytes / item.file.size) * 100);
-
-          // Speed calculation
-          const now = Date.now();
-          const elapsed = (now - lastTime) / 1000;
-          let speed: number | undefined;
-          if (elapsed > 0.5) {
-            speed = (uploadedBytes - lastBytes) / elapsed;
-            lastBytes = uploadedBytes;
-            lastTime = now;
-          }
-
-          updateUpload(item.id, {
-            progress,
-            ...(speed !== undefined ? { speed } : {}),
-          });
-        }
-
-        // 3. Complete — assemble on server
+        // 3. Complete — assemble chunks on server, create DB record
         const completeRes = await fetch("/api/files/upload/chunked", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -184,32 +239,40 @@ export function UploadProvider({ children }: { children: ReactNode }) {
             isPersonal: item.isPersonal,
             mimeType: item.file.type,
           }),
-          signal: abortController.signal,
+          signal: abort.signal,
         });
-
         if (!completeRes.ok) {
-          const body = await completeRes.json().catch(() => ({}));
-          throw new Error(body.error || `Complete failed (${completeRes.status})`);
+          const body = await completeRes.json().catch(() => ({})) as { error?: string };
+          throw new Error(body.error ?? `Complete failed (${completeRes.status})`);
         }
 
         item.status = "done";
-        completedSinceLastInvalidate.current++;
         updateUpload(item.id, { progress: 100, status: "done", speed: undefined });
+        invalidateFiles();
       } catch (err) {
-        if (abortController.signal.aborted) {
+        if (abort.signal.aborted) {
           item.status = "cancelled";
           updateUpload(item.id, { status: "cancelled", error: "Cancelled", speed: undefined });
+          // Inform server so it can clean up chunk directory
+          fetch("/api/files/upload/chunked", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "abort", uploadId: item._abort }),
+          }).catch(() => {});
         } else {
           item.status = "error";
-          const message = err instanceof Error ? err.message : "Upload failed";
-          updateUpload(item.id, { status: "error", error: message, speed: undefined });
+          updateUpload(item.id, {
+            status: "error",
+            error: err instanceof Error ? err.message : "Upload failed",
+            speed: undefined,
+          });
         }
       }
     },
-    [updateUpload]
+    [updateUpload, scheduleUpdate, invalidateFiles]
   );
 
-  // ── Single-request upload via XHR (for small files, supports progress) ──
+  // ── Single-request XHR upload (small files, real-time progress) ────────
   const uploadSingle = useCallback(
     (item: UploadItem, attempt = 0): Promise<void> => {
       const formData = new FormData();
@@ -219,7 +282,6 @@ export function UploadProvider({ children }: { children: ReactNode }) {
 
       const xhr = new XMLHttpRequest();
       item._xhr = xhr;
-
       let lastLoaded = 0;
       let lastTime = Date.now();
 
@@ -228,59 +290,49 @@ export function UploadProvider({ children }: { children: ReactNode }) {
         const percent = Math.round((e.loaded / e.total) * 100);
         const now = Date.now();
         const elapsed = (now - lastTime) / 1000;
-
         let speed: number | undefined;
         if (elapsed > 0.3) {
           speed = (e.loaded - lastLoaded) / elapsed;
           lastLoaded = e.loaded;
           lastTime = now;
         }
-
-        updateUpload(item.id, {
-          progress: percent,
-          ...(speed !== undefined ? { speed } : {}),
-        });
+        scheduleUpdate(item.id, { progress: percent, ...(speed !== undefined ? { speed } : {}) });
       });
 
       return new Promise<void>((resolve) => {
         xhr.addEventListener("load", () => {
           if (xhr.status >= 200 && xhr.status < 300) {
             item.status = "done";
-            completedSinceLastInvalidate.current++;
             updateUpload(item.id, { progress: 100, status: "done", speed: undefined });
+            invalidateFiles();
             resolve();
           } else if (xhr.status >= 500 && attempt < MAX_RETRIES) {
-            const delay = RETRY_DELAY_MS * Math.pow(2, attempt);
-            updateUpload(item.id, { progress: 0, speed: undefined });
-            setTimeout(() => uploadSingle(item, attempt + 1).then(resolve), delay);
+            scheduleUpdate(item.id, { progress: 0, speed: undefined });
+            setTimeout(
+              () => uploadSingle(item, attempt + 1).then(resolve),
+              RETRY_DELAY_MS * Math.pow(2, attempt)
+            );
           } else {
             let errorMsg = "Upload failed";
             try {
-              const body = JSON.parse(xhr.responseText);
-              errorMsg = body.error || errorMsg;
+              errorMsg = (JSON.parse(xhr.responseText) as { error?: string }).error ?? errorMsg;
             } catch { /* ignore */ }
             item.status = "error";
-            updateUpload(item.id, {
-              status: "error",
-              error: `${errorMsg} (${xhr.status})`,
-              speed: undefined,
-            });
+            updateUpload(item.id, { status: "error", error: `${errorMsg} (${xhr.status})`, speed: undefined });
             resolve();
           }
         });
 
         xhr.addEventListener("error", () => {
           if (attempt < MAX_RETRIES) {
-            const delay = RETRY_DELAY_MS * Math.pow(2, attempt);
-            updateUpload(item.id, { progress: 0, speed: undefined });
-            setTimeout(() => uploadSingle(item, attempt + 1).then(resolve), delay);
+            scheduleUpdate(item.id, { progress: 0, speed: undefined });
+            setTimeout(
+              () => uploadSingle(item, attempt + 1).then(resolve),
+              RETRY_DELAY_MS * Math.pow(2, attempt)
+            );
           } else {
             item.status = "error";
-            updateUpload(item.id, {
-              status: "error",
-              error: "Network error — check your connection",
-              speed: undefined,
-            });
+            updateUpload(item.id, { status: "error", error: "Network error — check your connection", speed: undefined });
             resolve();
           }
         });
@@ -295,15 +347,17 @@ export function UploadProvider({ children }: { children: ReactNode }) {
         xhr.send(formData);
       });
     },
-    [updateUpload]
+    [updateUpload, scheduleUpdate, invalidateFiles]
   );
 
-  const isProcessing = useRef(false);
+  // ── Queue processor ────────────────────────────────────────────────────
+  // Stored in a ref so that onDone closures from in-flight uploads always
+  // call the current version, preventing the stale-closure problem where
+  // an upload started before a re-render completes calling an old processNext
+  // that references replaced uploadChunked/uploadSingle functions.
+  const processNextRef = useRef<() => void>(() => {});
 
   const processNext = useCallback(() => {
-    if (isProcessing.current) return;
-    isProcessing.current = true;
-
     while (activeCount.current < MAX_CONCURRENT) {
       const next = queueRef.current.find((u) => u.status === "queued");
       if (!next) break;
@@ -313,31 +367,25 @@ export function UploadProvider({ children }: { children: ReactNode }) {
       next.startedAt = Date.now();
       updateUpload(next.id, { status: "uploading", startedAt: next.startedAt });
 
-      const isLarge = next.file.size > CHUNK_THRESHOLD;
-
-      const done = () => {
+      const onDone = () => {
         activeCount.current--;
-        processNext();
+        processNextRef.current();
       };
 
-      if (isLarge) {
-        uploadChunked(next).then(done);
+      if (next.file.size > CHUNK_THRESHOLD) {
+        uploadChunked(next).then(onDone);
       } else {
-        uploadSingle(next).then(done);
+        uploadSingle(next).then(onDone);
       }
     }
+  }, [updateUpload, uploadChunked, uploadSingle]);
 
-    isProcessing.current = false;
+  processNextRef.current = processNext;
 
-    if (activeCount.current === 0 && completedSinceLastInvalidate.current > 0) {
-      invalidateFiles();
-    }
-  }, [updateUpload, invalidateFiles, uploadChunked, uploadSingle]);
-
+  // ── Public API ─────────────────────────────────────────────────────────
   const enqueueFiles = useCallback(
     (files: File[], folderId?: string | null, isPersonal?: boolean) => {
       if (files.length === 0) return;
-
       const newItems: UploadItem[] = files.map((f) => ({
         id: generateId(),
         file: f,
@@ -346,7 +394,6 @@ export function UploadProvider({ children }: { children: ReactNode }) {
         progress: 0,
         status: "queued" as const,
       }));
-
       queueRef.current = [...queueRef.current, ...newItems];
       setUploads((prev) => [...prev, ...newItems]);
       processNext();
@@ -358,21 +405,13 @@ export function UploadProvider({ children }: { children: ReactNode }) {
     (id: string) => {
       const item = queueRef.current.find((u) => u.id === id);
       if (!item) return;
-
       item.status = "queued";
       item.progress = 0;
       item.error = undefined;
       item.speed = undefined;
       item._abort = undefined;
       item._xhr = undefined;
-
-      updateUpload(id, {
-        status: "queued",
-        progress: 0,
-        error: undefined,
-        speed: undefined,
-      });
-
+      updateUpload(id, { status: "queued", progress: 0, error: undefined, speed: undefined });
       processNext();
     },
     [processNext, updateUpload]
@@ -382,16 +421,9 @@ export function UploadProvider({ children }: { children: ReactNode }) {
     (id: string) => {
       const item = queueRef.current.find((u) => u.id === id);
       if (!item) return;
-
       if (item.status === "uploading") {
-        // Abort chunked upload
-        if (item._abort) {
-          item._abort.abort();
-        }
-        // Abort XHR upload
-        if (item._xhr) {
-          item._xhr.abort();
-        }
+        item._abort?.abort();
+        item._xhr?.abort();
       } else if (item.status === "queued") {
         item.status = "cancelled";
         updateUpload(id, { status: "cancelled", error: "Cancelled" });
@@ -437,15 +469,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
 
   return (
     <UploadContext.Provider
-      value={{
-        uploads,
-        enqueueFiles,
-        retryUpload,
-        cancelUpload,
-        removeUpload,
-        clearCompleted,
-        retryAllFailed,
-      }}
+      value={{ uploads, enqueueFiles, retryUpload, cancelUpload, removeUpload, clearCompleted, retryAllFailed }}
     >
       {children}
     </UploadContext.Provider>
