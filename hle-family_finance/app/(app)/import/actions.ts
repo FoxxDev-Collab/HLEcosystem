@@ -67,12 +67,11 @@ export async function uploadImportAction(formData: FormData): Promise<void> {
 
   let duplicateCount = 0;
 
-  for (const tx of parsed) {
+  const records = parsed.map((tx) => {
     const externalId = `${tx.date}:${tx.amount}:${tx.description}`;
     const isDuplicate = existingExternalIds.has(externalId);
     if (isDuplicate) duplicateCount++;
 
-    // Find matching category rule
     let suggestedCategoryId: string | null = null;
     for (const rule of rules) {
       const target = tx.description.toLowerCase();
@@ -86,27 +85,24 @@ export async function uploadImportAction(formData: FormData): Promise<void> {
         try { matches = new RegExp(rule.pattern, "i").test(tx.description); } catch { /* ignore */ }
       }
 
-      if (matches) {
-        suggestedCategoryId = rule.categoryId;
-        break;
-      }
+      if (matches) { suggestedCategoryId = rule.categoryId; break; }
     }
 
-    await prisma.importedTransaction.create({
-      data: {
-        importBatchId: batch.id,
-        date: new Date(tx.date),
-        amount: tx.amount,
-        description: tx.description,
-        payee: tx.payee,
-        checkNumber: tx.checkNumber ?? null,
-        referenceNumber: tx.referenceNumber ?? null,
-        rawData: tx.rawData,
-        matchStatus: isDuplicate ? "DUPLICATE" : "PENDING",
-        suggestedCategoryId,
-      },
-    });
-  }
+    return {
+      importBatchId:   batch.id,
+      date:            new Date(tx.date),
+      amount:          tx.amount,
+      description:     tx.description,
+      payee:           tx.payee,
+      checkNumber:     tx.checkNumber ?? null,
+      referenceNumber: tx.referenceNumber ?? null,
+      rawData:         tx.rawData,
+      matchStatus:     (isDuplicate ? "DUPLICATE" : "PENDING") as "DUPLICATE" | "PENDING",
+      suggestedCategoryId,
+    };
+  });
+
+  await prisma.importedTransaction.createMany({ data: records });
 
   // Update batch counts
   await prisma.importBatch.update({
