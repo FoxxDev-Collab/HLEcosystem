@@ -58,9 +58,9 @@ export default async function PackingPage() {
 
       {totalItems > 0 && (
         <div className="flex items-center gap-3">
-          <Progress value={totalItems > 0 ? Math.round((totalPacked / totalItems) * 100) : 0} className="h-2 flex-1" />
+          <Progress value={Math.round((totalPacked / totalItems) * 100)} className="h-2 flex-1" />
           <span className="text-sm text-muted-foreground shrink-0">
-            {totalItems > 0 ? Math.round((totalPacked / totalItems) * 100) : 0}% overall
+            {Math.round((totalPacked / totalItems) * 100)}% overall
           </span>
         </div>
       )}
