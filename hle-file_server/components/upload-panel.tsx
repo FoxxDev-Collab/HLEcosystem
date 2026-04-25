@@ -8,6 +8,7 @@ import {
   RotateCcw,
   Pause,
   Loader2,
+  Clock,
   ChevronDown,
   ChevronUp,
   FileUp,
@@ -56,9 +57,11 @@ export function UploadPanel() {
   const isActive = activeUploads.length > 0 || queuedCount > 0;
   const pendingCount = activeUploads.length + queuedCount;
 
-  // Aggregate progress
+  // Aggregate progress — denominator includes queued files so the bar only
+  // moves forward as uploads complete (adding queued files would otherwise
+  // make the bar jump backward when a new file starts).
   const trackedUploads = uploads.filter(
-    (u) => u.status === "uploading" || u.status === "done"
+    (u) => u.status !== "error" && u.status !== "cancelled"
   );
   const totalBytes = trackedUploads.reduce((s, u) => s + u.file.size, 0);
   const loadedBytes = trackedUploads.reduce(
@@ -228,7 +231,7 @@ function UploadRow({
           <FileUp className="size-4 text-primary" />
         )}
         {upload.status === "queued" && (
-          <Loader2 className="size-4 text-muted-foreground" />
+          <Clock className="size-4 text-muted-foreground" />
         )}
         {upload.status === "done" && (
           <CheckCircle2 className="size-4 text-green-500" />
