@@ -5,6 +5,20 @@ import { getCurrentUser } from "@/lib/auth";
 import { getCurrentHouseholdId } from "@/lib/household";
 import prisma from "@/lib/prisma";
 import { getFileSize } from "@/lib/file-storage";
+import { UNSAFE_INLINE_MIME_TYPES } from "@/lib/file-validation";
+
+// HTML, JS, and SVG served inline from the same origin can run scripts.
+// Force them to download instead.
+function safeContentType(mimeType: string): string {
+  return UNSAFE_INLINE_MIME_TYPES.has(mimeType) ? "application/octet-stream" : mimeType;
+}
+
+function safeDisposition(mimeType: string, name: string): string {
+  const encoded = encodeURIComponent(name);
+  return UNSAFE_INLINE_MIME_TYPES.has(mimeType)
+    ? `attachment; filename="${encoded}"`
+    : `inline; filename="${encoded}"`;
+}
 
 async function canAccessFile(
   fileId: string,
@@ -94,12 +108,13 @@ export async function GET(
     return new NextResponse(stream, {
       status: 206,
       headers: {
-        "Content-Type": file.mimeType,
-        "Content-Disposition": `inline; filename="${encodeURIComponent(file.name)}"`,
+        "Content-Type": safeContentType(file.mimeType),
+        "Content-Disposition": safeDisposition(file.mimeType, file.name),
         "Content-Range": `bytes ${start}-${end}/${totalSize}`,
         "Content-Length": chunkSize.toString(),
         "Accept-Ranges": "bytes",
         "Cache-Control": "private, max-age=86400",
+        "X-Content-Type-Options": "nosniff",
       },
     });
   }
@@ -110,11 +125,12 @@ export async function GET(
 
   return new NextResponse(stream, {
     headers: {
-      "Content-Type": file.mimeType,
-      "Content-Disposition": `inline; filename="${encodeURIComponent(file.name)}"`,
+      "Content-Type": safeContentType(file.mimeType),
+      "Content-Disposition": safeDisposition(file.mimeType, file.name),
       "Content-Length": totalSize.toString(),
       "Accept-Ranges": "bytes",
       "Cache-Control": "private, max-age=86400",
+      "X-Content-Type-Options": "nosniff",
     },
   });
 }

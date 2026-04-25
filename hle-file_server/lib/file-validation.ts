@@ -111,6 +111,22 @@ export function isWithinSizeLimit(size: number, maxBytes?: number): boolean {
   return size <= (maxBytes ?? MAX_FILE_SIZE);
 }
 
+// uploadId is generated server-side as `${Date.now()}_${random}`.
+// Validate before using it in a file path to prevent directory traversal.
+export function isValidUploadId(uploadId: string): boolean {
+  return /^\d+_[a-z0-9]+$/i.test(uploadId);
+}
+
+// MIME types that can execute scripts when served inline from the same origin.
+// These are forced to attachment + application/octet-stream by the serve routes.
+export const UNSAFE_INLINE_MIME_TYPES = new Set([
+  "text/html",
+  "application/xhtml+xml",
+  "application/javascript",
+  "text/javascript",
+  "image/svg+xml",
+]);
+
 export interface UploadValidationResult {
   valid: boolean;
   error?: string;

@@ -6,6 +6,8 @@ import { dirname, extname, join } from "path";
 import { Readable } from "stream";
 import { pipeline } from "stream/promises";
 
+const CHUNK_ORPHAN_MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24 hours
+
 const UPLOAD_DIR = process.env.UPLOAD_DIR || "/app/uploads";
 
 export function getFilesDir(householdId: string): string {
@@ -138,6 +140,7 @@ function getChunksDir(householdId: string, uploadId: string): string {
 
 /**
  * Initialize a chunked upload session. Returns the uploadId (directory name).
+ * Lazily cleans up any stale chunk directories older than CHUNK_ORPHAN_MAX_AGE_MS.
  */
 export async function initChunkedUpload(
   householdId: string
@@ -145,7 +148,38 @@ export async function initChunkedUpload(
   const uploadId = `${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
   const chunksDir = getChunksDir(householdId, uploadId);
   await mkdir(chunksDir, { recursive: true });
+
+  // Fire-and-forget orphan sweep — doesn't block the response
+  sweepOrphanChunks(householdId).catch(() => {});
+
   return uploadId;
+}
+
+/**
+ * Remove chunk directories older than CHUNK_ORPHAN_MAX_AGE_MS.
+ * These are left behind when a chunked upload was initiated but never completed or aborted.
+ */
+async function sweepOrphanChunks(householdId: string): Promise<void> {
+  const chunksRoot = join(UPLOAD_DIR, householdId, "chunks");
+  let entries: string[];
+  try {
+    entries = await readdir(chunksRoot);
+  } catch {
+    return; // chunks dir doesn't exist yet — nothing to sweep
+  }
+
+  const cutoff = Date.now() - CHUNK_ORPHAN_MAX_AGE_MS;
+  for (const entry of entries) {
+    const dirPath = join(chunksRoot, entry);
+    try {
+      const s = await stat(dirPath);
+      if (s.isDirectory() && s.mtimeMs < cutoff) {
+        await rm(dirPath, { recursive: true, force: true });
+      }
+    } catch {
+      // ignore individual errors — best effort
+    }
+  }
 }
 
 /**
@@ -272,8 +306,8 @@ export async function generateThumbnail(
 
   try {
     const sharp = (await import("sharp")).default;
-    const sourceBuffer = await readFileBuffer(storagePath);
-    const thumbnail = await sharp(sourceBuffer)
+    // Pass the path string — sharp/libvips reads it as a stream internally.
+    const thumbnail = await sharp(storagePath)
       .resize(400, 400, { fit: "cover", withoutEnlargement: true })
       .webp({ quality: 80 })
       .toBuffer();

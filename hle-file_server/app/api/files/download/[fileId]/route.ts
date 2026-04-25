@@ -3,6 +3,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { getCurrentHouseholdId } from "@/lib/household";
 import prisma from "@/lib/prisma";
 import { readFileStream } from "@/lib/file-storage";
+import { logAudit, getClientIp } from "@/lib/audit";
 
 async function canAccessFile(
   fileId: string,
@@ -62,6 +63,15 @@ export async function GET(
     return NextResponse.json({ error: "File not found" }, { status: 404 });
   }
 
+  logAudit({
+    householdId,
+    userId: user.id,
+    action: "FILE_DOWNLOAD",
+    fileId: file.id,
+    details: { name: file.name },
+    ipAddress: getClientIp(_request),
+  });
+
   const stream = readFileStream(file.storagePath);
 
   return new NextResponse(stream, {
@@ -70,6 +80,7 @@ export async function GET(
       "Content-Disposition": `attachment; filename="${encodeURIComponent(file.name)}"`,
       "Content-Length": file.size.toString(),
       "Cache-Control": "private, no-cache",
+      "X-Content-Type-Options": "nosniff",
     },
   });
 }

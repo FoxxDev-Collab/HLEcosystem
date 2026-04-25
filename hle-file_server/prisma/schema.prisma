@@ -97,6 +97,7 @@ model File {
   @@index([ownerId])
   @@index([deletedAt])
   @@index([householdId, folderId, status, deletedAt])
+  @@index([householdId, ownerId, status, deletedAt])
   @@index([uploadedByUserId])
   @@index([mimeType])
 }
@@ -178,7 +179,7 @@ model FileShare {
 model ShareLink {
   id              String          @id @default(cuid())
   fileId          String
-  token           String          @unique @default(cuid())
+  token           String          @unique
   permission      SharePermission @default(VIEW)
   createdByUserId String
   expiresAt       DateTime?
@@ -230,6 +231,7 @@ enum AuditAction {
   FILE_SHARE_LINK_REVOKE
   FILE_FAVORITE
   FILE_UNFAVORITE
+  FILE_SHARE_LINK_ACCESS
   FOLDER_CREATE
   FOLDER_RENAME
   FOLDER_MOVE
@@ -254,8 +256,9 @@ model AuditLog {
   createdAt   DateTime    @default(now())
 
   @@index([householdId, createdAt])
+  @@index([householdId, action, createdAt])
   @@index([userId])
-  @@index([fileId])
+  @@index([fileId, createdAt])
   @@index([folderId])
 }
 
