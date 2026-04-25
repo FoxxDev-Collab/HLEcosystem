@@ -144,7 +144,7 @@ export default async function DashboardPage() {
                     <div className="flex items-center gap-1 text-xs text-muted-foreground">
                       <Package className="size-3" /> Packing
                     </div>
-                    <Progress value={totalItems > 0 ? Math.round((packedCount / totalItems) * 100) : 0} className="h-1.5" />
+                    <Progress value={Math.round((packedCount / totalItems) * 100)} className="h-1.5" />
                     <p className="text-[10px] text-muted-foreground">{packedCount}/{totalItems} packed</p>
                   </div>
                 )}
