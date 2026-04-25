@@ -1,12 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { readFileStream } from "@/lib/file-storage";
+import { logAudit, getClientIp } from "@/lib/audit";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ token: string }> }
 ) {
   const { token } = await params;
+
+  const ip = getClientIp(request) ?? "unknown";
+  if (!checkRateLimit(`share-download:${ip}:${token}`, 20, 60_000)) {
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+  }
 
   const shareLink = await prisma.shareLink.findUnique({
     where: { token },
@@ -36,6 +43,17 @@ export async function GET(
   });
 
   const file = shareLink.file;
+
+  // Log using the link creator as the userId — public access has no auth user.
+  logAudit({
+    householdId: file.householdId,
+    userId: shareLink.createdByUserId,
+    action: "FILE_DOWNLOAD",
+    fileId: file.id,
+    details: { shareToken: token, via: "share-link" },
+    ipAddress: getClientIp(request),
+  });
+
   const stream = readFileStream(file.storagePath);
 
   return new NextResponse(stream, {
@@ -44,6 +62,7 @@ export async function GET(
       "Content-Disposition": `attachment; filename="${encodeURIComponent(file.name)}"`,
       "Content-Length": file.size.toString(),
       "Cache-Control": "private, no-cache",
+      "X-Content-Type-Options": "nosniff",
     },
   });
 }

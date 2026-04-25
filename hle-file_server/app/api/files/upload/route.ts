@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { getCurrentHouseholdId } from "@/lib/household";
 import prisma from "@/lib/prisma";
-import { validateUpload } from "@/lib/file-validation";
+import { validateUpload, validateMimeType } from "@/lib/file-validation";
 import { saveFileStreaming, generateThumbnail } from "@/lib/file-storage";
+import { logAudit, getClientIp } from "@/lib/audit";
 
 // Single-file streaming upload — no memory buffering.
 // For files over ~100MB, prefer the chunked upload API instead.
@@ -33,11 +34,11 @@ export async function POST(request: NextRequest) {
   const folderId = (formData.get("folderId") as string) || null;
   const isPersonal = formData.get("isPersonal") === "true";
 
-  // Validate name and extension (doesn't need the full buffer)
+  // Validate name, extension, and size first
   const validation = validateUpload({
     name: file.name,
     size: file.size,
-    buffer: Buffer.alloc(0), // validation only checks name/size, not content for streaming
+    buffer: Buffer.alloc(0), // size/extension check only at this stage
     type: file.type,
   });
 
@@ -47,6 +48,11 @@ export async function POST(request: NextRequest) {
       { status: 422 }
     );
   }
+
+  // Read first 64 bytes for magic-byte MIME detection without buffering the full file.
+  // file.slice() reads only those bytes; file.stream() below streams the full file separately.
+  const headerBytes = await file.slice(0, 64).arrayBuffer();
+  const { detectedMime } = validateMimeType(Buffer.from(headerBytes), file.type);
 
   try {
     // Stream file to disk — no memory buffering
@@ -82,7 +88,7 @@ export async function POST(request: NextRequest) {
           ownerId: isPersonal ? user.id : null,
           name: validation.sanitizedName,
           originalName: file.name,
-          mimeType: validation.detectedMime,
+          mimeType: detectedMime,
           size: BigInt(size),
           storagePath,
           contentHash,
@@ -113,12 +119,21 @@ export async function POST(request: NextRequest) {
       return fileRecord;
     });
 
+    logAudit({
+      householdId,
+      userId: user.id,
+      action: "FILE_UPLOAD",
+      fileId: created.id,
+      details: { name: created.name, size: created.size.toString(), mimeType: detectedMime },
+      ipAddress: getClientIp(request),
+    });
+
     // Generate thumbnail in background (non-blocking)
     generateThumbnail(
       householdId,
       created.id,
       storagePath,
-      validation.detectedMime
+      detectedMime
     ).then(async (thumbnailPath) => {
       if (thumbnailPath) {
         await prisma.file.update({

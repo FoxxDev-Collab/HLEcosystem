@@ -181,11 +181,7 @@ export async function addTripExpenseAction(formData: FormData): Promise<void> {
     },
   });
 
-  // Update account balance
-  await prisma.account.update({
-    where: { id: accountId },
-    data: { currentBalance: { decrement: amount } },
-  });
+  // Balance updated by sync_account_balance DB trigger on the INSERT above.
 
   // Create the TripExpense linking to the transaction
   const tripExpense = await prisma.tripExpense.create({
@@ -256,16 +252,11 @@ export async function deleteTripExpenseAction(formData: FormData): Promise<void>
   // Delete the TripExpense record
   await prisma.tripExpense.delete({ where: { id } });
 
-  // Optionally delete the linked transaction with balance reversal
+  // Optionally delete the linked transaction.
+  // The sync_account_balance DB trigger automatically reverses the balance
+  // effect on DELETE — no explicit account.update needed.
   if (deleteTransaction && expense.transactionId) {
-    const tx = await prisma.transaction.findUnique({ where: { id: expense.transactionId } });
-    if (tx) {
-      await prisma.account.update({
-        where: { id: tx.accountId },
-        data: { currentBalance: { increment: Number(tx.amount) } },
-      });
-      await prisma.transaction.delete({ where: { id: tx.id } });
-    }
+    await prisma.transaction.delete({ where: { id: expense.transactionId } });
   }
 
   revalidateTripPaths(tripId);

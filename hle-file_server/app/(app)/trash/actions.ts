@@ -73,13 +73,20 @@ export async function permanentDeleteFileAction(formData: FormData) {
   const fileSize = file.size;
   const storagePath = file.storagePath;
 
+  // Check for other File records sharing this storagePath (content-addressed copies).
+  // Only delete from disk if this is the last reference.
+  const otherRefs = await prisma.file.count({
+    where: { storagePath, id: { not: fileId } },
+  });
+
   // Delete the file record from the database (cascades to favorites, tags, etc.)
   await prisma.file.delete({
     where: { id: fileId },
   });
 
-  // Delete file from disk
-  await deleteFileFromDisk(storagePath);
+  if (otherRefs === 0) {
+    await deleteFileFromDisk(storagePath);
+  }
 
   // Decrement storage quota
   await prisma.storageQuota.updateMany({
@@ -116,6 +123,18 @@ export async function emptyTrashAction() {
     totalSize += file.size;
   }
 
+  // Determine which storagePaths are safe to delete from disk.
+  // A path is safe only if no File record OUTSIDE the trashed set references it
+  // (content-addressed copies share the same storagePath).
+  const trashedIds = trashedFiles.map((f) => f.id);
+  const safeToDelete: string[] = [];
+  for (const file of trashedFiles) {
+    const otherRefs = await prisma.file.count({
+      where: { storagePath: file.storagePath, id: { notIn: trashedIds } },
+    });
+    if (otherRefs === 0) safeToDelete.push(file.storagePath);
+  }
+
   // Delete all trashed files from DB (cascades to favorites, tags, etc.)
   await prisma.file.deleteMany({
     where: {
@@ -133,9 +152,9 @@ export async function emptyTrashAction() {
     },
   });
 
-  // Delete files from disk
-  for (const file of trashedFiles) {
-    await deleteFileFromDisk(file.storagePath);
+  // Delete only paths that had no live references
+  for (const storagePath of safeToDelete) {
+    await deleteFileFromDisk(storagePath);
   }
 
   // Decrement storage quota

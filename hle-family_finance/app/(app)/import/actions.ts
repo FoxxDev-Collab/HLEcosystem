@@ -154,18 +154,7 @@ export async function confirmImportAction(formData: FormData): Promise<void> {
       },
     });
 
-    // Update balance
-    if (type === "EXPENSE") {
-      await prisma.account.update({
-        where: { id: batch.accountId },
-        data: { currentBalance: { decrement: amount } },
-      });
-    } else {
-      await prisma.account.update({
-        where: { id: batch.accountId },
-        data: { currentBalance: { increment: amount } },
-      });
-    }
+    // Balance updated by sync_account_balance DB trigger on the INSERT above.
 
     await prisma.importedTransaction.update({
       where: { id: imported.id },

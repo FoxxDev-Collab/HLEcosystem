@@ -62,7 +62,7 @@ export async function createTransactionAction(formData: FormData): Promise<void>
     if (!destAccount) return;
   }
 
-  const transaction = await prisma.transaction.create({
+  await prisma.transaction.create({
     data: {
       householdId,
       type,
@@ -76,30 +76,7 @@ export async function createTransactionAction(formData: FormData): Promise<void>
       createdByUserId: user.id,
     },
   });
-
-  // Update account balance
-  if (type === "EXPENSE") {
-    await prisma.account.update({
-      where: { id: accountId },
-      data: { currentBalance: { decrement: amount } },
-    });
-  } else if (type === "INCOME") {
-    await prisma.account.update({
-      where: { id: accountId },
-      data: { currentBalance: { increment: amount } },
-    });
-  } else if (type === "TRANSFER") {
-    await prisma.account.update({
-      where: { id: accountId },
-      data: { currentBalance: { decrement: amount } },
-    });
-    if (transferToAccountId) {
-      await prisma.account.update({
-        where: { id: transferToAccountId },
-        data: { currentBalance: { increment: amount } },
-      });
-    }
-  }
+  // Account balance is updated by the sync_account_balance DB trigger.
 
   revalidatePath("/transactions");
   revalidatePath("/dashboard");
@@ -144,34 +121,11 @@ export async function deleteTransactionAction(formData: FormData): Promise<void>
 
   const { id } = parsed.data;
 
-  // Get transaction to reverse balance
   const tx = await prisma.transaction.findUnique({ where: { id, householdId } });
   if (!tx) return;
 
-  // Reverse balance
-  if (tx.type === "EXPENSE") {
-    await prisma.account.update({
-      where: { id: tx.accountId },
-      data: { currentBalance: { increment: Number(tx.amount) } },
-    });
-  } else if (tx.type === "INCOME") {
-    await prisma.account.update({
-      where: { id: tx.accountId },
-      data: { currentBalance: { decrement: Number(tx.amount) } },
-    });
-  } else if (tx.type === "TRANSFER") {
-    await prisma.account.update({
-      where: { id: tx.accountId },
-      data: { currentBalance: { increment: Number(tx.amount) } },
-    });
-    if (tx.transferToAccountId) {
-      await prisma.account.update({
-        where: { id: tx.transferToAccountId },
-        data: { currentBalance: { decrement: Number(tx.amount) } },
-      });
-    }
-  }
-
+  // Delete the transaction; the sync_account_balance DB trigger automatically
+  // reverses the balance effect on the affected account(s).
   await prisma.transaction.delete({ where: { id } });
 
   revalidatePath("/transactions");

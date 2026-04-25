@@ -134,11 +134,7 @@ export async function createTransactionsFromReceiptAction(formData: FormData): P
     },
   });
 
-  // Update account balance
-  await prisma.account.update({
-    where: { id: accountId },
-    data: { currentBalance: { decrement: amount } },
-  });
+  // Balance updated by sync_account_balance DB trigger on the INSERT above.
 
   revalidatePath("/transactions");
   revalidatePath("/dashboard");

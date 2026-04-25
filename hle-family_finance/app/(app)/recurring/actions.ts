@@ -49,11 +49,16 @@ export async function createRecurringAction(formData: FormData): Promise<void> {
 }
 
 export async function toggleRecurringActiveAction(formData: FormData): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) redirect("/setup");
+
   const id = formData.get("id") as string;
   const isActive = formData.get("isActive") === "true";
 
   await prisma.recurringTransaction.update({
-    where: { id },
+    where: { id, householdId },
     data: { isActive: !isActive },
   });
 
@@ -61,9 +66,14 @@ export async function toggleRecurringActiveAction(formData: FormData): Promise<v
 }
 
 export async function skipNextOccurrenceAction(formData: FormData): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) redirect("/setup");
+
   const id = formData.get("id") as string;
 
-  const recurring = await prisma.recurringTransaction.findUnique({ where: { id } });
+  const recurring = await prisma.recurringTransaction.findFirst({ where: { id, householdId } });
   if (!recurring || !recurring.nextOccurrence) return;
 
   const nextOccurrence = calculateNextOccurrence(
@@ -76,12 +86,12 @@ export async function skipNextOccurrenceAction(formData: FormData): Promise<void
   // Don't go past end date
   if (recurring.endDate && nextOccurrence > recurring.endDate) {
     await prisma.recurringTransaction.update({
-      where: { id },
+      where: { id, householdId },
       data: { isActive: false, nextOccurrence: null },
     });
   } else {
     await prisma.recurringTransaction.update({
-      where: { id },
+      where: { id, householdId },
       data: { nextOccurrence },
     });
   }
@@ -90,8 +100,13 @@ export async function skipNextOccurrenceAction(formData: FormData): Promise<void
 }
 
 export async function deleteRecurringAction(formData: FormData): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) redirect("/setup");
+
   const id = formData.get("id") as string;
-  await prisma.recurringTransaction.delete({ where: { id } });
+  await prisma.recurringTransaction.delete({ where: { id, householdId } });
   revalidatePath("/recurring");
 }
 
@@ -101,73 +116,12 @@ export async function processDueRecurringAction(): Promise<void> {
   const householdId = await getCurrentHouseholdId();
   if (!householdId) return;
 
-  const today = new Date();
-  today.setHours(23, 59, 59, 999);
-
-  const dueRecurrings = await prisma.recurringTransaction.findMany({
-    where: {
-      householdId,
-      isActive: true,
-      autoCreate: true,
-      nextOccurrence: { lte: today },
-    },
-  });
-
-  for (const recurring of dueRecurrings) {
-    if (!recurring.nextOccurrence) continue;
-
-    // Create the transaction
-    await prisma.transaction.create({
-      data: {
-        householdId,
-        accountId: recurring.accountId,
-        categoryId: recurring.categoryId,
-        transferToAccountId: recurring.transferToAccountId,
-        recurringTransactionId: recurring.id,
-        type: recurring.type,
-        amount: recurring.amount,
-        date: recurring.nextOccurrence,
-        payee: recurring.payee,
-        description: `Auto: ${recurring.name}`,
-        createdByUserId: user.id,
-      },
-    });
-
-    // Update account balance
-    const amount = Number(recurring.amount);
-    if (recurring.type === "EXPENSE") {
-      await prisma.account.update({
-        where: { id: recurring.accountId },
-        data: { currentBalance: { decrement: amount } },
-      });
-    } else if (recurring.type === "INCOME") {
-      await prisma.account.update({
-        where: { id: recurring.accountId },
-        data: { currentBalance: { increment: amount } },
-      });
-    }
-
-    // Calculate next occurrence
-    const nextOccurrence = calculateNextOccurrence(
-      recurring.nextOccurrence,
-      recurring.frequency,
-      recurring.frequencyInterval,
-      recurring.dayOfPeriod
-    );
-
-    // Check end date
-    if (recurring.endDate && nextOccurrence > recurring.endDate) {
-      await prisma.recurringTransaction.update({
-        where: { id: recurring.id },
-        data: { isActive: false, nextOccurrence: null, lastProcessed: recurring.nextOccurrence },
-      });
-    } else {
-      await prisma.recurringTransaction.update({
-        where: { id: recurring.id },
-        data: { nextOccurrence, lastProcessed: recurring.nextOccurrence },
-      });
-    }
-  }
+  // The PG function handles transaction creation, nextOccurrence advancement,
+  // and deactivation atomically. The sync_account_balance trigger fires on
+  // each INSERT, so no explicit balance updates are needed here.
+  await prisma.$executeRaw`
+    SELECT family_finance.process_due_recurring(${householdId}, ${user.id})
+  `;
 
   revalidatePath("/recurring");
   revalidatePath("/transactions");
@@ -212,3 +166,4 @@ function calculateNextOccurrence(
 function daysInMonth(date: Date): number {
   return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
 }
+

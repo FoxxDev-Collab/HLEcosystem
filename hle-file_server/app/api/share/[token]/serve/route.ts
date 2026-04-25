@@ -3,12 +3,32 @@ import { createReadStream } from "fs";
 import { Readable } from "stream";
 import prisma from "@/lib/prisma";
 import { getFileSize } from "@/lib/file-storage";
+import { UNSAFE_INLINE_MIME_TYPES } from "@/lib/file-validation";
+import { checkRateLimit } from "@/lib/rate-limit";
+import { getClientIp } from "@/lib/audit";
+
+function safeContentType(mimeType: string): string {
+  return UNSAFE_INLINE_MIME_TYPES.has(mimeType) ? "application/octet-stream" : mimeType;
+}
+
+function safeDisposition(mimeType: string, name: string): string {
+  const encoded = encodeURIComponent(name);
+  return UNSAFE_INLINE_MIME_TYPES.has(mimeType)
+    ? `attachment; filename="${encoded}"`
+    : `inline; filename="${encoded}"`;
+}
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ token: string }> }
 ) {
   const { token } = await params;
+
+  // Rate limit: 60 requests per minute per IP to prevent scraping if a token leaks.
+  const ip = getClientIp(request) ?? "unknown";
+  if (!checkRateLimit(`share-serve:${ip}:${token}`, 60, 60_000)) {
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+  }
 
   const shareLink = await prisma.shareLink.findUnique({
     where: { token },
@@ -26,6 +46,13 @@ export async function GET(
   if (shareLink.maxDownloads && shareLink.downloadCount >= shareLink.maxDownloads) {
     return NextResponse.json({ error: "Download limit reached" }, { status: 429 });
   }
+
+  // Increment download count before serving — maxDownloads enforcement requires this.
+  // The check above already confirmed we haven't exceeded the limit.
+  await prisma.shareLink.update({
+    where: { id: shareLink.id },
+    data: { downloadCount: { increment: 1 } },
+  });
 
   const file = shareLink.file;
   const totalSize = await getFileSize(file.storagePath);
@@ -52,11 +79,13 @@ export async function GET(
     return new NextResponse(stream, {
       status: 206,
       headers: {
-        "Content-Type": file.mimeType,
+        "Content-Type": safeContentType(file.mimeType),
+        "Content-Disposition": safeDisposition(file.mimeType, file.name),
         "Content-Range": `bytes ${start}-${end}/${totalSize}`,
         "Content-Length": chunkSize.toString(),
         "Accept-Ranges": "bytes",
         "Cache-Control": "private, max-age=3600",
+        "X-Content-Type-Options": "nosniff",
       },
     });
   }
@@ -66,11 +95,12 @@ export async function GET(
 
   return new NextResponse(stream, {
     headers: {
-      "Content-Type": file.mimeType,
-      "Content-Disposition": `inline; filename="${encodeURIComponent(file.name)}"`,
+      "Content-Type": safeContentType(file.mimeType),
+      "Content-Disposition": safeDisposition(file.mimeType, file.name),
       "Content-Length": totalSize.toString(),
       "Accept-Ranges": "bytes",
       "Cache-Control": "private, max-age=3600",
+      "X-Content-Type-Options": "nosniff",
     },
   });
 }
