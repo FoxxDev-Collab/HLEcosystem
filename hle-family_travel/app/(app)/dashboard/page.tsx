@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import {
-  Plane, FileText, MapPin, Calendar, Clock, Tag,
+  Plane, FileText, MapPin, Calendar, Tag,
   Package, DollarSign, CheckSquare,
 } from "lucide-react";
 import Link from "next/link";
