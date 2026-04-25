@@ -89,6 +89,7 @@ model File {
   shareLinks    ShareLink[]
   photoMetadata PhotoMetadata?
   albumFiles    AlbumFile[]
+  content       FileContent?
 
   @@index([householdId])
   @@index([folderId])
@@ -391,3 +392,24 @@ model StorageQuota {
 
   @@index([householdId])
 }
+
+// ============================================================================
+// DOCUMENT CONTENT (full-text search)
+// ============================================================================
+
+model FileContent {
+  id          String    @id @default(cuid())
+  fileId      String    @unique
+  rawText     String?   @db.Text
+  pageCount   Int?
+  wordCount   Int?
+  extractedAt DateTime  @default(now())
+
+  file File @relation(fields: [fileId], references: [id], onDelete: Cascade)
+
+  @@index([fileId])
+}
+// searchVector tsvector column is added via raw SQL migration (Prisma does not
+// support generated columns). It is maintained automatically by Postgres as a
+// GENERATED ALWAYS AS (to_tsvector('english', COALESCE(rawText, ''))) STORED
+// column and queried exclusively through $queryRaw.

@@ -31,6 +31,8 @@ export type SerializedFile = {
   uploadedByName: string;
   description: string | null;
   tags: { id: string; name: string; color: string | null }[];
+  excerpt?: string | null; // content-search excerpt with [[...]] highlight markers
+  hasContent?: boolean;    // true if document text has been indexed
 };
 
 export type SerializedFolder = {
@@ -127,6 +129,140 @@ function getSortField(sort: string): string {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Full-text content search — runs when ?q= is present on a normal browse.
+// Combines:
+//   • tsvector full-text match against indexed document content (ts_rank)
+//   • pg_trgm ILIKE match against filename / description
+// Results are ranked by relevance descending and returned as a flat list
+// (no cursor pagination — search results are typically small).
+// Searches all files the user can access: household (ownerId IS NULL) and
+// their own personal files (ownerId = userId).
+// ---------------------------------------------------------------------------
+type ContentSearchRow = {
+  id: string;
+  name: string;
+  mimeType: string;
+  size: string;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+  uploadedByUserId: string;
+  description: string | null;
+  hasContent: boolean;
+  excerpt: string | null;
+  rank: number;
+};
+
+async function contentSearch(params: {
+  q: string;
+  householdId: string;
+  userId: string;
+  limit: number;
+}): Promise<NextResponse> {
+  const { q, householdId, userId, limit } = params;
+  // Escape ILIKE wildcards in the raw input
+  const likeQ = `%${q.replace(/[%_\\]/g, "\\$&")}%`;
+
+  const rows = await prisma.$queryRaw<ContentSearchRow[]>`
+    SELECT
+      f.id,
+      f.name,
+      f."mimeType",
+      f.size::text                  AS size,
+      f."createdAt",
+      f."updatedAt",
+      f."deletedAt",
+      f."uploadedByUserId",
+      f.description,
+      (fc."rawText" IS NOT NULL)    AS "hasContent",
+      CASE
+        WHEN fc."searchVector" IS NOT NULL
+         AND fc."searchVector" @@ websearch_to_tsquery('english', ${q})
+        THEN ts_headline(
+          'english',
+          fc."rawText",
+          websearch_to_tsquery('english', ${q}),
+          'MaxWords=30, MinWords=15, StartSel=[[, StopSel=]], ShortWord=3'
+        )
+        ELSE NULL
+      END                           AS excerpt,
+      GREATEST(
+        COALESCE(
+          CASE
+            WHEN fc."searchVector" IS NOT NULL
+             AND fc."searchVector" @@ websearch_to_tsquery('english', ${q})
+            THEN ts_rank(fc."searchVector", websearch_to_tsquery('english', ${q}))
+            ELSE NULL
+          END,
+          0.0
+        ),
+        CASE WHEN f.name        ILIKE ${likeQ} THEN 0.3 ELSE 0.0 END,
+        CASE WHEN f.description ILIKE ${likeQ} THEN 0.1 ELSE 0.0 END
+      )                             AS rank
+    FROM   file_server."File"        f
+    LEFT JOIN file_server."FileContent" fc ON fc."fileId" = f.id
+    WHERE  f."householdId" = ${householdId}
+      AND  f.status         = 'ACTIVE'
+      AND  f."deletedAt"    IS NULL
+      AND  (f."ownerId" IS NULL OR f."ownerId" = ${userId})
+      AND  (
+             f.name         ILIKE ${likeQ}
+          OR f.description  ILIKE ${likeQ}
+          OR f."originalName" ILIKE ${likeQ}
+          OR (
+               fc."searchVector" IS NOT NULL
+               AND fc."searchVector" @@ websearch_to_tsquery('english', ${q})
+             )
+           )
+    ORDER  BY rank DESC, f."updatedAt" DESC
+    LIMIT  ${limit}
+  `;
+
+  const uploaderIds = [...new Set(rows.map((r) => r.uploadedByUserId))];
+  const userList = await getUsersByIds(uploaderIds);
+  const userMap = new Map(userList.map((u) => [u.id, u.name]));
+
+  const fileIds = rows.map((r) => r.id);
+  const tagRows = fileIds.length > 0
+    ? await prisma.fileTag.findMany({
+        where: { fileId: { in: fileIds } },
+        include: { tag: { select: { id: true, name: true, color: true } } },
+      })
+    : [];
+  const tagsByFile = new Map<string, { id: string; name: string; color: string | null }[]>();
+  for (const ft of tagRows) {
+    const arr = tagsByFile.get(ft.fileId) ?? [];
+    arr.push({ id: ft.tag.id, name: ft.tag.name, color: ft.tag.color });
+    tagsByFile.set(ft.fileId, arr);
+  }
+
+  const files: SerializedFile[] = rows.map((r) => ({
+    id: r.id,
+    name: r.name,
+    mimeType: r.mimeType,
+    size: r.size,
+    createdAt: new Date(r.createdAt).toISOString(),
+    updatedAt: new Date(r.updatedAt).toISOString(),
+    deletedAt: r.deletedAt ? new Date(r.deletedAt).toISOString() : null,
+    uploadedByUserId: r.uploadedByUserId,
+    uploadedByName: userMap.get(r.uploadedByUserId) ?? "Unknown",
+    description: r.description,
+    tags: tagsByFile.get(r.id) ?? [],
+    excerpt: r.excerpt ?? null,
+    hasContent: Boolean(r.hasContent),
+  }));
+
+  const response: FileListResponse = {
+    files,
+    folders: [],
+    nextCursor: null,
+    totalCount: files.length,
+  };
+
+  return NextResponse.json(response);
+}
+
 export async function GET(request: NextRequest) {
   const user = await getCurrentUser();
   if (!user) {
@@ -154,6 +290,11 @@ export async function GET(request: NextRequest) {
   const status = (params.get("status") || "ACTIVE") as "ACTIVE" | "DELETED";
   const mode = params.get("mode") as FileListParams["mode"] || null;
 
+  // Full-text content search — bypasses the Prisma path entirely
+  if (q && status === "ACTIVE" && !mode) {
+    return contentSearch({ q, householdId, userId: user.id, limit });
+  }
+
   // Build file WHERE clause
   const where: Prisma.FileWhereInput = { householdId };
 
@@ -177,13 +318,7 @@ export async function GET(request: NextRequest) {
     where.status = "ACTIVE";
     where.deletedAt = null;
 
-    if (q) {
-      where.OR = [
-        { name: { contains: q, mode: "insensitive" } },
-        { description: { contains: q, mode: "insensitive" } },
-        { originalName: { contains: q, mode: "insensitive" } },
-      ];
-    } else if (tag) {
+    if (tag) {
       where.tags = { some: { tagId: tag } };
     } else {
       where.folderId = folderId || null;

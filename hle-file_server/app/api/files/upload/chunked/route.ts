@@ -10,6 +10,7 @@ import {
 } from "@/lib/file-storage";
 import { sanitizeFilename, isBlockedExtension, isValidUploadId } from "@/lib/file-validation";
 import { logAudit, getClientIp } from "@/lib/audit";
+import { extractAndStoreContent } from "@/lib/document-parser";
 
 const MAX_CHUNK_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB per chunk
 const MAX_CHUNK_COUNT = 1000; // 10 MB × 1000 = 10 GB max via chunked upload
@@ -132,6 +133,9 @@ export async function POST(request: NextRequest) {
         details: { name: created.name, size: created.size.toString(), chunked: true },
         ipAddress: getClientIp(request),
       });
+
+      // Extract document content in background (non-blocking)
+      extractAndStoreContent(created.id, storagePath, mimeType).catch(() => {});
 
       return NextResponse.json({
         id: created.id,

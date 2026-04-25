@@ -1,35 +1,70 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
-import { Search } from "lucide-react";
+import { Search, X } from "lucide-react";
 
 export function SearchInput({ baseUrl }: { baseUrl: string }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [query, setQuery] = useState(searchParams.get("q") || "");
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
+  // Sync input if the URL param changes externally (e.g. browser back/forward)
+  useEffect(() => {
+    setQuery(searchParams.get("q") || "");
+  }, [searchParams]);
+
+  const navigate = (value: string) => {
     const params = new URLSearchParams(searchParams.toString());
-    if (query) {
-      params.set("q", query);
+    if (value) {
+      params.set("q", value);
     } else {
       params.delete("q");
     }
-    router.push(`${baseUrl}?${params.toString()}`);
+    // replace instead of push — avoid a history entry per keystroke
+    router.replace(`${baseUrl}?${params.toString()}`);
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setQuery(value);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => navigate(value), 300);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    navigate(query);
+  };
+
+  const handleClear = () => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    setQuery("");
+    navigate("");
   };
 
   return (
-    <form onSubmit={handleSearch} className="relative">
-      <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+    <form onSubmit={handleSubmit} className="relative">
+      <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
       <Input
         value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder="Search files..."
-        className="pl-9 w-64"
+        onChange={handleChange}
+        placeholder="Search files & content..."
+        className="pl-9 pr-8 w-64"
       />
+      {query && (
+        <button
+          type="button"
+          onClick={handleClear}
+          className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+          aria-label="Clear search"
+        >
+          <X className="size-3.5" />
+        </button>
+      )}
     </form>
   );
 }

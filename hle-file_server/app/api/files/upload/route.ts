@@ -5,6 +5,7 @@ import prisma from "@/lib/prisma";
 import { validateUpload, validateMimeType } from "@/lib/file-validation";
 import { saveFileStreaming, generateThumbnail } from "@/lib/file-storage";
 import { logAudit, getClientIp } from "@/lib/audit";
+import { extractAndStoreContent } from "@/lib/document-parser";
 
 // Single-file streaming upload — no memory buffering.
 // For files over ~100MB, prefer the chunked upload API instead.
@@ -128,20 +129,15 @@ export async function POST(request: NextRequest) {
       ipAddress: getClientIp(request),
     });
 
-    // Generate thumbnail in background (non-blocking)
-    generateThumbnail(
-      householdId,
-      created.id,
-      storagePath,
-      detectedMime
-    ).then(async (thumbnailPath) => {
-      if (thumbnailPath) {
-        await prisma.file.update({
-          where: { id: created.id },
-          data: { thumbnailPath },
-        });
+    // Generate thumbnail + extract document content in background (non-blocking)
+    generateThumbnail(householdId, created.id, storagePath, detectedMime).then(
+      async (thumbnailPath) => {
+        if (thumbnailPath) {
+          await prisma.file.update({ where: { id: created.id }, data: { thumbnailPath } });
+        }
       }
-    });
+    );
+    extractAndStoreContent(created.id, storagePath, detectedMime).catch(() => {});
 
     return NextResponse.json(
       {

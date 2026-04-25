@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import React, { useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useVirtualizer } from "@tanstack/react-virtual";
@@ -51,6 +51,22 @@ type FileListProps = {
 };
 
 const ROW_HEIGHT = 48;
+const ROW_HEIGHT_EXCERPT = 72;
+
+// Render a ts_headline excerpt — Postgres wraps matched terms in [[ and ]]
+function renderHighlight(text: string): React.ReactNode {
+  const parts = text.split(/(\[\[.*?\]\])/);
+  return parts.map((part, i) => {
+    if (part.startsWith("[[") && part.endsWith("]]")) {
+      return (
+        <mark key={i} className="bg-yellow-200 dark:bg-yellow-800 rounded-[2px] px-0.5">
+          {part.slice(2, -2)}
+        </mark>
+      );
+    }
+    return part;
+  });
+}
 
 type ListItem =
   | { type: "folder"; data: SerializedFolder }
@@ -102,7 +118,11 @@ export function FileList({
   const virtualizer = useVirtualizer({
     count: items.length,
     getScrollElement: () => scrollRef.current,
-    estimateSize: () => ROW_HEIGHT,
+    estimateSize: (i) => {
+      const item = items[i];
+      return item.type === "file" && item.data.excerpt ? ROW_HEIGHT_EXCERPT : ROW_HEIGHT;
+    },
+    measureElement: (el) => el.getBoundingClientRect().height,
     overscan: 15,
   });
 
@@ -341,37 +361,38 @@ export function FileList({
             e.dataTransfer.setData("application/x-file-id", file.id);
             e.dataTransfer.effectAllowed = "move";
           }}
-          className="flex items-center h-12 px-3 border-b transition-colors cursor-grab active:cursor-grabbing hover:bg-accent/30"
+          className="flex flex-col px-3 border-b transition-colors cursor-grab active:cursor-grabbing hover:bg-accent/30 min-h-12 justify-center py-1.5"
         >
-          {hasSelection && (
-            <div className="w-10 shrink-0" onClick={(e) => e.stopPropagation()}>
-              <Checkbox
-                checked={selectedFileIds.includes(file.id)}
-                onCheckedChange={() => onToggleFileSelection?.(file.id)}
-                aria-label={`Select ${file.name}`}
-              />
-            </div>
-          )}
-          <div className="flex-1 min-w-0 overflow-hidden">
-            {renamingFileId === file.id ? (
-              <div className="flex items-center gap-2 min-w-0">
-                <FileIcon mimeType={file.mimeType} className="shrink-0" />
-                <InlineRename
-                  name={file.name}
-                  onRename={(n) => handleRenameFile(file.id, n)}
-                  onCancel={() => setRenamingFileId(null)}
+          <div className="flex items-center">
+            {hasSelection && (
+              <div className="w-10 shrink-0" onClick={(e) => e.stopPropagation()}>
+                <Checkbox
+                  checked={selectedFileIds.includes(file.id)}
+                  onCheckedChange={() => onToggleFileSelection?.(file.id)}
+                  aria-label={`Select ${file.name}`}
                 />
               </div>
-            ) : (
-              <Link
-                href={`${baseUrl}/${file.id}`}
-                className="flex items-center gap-2 hover:underline font-medium min-w-0"
-              >
-                <FileIcon mimeType={file.mimeType} className="shrink-0" />
-                <span className="truncate block">{file.name}</span>
-              </Link>
             )}
-          </div>
+            <div className="flex-1 min-w-0 overflow-hidden">
+              {renamingFileId === file.id ? (
+                <div className="flex items-center gap-2 min-w-0">
+                  <FileIcon mimeType={file.mimeType} className="shrink-0" />
+                  <InlineRename
+                    name={file.name}
+                    onRename={(n) => handleRenameFile(file.id, n)}
+                    onCancel={() => setRenamingFileId(null)}
+                  />
+                </div>
+              ) : (
+                <Link
+                  href={`${baseUrl}/${file.id}`}
+                  className="flex items-center gap-2 hover:underline font-medium min-w-0"
+                >
+                  <FileIcon mimeType={file.mimeType} className="shrink-0" />
+                  <span className="truncate block">{file.name}</span>
+                </Link>
+              )}
+            </div>
           <div className="hidden md:block w-24">
             <Badge variant="secondary">{formatMimeType(file.mimeType)}</Badge>
           </div>
@@ -445,6 +466,12 @@ export function FileList({
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
+          </div>{/* end inner flex row */}
+          {file.excerpt && (
+            <p className="text-[11px] text-muted-foreground leading-snug line-clamp-2 pl-6 pr-12">
+              {renderHighlight(file.excerpt)}
+            </p>
+          )}
         </div>
       </ContextMenuTrigger>
       <ContextMenuContent>
@@ -526,12 +553,13 @@ export function FileList({
               return (
                 <div
                   key={virtualRow.key}
+                  data-index={virtualRow.index}
+                  ref={virtualizer.measureElement}
                   style={{
                     position: "absolute",
                     top: 0,
                     left: 0,
                     width: "100%",
-                    height: `${virtualRow.size}px`,
                     transform: `translateY(${virtualRow.start}px)`,
                   }}
                 >
