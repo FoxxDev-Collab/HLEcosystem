@@ -1,20 +1,21 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Search, X } from "lucide-react";
 
 export function SearchInput({ baseUrl, className }: { baseUrl: string; className?: string }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [query, setQuery] = useState(searchParams.get("q") || "");
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Sync input if the URL param changes externally (e.g. browser back/forward)
-  useEffect(() => {
-    setQuery(searchParams.get("q") || "");
-  }, [searchParams]);
+  const urlQuery = searchParams.get("q") || "";
+  // null = "mirror the URL value"; set to a string while user is typing before
+  // the debounce fires. Clears itself after navigation, so back/forward always
+  // shows the URL value without needing a useEffect or ref-during-render sync.
+  const [pendingQuery, setPendingQuery] = useState<string | null>(null);
+  const displayQuery = pendingQuery ?? urlQuery;
 
   const navigate = (value: string) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -23,13 +24,13 @@ export function SearchInput({ baseUrl, className }: { baseUrl: string; className
     } else {
       params.delete("q");
     }
-    // replace instead of push — avoid a history entry per keystroke
     router.replace(`${baseUrl}?${params.toString()}`);
+    setPendingQuery(null);
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    setQuery(value);
+    setPendingQuery(value);
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => navigate(value), 300);
   };
@@ -37,12 +38,12 @@ export function SearchInput({ baseUrl, className }: { baseUrl: string; className
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    navigate(query);
+    navigate(displayQuery);
   };
 
   const handleClear = () => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    setQuery("");
+    setPendingQuery(null);
     navigate("");
   };
 
@@ -50,12 +51,12 @@ export function SearchInput({ baseUrl, className }: { baseUrl: string; className
     <form onSubmit={handleSubmit} className={`relative ${className ?? ""}`}>
       <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
       <Input
-        value={query}
+        value={displayQuery}
         onChange={handleChange}
         placeholder="Search files & content..."
         className="pl-9 pr-8 w-full"
       />
-      {query && (
+      {displayQuery && (
         <button
           type="button"
           onClick={handleClear}

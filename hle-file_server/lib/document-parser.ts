@@ -41,13 +41,19 @@ async function parseDocx(buf: Buffer): Promise<ParseResult | null> {
 
 async function parseXlsx(buf: Buffer): Promise<ParseResult | null> {
   try {
-    const XLSX = await import("xlsx");
-    const wb = XLSX.read(buf, { type: "buffer" });
+    const ExcelJS = await import("exceljs");
+    const workbook = new ExcelJS.Workbook();
+    // Node 22 Buffer<ArrayBufferLike> doesn't satisfy exceljs's non-generic Buffer type
+    await workbook.xlsx.load(buf as unknown as Parameters<typeof workbook.xlsx.load>[0]);
     const parts: string[] = [];
-    for (const name of wb.SheetNames) {
-      const ws = wb.Sheets[name];
-      parts.push(XLSX.utils.sheet_to_csv(ws));
-    }
+    workbook.eachSheet((sheet) => {
+      const rows: string[] = [];
+      sheet.eachRow((row) => {
+        const values = (row.values as unknown[]).slice(1);
+        rows.push(values.map((v) => (v == null ? "" : String(v))).join(","));
+      });
+      parts.push(rows.join("\n"));
+    });
     const rawText = parts.join("\n").slice(0, MAX_TEXT_BYTES);
     const wordCount = rawText.trim().split(/\s+/).filter(Boolean).length;
     return { rawText, wordCount };
