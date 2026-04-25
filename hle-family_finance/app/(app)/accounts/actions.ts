@@ -140,7 +140,10 @@ export async function adjustBalanceAction(formData: FormData): Promise<void> {
     });
   }
 
-  // Create the adjustment transaction
+  // Create the adjustment transaction.
+  // The sync_account_balance DB trigger fires on INSERT and adjusts
+  // currentBalance by ±amount, which equals the difference — no explicit
+  // account.update needed.
   const type = difference > 0 ? "INCOME" : "EXPENSE";
   const amount = Math.abs(difference);
 
@@ -157,12 +160,6 @@ export async function adjustBalanceAction(formData: FormData): Promise<void> {
       isBalanceAdjustment: true,
       createdByUserId: user.id,
     },
-  });
-
-  // Update the account balance
-  await prisma.account.update({
-    where: { id: accountId },
-    data: { currentBalance: targetBalance },
   });
 
   revalidatePath(`/accounts/${accountId}`);

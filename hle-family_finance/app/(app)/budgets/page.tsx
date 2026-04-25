@@ -67,27 +67,56 @@ export default async function BudgetsPage({
   const nextMonth = month === 12 ? 1 : month + 1;
   const nextYear = month === 12 ? year + 1 : year;
 
-  // --- Budget Trends (6 months) ---
+  // --- Budget Trends (6 months) — 2 queries instead of 12 ---
+  const trendStart = new Date(year, month - 6, 1);   // 5 months back, inclusive
+  const trendEnd   = new Date(year, month, 0);        // last day of current month
+
+  // Start year/month for the budget range filter
+  const trendStartYear  = trendStart.getFullYear();
+  const trendStartMonth = trendStart.getMonth() + 1;
+
+  type TrendSpendRow   = { year: number; month: number; spent: number };
+  type TrendBudgetRow  = { year: number; month: number; budgeted: number };
+
+  const [rawSpend, rawBudgets] = await Promise.all([
+    prisma.$queryRaw<TrendSpendRow[]>`
+      SELECT
+        EXTRACT(YEAR  FROM date)::int AS year,
+        EXTRACT(MONTH FROM date)::int AS month,
+        SUM(amount)::float            AS spent
+      FROM family_finance."Transaction"
+      WHERE "householdId" = ${householdId}
+        AND type = 'EXPENSE'
+        AND date >= ${trendStart}
+        AND date <= ${trendEnd}
+      GROUP BY EXTRACT(YEAR FROM date), EXTRACT(MONTH FROM date)
+    `,
+    prisma.$queryRaw<TrendBudgetRow[]>`
+      SELECT
+        year::int,
+        month::int,
+        SUM(amount)::float AS budgeted
+      FROM family_finance."Budget"
+      WHERE "householdId" = ${householdId}
+        AND (year * 12 + month) >= ${trendStartYear * 12 + trendStartMonth}
+        AND (year * 12 + month) <= ${year * 12 + month}
+      GROUP BY year, month
+    `,
+  ]);
+
+  const spendMap  = new Map(rawSpend.map((r)  => [`${r.year}-${r.month}`,  r.spent]));
+  const budgetMap2 = new Map(rawBudgets.map((r) => [`${r.year}-${r.month}`, r.budgeted]));
+
   const trendMonths: { label: string; budgeted: number; spent: number }[] = [];
   for (let i = 5; i >= 0; i--) {
     const tDate = new Date(year, month - 1 - i, 1);
-    const tY = tDate.getFullYear();
-    const tM = tDate.getMonth() + 1;
-    const tFirst = new Date(tY, tM - 1, 1);
-    const tLast = new Date(tY, tM, 0);
-
-    const [tBudgets, tTransactions] = await Promise.all([
-      prisma.budget.findMany({ where: { householdId, year: tY, month: tM } }),
-      prisma.transaction.aggregate({
-        where: { householdId, type: "EXPENSE", date: { gte: tFirst, lte: tLast } },
-        _sum: { amount: true },
-      }),
-    ]);
-
+    const tY    = tDate.getFullYear();
+    const tM    = tDate.getMonth() + 1;
+    const key   = `${tY}-${tM}`;
     trendMonths.push({
-      label: tDate.toLocaleString("en-US", { month: "short" }),
-      budgeted: tBudgets.reduce((s, b) => s + Number(b.amount), 0),
-      spent: Number(tTransactions._sum.amount || 0),
+      label:    tDate.toLocaleString("en-US", { month: "short" }),
+      budgeted: budgetMap2.get(key) ?? 0,
+      spent:    spendMap.get(key)   ?? 0,
     });
   }
 

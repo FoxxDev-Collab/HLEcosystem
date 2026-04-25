@@ -151,7 +151,6 @@ describe("createTransactionAction — ADR-0005 household scoping regression", ()
       currentBalance: 1000,
     });
     mockPrisma.transaction.create.mockResolvedValueOnce({ id: "txn_1" });
-    mockPrisma.account.update.mockResolvedValueOnce({});
 
     await createTransactionAction(
       makeFormData({
@@ -163,11 +162,9 @@ describe("createTransactionAction — ADR-0005 household scoping regression", ()
     );
 
     expect(mockPrisma.transaction.create).toHaveBeenCalledTimes(1);
-    expect(mockPrisma.account.update).toHaveBeenCalledTimes(1);
-    expect(mockPrisma.account.update).toHaveBeenCalledWith({
-      where: { id: "acct_A" },
-      data: { currentBalance: { decrement: 50 } },
-    });
+    // Balance update is handled by the sync_account_balance DB trigger on INSERT,
+    // so the application layer must NOT call account.update.
+    expect(mockPrisma.account.update).not.toHaveBeenCalled();
   });
 
   it("rejects the request when input fails zod validation (defense in depth)", async () => {
