@@ -1,6 +1,9 @@
 -- HLEcosystem PostgreSQL initialization
 -- Runs automatically on first boot via docker-entrypoint-initdb.d
 
+-- Extensions (must be created by the superuser before migrations run)
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
 -- App schemas (all within the 'foxxlab' database)
 CREATE SCHEMA IF NOT EXISTS family_manager;
 CREATE SCHEMA IF NOT EXISTS familyhub;
