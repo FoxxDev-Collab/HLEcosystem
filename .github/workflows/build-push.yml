@@ -11,12 +11,14 @@ env:
 
 permissions:
   contents: read
-  packages: write
-  security-events: write  # Trivy SARIF upload for built images
 
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write          # Push image to GHCR
+      security-events: write   # Grype SARIF upload for built images
     strategy:
       fail-fast: false
       matrix:

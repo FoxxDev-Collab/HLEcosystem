@@ -8,7 +8,7 @@ export function formatCurrency(
       ? parseFloat(amount)
       : typeof amount === "number"
         ? amount
-        : typeof amount === "object" && amount && "toNumber" in amount
+        : typeof amount === "object" && "toNumber" in amount
           ? (amount as { toNumber: () => number }).toNumber()
           : Number(amount);
   if (isNaN(num)) return "";
