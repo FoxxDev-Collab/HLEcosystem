@@ -15,7 +15,6 @@ concurrency:
 
 permissions:
   contents: read
-  security-events: write  # SARIF upload to code scanning
 
 jobs:
   # Static analysis of the workflow YAML itself — catches script-injection sinks,
@@ -114,6 +113,9 @@ jobs:
   trivy-fs:
     name: Dependency + config scan (trivy)
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write  # SARIF upload to code scanning
     steps:
       - uses: actions/checkout@v4
 
