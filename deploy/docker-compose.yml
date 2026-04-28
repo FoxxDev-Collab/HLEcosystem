@@ -39,6 +39,37 @@ x-nextjs-app: &nextjs-app
       reservations:
         memory: 128M
 
+x-bun-app: &bun-app
+  restart: unless-stopped
+  networks:
+    - hle-net
+  depends_on:
+    postgres:
+      condition: service_healthy
+  environment: &bun-env
+    NODE_ENV: production
+    PORT: "3000"
+    AUTH_URL: ${AUTH_URL:-http://localhost:8080}
+    AUTH_DOMAIN: ${AUTH_DOMAIN:-}
+    SECURE_COOKIES: ${SECURE_COOKIES:-true}
+  healthcheck:
+    test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1"]
+    interval: 30s
+    timeout: 5s
+    retries: 3
+    start_period: 20s
+  logging:
+    driver: "json-file"
+    options:
+      max-size: "100m"
+      max-file: "10"
+  deploy:
+    resources:
+      limits:
+        memory: 512M
+      reservations:
+        memory: 128M
+
 services:
 
   # PostgreSQL 16
@@ -205,6 +236,23 @@ services:
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
       CLAUDE_API_SERVICE_SECRET: ${CLAUDE_API_SERVICE_SECRET}
 
+  # Media — Bun + React. Library, IPTV channels (Phase 2), Plex-lite player.
+  hle-media:
+    <<: *bun-app
+    image: ghcr.io/foxxdev-collab/hle-media:latest
+    container_name: foxxlab-media
+    ports:
+      - "${MEDIA_PORT:-8090}:3000"
+    volumes:
+      - media-library:/app/library
+    environment:
+      <<: *bun-env
+      DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/foxxlab"
+      APP_URL: ${MEDIA_URL:-http://localhost:8090}
+      BUN_PUBLIC_AUTH_URL: ${AUTH_URL:-http://localhost:8080}
+      MEDIA_LIBRARY_PATH: "/app/library"
+      TMDB_API_KEY: ${TMDB_API_KEY:-}
+
 networks:
   hle-net:
     driver: bridge
@@ -219,3 +267,5 @@ volumes:
     name: hle-home-care-uploads
   file-server-uploads:
     name: hle-file-server-uploads
+  media-library:
+    name: hle-media-library
