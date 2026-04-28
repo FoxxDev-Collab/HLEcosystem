@@ -33,27 +33,13 @@ FROM docker.io/oven/bun:1-alpine AS runner
 ARG APP_DIR
 WORKDIR /app
 
-# Apply pending apk security updates on top of the base image, then install
+# Apply pending apk security updates on top of the base image, and install
 # ffmpeg (which also provides ffprobe). The library scanner shells out to
 # ffprobe to read codec/duration/resolution metadata, and Phase 2 IPTV
-# channels will drive HLS streams via ffmpeg.
-#
-# We pull ffmpeg + its dependency closure from alpine edge (main + community)
-# rather than the base 3.22 community repo. Reason: 3.22 ships ffmpeg 6.1.2
-# which is still vulnerable to CVE-2026-40962 (integer overflow / out-of-
-# bounds write in libavformat/mov.c via crafted CENC subsample data — fixed
-# in ffmpeg 8.1). Edge currently has 8.1-r0. Edge also ships a glib new
-# enough to clear CVE-2025-13601 (g_escape_uri_string heap overflow).
-#
-# Mixing edge packages on a 3.22 base is install-scoped (--repository on the
-# command line; not written to /etc/apk/repositories), so the runtime has
-# bun from 3.22 + ffmpeg/glib/etc. from edge. Resolved at build time, frozen
-# in the image. Adds ~130MB.
+# channels will drive HLS streams via ffmpeg. Both binaries ship in the
+# single `ffmpeg` package on alpine. Adds ~50MB to the runtime image.
 RUN apk upgrade --no-cache && \
-    apk add --no-cache \
-      --repository=http://dl-cdn.alpinelinux.org/alpine/edge/main \
-      --repository=http://dl-cdn.alpinelinux.org/alpine/edge/community \
-      ffmpeg
+    apk add --no-cache ffmpeg
 
 RUN addgroup --system --gid 1001 bunapp && \
     adduser  --system --uid 1001 --ingroup bunapp bunapp
