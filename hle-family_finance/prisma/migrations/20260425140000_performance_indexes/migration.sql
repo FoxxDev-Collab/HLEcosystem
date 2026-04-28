@@ -1,9 +1,15 @@
--- Widen search_path so gin_trgm_ops is visible without schema qualification.
--- Prisma sets search_path=family_finance at the connection level; this SET
--- persists for the duration of this migration transaction.
+-- Widen search_path so gin_trgm_ops is visible without schema qualification
+-- in the CREATE INDEX statements below. Prisma sets search_path=family_finance
+-- at the connection level; this SET persists for the duration of this
+-- migration transaction.
 SET search_path TO public, family_finance;
 
-CREATE EXTENSION IF NOT EXISTS pg_trgm;
+-- SCHEMA public is explicit so the extension lands in public regardless of
+-- the active search_path or whether another app's migration already installed
+-- pg_trgm into a different schema. Without this, IF NOT EXISTS would silently
+-- skip installing into public if pg_trgm exists elsewhere, and gin_trgm_ops
+-- would not resolve via the search_path set above.
+CREATE EXTENSION IF NOT EXISTS pg_trgm SCHEMA public;
 
 -- Covering index: carries amount, type, categoryId in the leaf so reports,
 -- budgets, and advisor queries can do Index Only Scans without heap fetches.
