@@ -73,13 +73,15 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+        with:
+          persist-credentials: false
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
+        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4
 
       - name: Log in to GHCR
-        uses: docker/login-action@v4
+        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -87,7 +89,7 @@ jobs:
 
       - name: Extract metadata
         id: meta
-        uses: docker/metadata-action@v6
+        uses: docker/metadata-action@030e881283bb7a6894de51c315a6bfe6a94e05cf # v6
         with:
           images: ${{ env.IMAGE_PREFIX }}/${{ matrix.image_name }}
           tags: |
@@ -98,7 +100,7 @@ jobs:
       # images from ever reaching GHCR.
       - name: Build (local, for scan)
         id: build
-        uses: docker/build-push-action@v7
+        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7
         with:
           context: .
           file: ${{ matrix.dockerfile }}
@@ -122,7 +124,7 @@ jobs:
       # its strengths (IaC, config, OS package coverage) are better.
       - name: Grype image scan (SARIF)
         id: grype-sarif
-        uses: anchore/scan-action@v6
+        uses: anchore/scan-action@1638637db639e0ade3258b51db49a9a137574c3e # v6
         with:
           image: ${{ matrix.image_name }}:scan
           fail-build: false
@@ -131,13 +133,13 @@ jobs:
 
       - name: Upload image SARIF
         if: always() && steps.grype-sarif.outputs.sarif != ''
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@ce64ddcb0d8d890d2df4a9d1c04ff297367dea2a # v3
         with:
           sarif_file: ${{ steps.grype-sarif.outputs.sarif }}
           category: grype-image-${{ matrix.image_name }}
 
       - name: Grype image scan (fail on HIGH/CRITICAL)
-        uses: anchore/scan-action@v6
+        uses: anchore/scan-action@1638637db639e0ade3258b51db49a9a137574c3e # v6
         with:
           image: ${{ matrix.image_name }}:scan
           fail-build: true
@@ -145,7 +147,7 @@ jobs:
           output-format: table
 
       - name: Push image
-        uses: docker/build-push-action@v7
+        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7
         with:
           context: .
           file: ${{ matrix.dockerfile }}
@@ -162,7 +164,7 @@ jobs:
       # NIST SR-4 / SR-11 and FOSS-consumer transparency. Attached as a
       # workflow artifact; can later be attested via cosign.
       - name: Generate SBOM (CycloneDX)
-        uses: anchore/sbom-action@v0
+        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0
         with:
           image: ${{ matrix.image_name }}:scan
           format: cyclonedx-json
