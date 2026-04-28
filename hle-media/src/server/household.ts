@@ -29,3 +29,17 @@ export async function userBelongsToHousehold(
   `) as { ok: number }[];
   return rows.length > 0;
 }
+
+/** Household-level admin check (HouseholdMember.role = 'ADMIN'). */
+export async function isHouseholdAdmin(
+  userId: string,
+  householdId: string,
+): Promise<boolean> {
+  const rows = (await sql`
+    SELECT "role" AS role
+    FROM family_manager."HouseholdMember"
+    WHERE "userId" = ${userId} AND "householdId" = ${householdId}
+    LIMIT 1
+  `) as { role: string }[];
+  return rows[0]?.role === "ADMIN";
+}

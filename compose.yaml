@@ -330,6 +330,10 @@ services:
       # bundler — used in the React app for cross-app links (FM login, etc.).
       BUN_PUBLIC_AUTH_URL: ${AUTH_URL:-http://localhost:8080}
       MEDIA_LIBRARY_PATH: "/app/library"
+      # Optional. If unset, scanner runs without metadata enrichment and
+      # logs a single warning. Sign up for a free v3 key at:
+      #   https://www.themoviedb.org/settings/api
+      TMDB_API_KEY: ${TMDB_API_KEY:-}
 
 networks:
   hle-net:

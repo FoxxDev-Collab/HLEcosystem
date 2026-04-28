@@ -2,6 +2,7 @@ import { parseCookies } from "./cookies";
 import { SESSION_COOKIE, validateSession } from "./session";
 import {
   HOUSEHOLD_COOKIE,
+  isHouseholdAdmin,
   userBelongsToHousehold,
   type Household,
 } from "./household";
@@ -56,6 +57,22 @@ export function requireHousehold(
       return forbidden();
     }
     return handler(req, { user, householdId });
+  });
+}
+
+/**
+ * Like requireHousehold, but additionally requires the user be an ADMIN of
+ * the household (HouseholdMember.role = 'ADMIN'). Used for destructive or
+ * resource-heavy operations like library scans.
+ */
+export function requireHouseholdAdmin(
+  handler: Handler<HouseholdContext>,
+): (req: Request) => Promise<Response> {
+  return requireHousehold(async (req, ctx) => {
+    if (!(await isHouseholdAdmin(ctx.user.id, ctx.householdId))) {
+      return forbidden();
+    }
+    return handler(req, ctx);
   });
 }
 

@@ -33,10 +33,13 @@ FROM docker.io/oven/bun:1-alpine AS runner
 ARG APP_DIR
 WORKDIR /app
 
-# Apply pending apk security updates on top of the base image.
-# Same rationale as Containerfile.nextjs: catches base-image CVEs that
-# land before the upstream image is rebuilt.
-RUN apk upgrade --no-cache
+# Apply pending apk security updates on top of the base image, and install
+# ffmpeg (which also provides ffprobe). The library scanner shells out to
+# ffprobe to read codec/duration/resolution metadata, and Phase 2 IPTV
+# channels will drive HLS streams via ffmpeg. Both binaries ship in the
+# single `ffmpeg` package on alpine. Adds ~50MB to the runtime image.
+RUN apk upgrade --no-cache && \
+    apk add --no-cache ffmpeg
 
 RUN addgroup --system --gid 1001 bunapp && \
     adduser  --system --uid 1001 --ingroup bunapp bunapp
