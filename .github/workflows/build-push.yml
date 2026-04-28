@@ -26,33 +26,50 @@ jobs:
           - app_dir: hle-family_manager
             image_name: hle-family-manager
             app_name: "HLE Family Manager"
+            dockerfile: Containerfile.nextjs
           - app_dir: hle-familyhub
             image_name: hle-familyhub
             app_name: "HLE FamilyHub"
+            dockerfile: Containerfile.nextjs
           - app_dir: hle-family_finance
             image_name: hle-family-finance
             app_name: "HLE Family Finance"
+            dockerfile: Containerfile.nextjs
           - app_dir: hle-family_health
             image_name: hle-family-health
             app_name: "HLE Family Health"
+            dockerfile: Containerfile.nextjs
           - app_dir: hle-family_home_care
             image_name: hle-family-home-care
             app_name: "HLE Family Home Care"
+            dockerfile: Containerfile.nextjs
           - app_dir: hle-file_server
             image_name: hle-file-server
             app_name: "HLE File Server"
+            dockerfile: Containerfile.nextjs
           - app_dir: hle-meal_prep
             image_name: hle-meal-prep
             app_name: "HLE Meal Prep"
+            dockerfile: Containerfile.nextjs
           - app_dir: hle-family_wiki
             image_name: hle-family-wiki
             app_name: "HLE Family Wiki"
+            dockerfile: Containerfile.nextjs
           - app_dir: hle-claude_api
             image_name: hle-claude-api
             app_name: "HLE Claude API"
+            dockerfile: Containerfile.nextjs
           - app_dir: hle-family_travel
             image_name: hle-family-travel
             app_name: "HLE Family Travel"
+            dockerfile: Containerfile.nextjs
+          # Bun app — uses Containerfile.bun. NEXT_PUBLIC_APP_NAME is
+          # passed as an unused build-arg for matrix uniformity; Bun's
+          # Containerfile silently ignores it.
+          - app_dir: hle-media
+            image_name: hle-media
+            app_name: "HLE Media"
+            dockerfile: Containerfile.bun
 
     steps:
       - name: Checkout
@@ -84,7 +101,7 @@ jobs:
         uses: docker/build-push-action@v7
         with:
           context: .
-          file: Containerfile.nextjs
+          file: ${{ matrix.dockerfile }}
           load: true
           tags: ${{ matrix.image_name }}:scan
           build-args: |
@@ -131,7 +148,7 @@ jobs:
         uses: docker/build-push-action@v7
         with:
           context: .
-          file: Containerfile.nextjs
+          file: ${{ matrix.dockerfile }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
