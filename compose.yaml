@@ -25,6 +25,38 @@ x-nextjs-app: &nextjs-app
     NEXT_PUBLIC_APP_URL_MEALS: ${MEALS_URL:-http://localhost:8086}
     NEXT_PUBLIC_APP_URL_WIKI: ${WIKI_URL:-http://localhost:8087}
     NEXT_PUBLIC_APP_URL_TRAVEL: ${TRAVEL_URL:-http://localhost:8089}
+    NEXT_PUBLIC_APP_URL_MEDIA: ${MEDIA_URL:-http://localhost:8090}
+  healthcheck:
+    test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:3000/api/health || exit 1"]
+    interval: 30s
+    timeout: 5s
+    retries: 3
+    start_period: 20s
+  logging:
+    driver: "json-file"
+    options:
+      max-size: "100m"
+      max-file: "10"
+  deploy:
+    resources:
+      limits:
+        memory: 512M
+      reservations:
+        memory: 128M
+
+x-bun-app: &bun-app
+  restart: unless-stopped
+  networks:
+    - hle-net
+  depends_on:
+    postgres:
+      condition: service_healthy
+  environment: &bun-env
+    NODE_ENV: production
+    PORT: "3000"
+    AUTH_URL: ${AUTH_URL:-http://localhost:8080}
+    AUTH_DOMAIN: ${AUTH_DOMAIN:-}
+    SECURE_COOKIES: ${SECURE_COOKIES:-}
   healthcheck:
     test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:3000/api/health || exit 1"]
     interval: 30s
@@ -100,6 +132,7 @@ services:
       FILES_URL: ${FILES_URL:-http://localhost:8085}
       MEALS_URL: ${MEALS_URL:-http://localhost:8086}
       WIKI_URL: ${WIKI_URL:-http://localhost:8087}
+      MEDIA_URL: ${MEDIA_URL:-http://localhost:8090}
 
   # FamilyHub — Family relationships, dates, gifts
   hle-familyhub:
@@ -272,6 +305,32 @@ services:
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
       CLAUDE_API_SERVICE_SECRET: ${CLAUDE_API_SERVICE_SECRET}
 
+  # Media — Bun + React. Library, IPTV channels, Plex-lite player.
+  hle-media:
+    <<: *bun-app
+    container_name: foxxlab-media
+    build:
+      context: .
+      dockerfile: Containerfile.bun
+      args:
+        APP_DIR: hle-media
+    ports:
+      - "8090:3000"
+    volumes:
+      - media-library:/app/library
+    environment:
+      <<: *bun-env
+      # No `?schema=` here — Bun.sql forwards unknown URL params as Postgres
+      # connection options and the server rejects "schema". This app is
+      # fully schema-qualified at the SQL layer (`media."Movie"`), so no
+      # search_path manipulation is needed.
+      DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/foxxlab"
+      APP_URL: ${MEDIA_URL:-http://localhost:8090}
+      # BUN_PUBLIC_* env vars are baked into the client bundle by Bun's
+      # bundler — used in the React app for cross-app links (FM login, etc.).
+      BUN_PUBLIC_AUTH_URL: ${AUTH_URL:-http://localhost:8080}
+      MEDIA_LIBRARY_PATH: "/app/library"
+
 networks:
   hle-net:
     driver: bridge
@@ -286,3 +345,5 @@ volumes:
     name: hle-home-care-uploads
   file-server-uploads:
     name: hle-file-server-uploads
+  media-library:
+    name: hle-media-library

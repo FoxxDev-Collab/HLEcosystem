@@ -24,3 +24,4 @@ config/
 compose.yaml
 Containerfile.*
 !Containerfile.nextjs
+!Containerfile.bun
