@@ -14,7 +14,7 @@ export function MovieDetail({ id }: { id: string }) {
     let cancelled = false;
     setMovie(null);
     setError(null);
-    api<MovieDetailType>(`/api/movies/${id}`)
+    api<MovieDetailType>(`/api/movies/${encodeURIComponent(id)}`)
       .then((m) => {
         if (!cancelled) setMovie(m);
       })

@@ -14,7 +14,7 @@ export function SeriesDetail({ id }: { id: string }) {
     let cancelled = false;
     setSeries(null);
     setError(null);
-    api<SeriesDetailType>(`/api/series/${id}`)
+    api<SeriesDetailType>(`/api/series/${encodeURIComponent(id)}`)
       .then((s) => {
         if (!cancelled) setSeries(s);
       })
