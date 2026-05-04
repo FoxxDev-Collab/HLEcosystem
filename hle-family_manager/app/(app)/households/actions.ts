@@ -2,8 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
+import { getCurrentUser } from "@/lib/auth";
 
 export type ActionState = { error: string } | null;
 
@@ -14,10 +14,10 @@ export async function createHouseholdAction(
   const name = formData.get("name") as string;
   if (!name?.trim()) return { error: "Household name is required" };
 
-  const cookieStore = await cookies();
-  const userId = cookieStore.get("hub_user_id")?.value ?? null;
-  if (!userId) return { error: "Not authenticated — please log in again" };
+  const currentUser = await getCurrentUser();
+  if (!currentUser) return { error: "Not authenticated — please log in again" };
 
+  const userId = currentUser.id;
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) return { error: "User account not found" };
 
@@ -67,6 +67,9 @@ export async function createHouseholdAction(
 }
 
 export async function updateHouseholdAction(formData: FormData): Promise<void> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) redirect("/login");
+
   const id = formData.get("id") as string;
   const name = formData.get("name") as string;
   if (!id || !name?.trim()) return;
@@ -82,6 +85,9 @@ export async function updateHouseholdAction(formData: FormData): Promise<void> {
 }
 
 export async function deleteHouseholdAction(formData: FormData): Promise<void> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) redirect("/login");
+
   const id = formData.get("id") as string;
   if (!id) return;
 
@@ -94,6 +100,9 @@ export async function deleteHouseholdAction(formData: FormData): Promise<void> {
 }
 
 export async function addMemberAction(formData: FormData): Promise<void> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) redirect("/login");
+
   const householdId = formData.get("householdId") as string;
   const userId = formData.get("userId") as string;
   const displayName = formData.get("displayName") as string;
@@ -130,6 +139,9 @@ export async function addMemberAction(formData: FormData): Promise<void> {
 }
 
 export async function updateMemberRoleAction(formData: FormData): Promise<void> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) redirect("/login");
+
   const memberId = formData.get("memberId") as string;
   const role = formData.get("role") as string;
   const householdId = formData.get("householdId") as string;
@@ -151,6 +163,9 @@ export async function updateMemberRoleAction(formData: FormData): Promise<void> 
 }
 
 export async function setMemberRelationshipAction(formData: FormData): Promise<void> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) redirect("/login");
+
   const memberId = formData.get("memberId") as string;
   const familyRelationship = formData.get("familyRelationship") as string;
   const householdId = formData.get("householdId") as string;
@@ -183,6 +198,9 @@ export async function setMemberRelationshipAction(formData: FormData): Promise<v
 }
 
 export async function removeMemberAction(formData: FormData): Promise<void> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) redirect("/login");
+
   const memberId = formData.get("memberId") as string;
   const householdId = formData.get("householdId") as string;
 
