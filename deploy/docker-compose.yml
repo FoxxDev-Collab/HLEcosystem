@@ -111,6 +111,18 @@ services:
     environment:
       <<: *nextjs-env
       DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/foxxlab?schema=family_manager"
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      ADMIN_NAME: ${ADMIN_NAME:-Admin}
+      HOUSEHOLD_NAME: ${HOUSEHOLD_NAME:-My Household}
+      HUB_URL: ${HUB_URL:-http://localhost:8081}
+      FINANCE_URL: ${FINANCE_URL:-http://localhost:8082}
+      HEALTH_URL: ${HEALTH_URL:-http://localhost:8083}
+      HOMECARE_URL: ${HOMECARE_URL:-http://localhost:8084}
+      FILES_URL: ${FILES_URL:-http://localhost:8085}
+      MEALS_URL: ${MEALS_URL:-http://localhost:8086}
+      WIKI_URL: ${WIKI_URL:-http://localhost:8087}
+      MEDIA_URL: ${MEDIA_URL:-http://localhost:8090}
 
   # FamilyHub — Family relationships, events, gifts
   hle-familyhub:
