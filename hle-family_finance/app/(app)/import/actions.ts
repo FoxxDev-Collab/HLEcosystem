@@ -7,17 +7,23 @@ import { getCurrentHouseholdId } from "@/lib/household";
 import prisma from "@/lib/prisma";
 import { parseWellsFargoCSV, parseGenericCSV, parseOFX } from "@/lib/import-parser";
 
-export async function uploadImportAction(formData: FormData): Promise<void> {
+export type UploadImportState = { error?: string };
+
+export async function uploadImportAction(
+  _prev: UploadImportState,
+  formData: FormData,
+): Promise<UploadImportState> {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
   const householdId = await getCurrentHouseholdId();
   if (!householdId) redirect("/setup");
 
-  const file = formData.get("file") as File;
-  const accountId = formData.get("accountId") as string;
-  const format = formData.get("format") as string || "CSV";
+  const file = formData.get("file") as File | null;
+  const accountId = formData.get("accountId") as string | null;
+  const format = (formData.get("format") as string) || "CSV";
 
-  if (!file || !accountId) return;
+  if (!accountId) return { error: "Please choose an account." };
+  if (!file || file.size === 0) return { error: "Please choose a file to import." };
 
   const content = await file.text();
   const fileName = file.name;
@@ -35,7 +41,12 @@ export async function uploadImportAction(formData: FormData): Promise<void> {
   // Determine storage format
   const fileFormat = format === "OFX" ? "OFX" : "CSV";
 
-  if (parsed.length === 0) return;
+  if (parsed.length === 0) {
+    return {
+      error:
+        "No transactions could be parsed from this file. Verify the format selection matches the file and try again.",
+    };
+  }
 
   // Create import batch
   const batch = await prisma.importBatch.create({

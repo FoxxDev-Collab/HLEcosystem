@@ -10,38 +10,74 @@ export type ParsedTransaction = {
 
 /**
  * Parse Wells Fargo CSV format.
- * Columns: "date","amount","*","check_number","description"
- * Example: "01/15/2026","-45.67","*","","WALMART STORE #1234"
+ *
+ * Modern export (with header, 2024+):
+ *   "DATE","DESCRIPTION","AMOUNT","CHECK #","STATUS"
+ *   "05/20/2026","WOODMENHMD WHMD 260520 ...","-43.96","","Posted"
+ *
+ * Legacy export (no header):
+ *   "01/15/2026","-45.67","*","","WALMART STORE #1234"
+ *
+ * The format is auto-detected by inspecting the first non-empty line.
  */
 export function parseWellsFargoCSV(content: string): ParsedTransaction[] {
-  const lines = content.trim().split("\n");
+  const lines = content.trim().split(/\r?\n/);
   const transactions: ParsedTransaction[] = [];
 
-  for (const line of lines) {
+  // Detect column layout. Modern format has a header whose first cell is "DATE".
+  // Legacy format has no header — field index 1 is the numeric amount.
+  let dateIdx = 0;
+  let descriptionIdx = 1;
+  let amountIdx = 2;
+  let checkIdx = 3;
+  let skipFirst = false;
+
+  const firstLine = lines.find((l) => l.trim()) ?? "";
+  const firstFields = parseCSVLine(firstLine);
+
+  if (firstFields[0]?.trim().toLowerCase() === "date") {
+    skipFirst = true;
+    const header = firstFields.map((h) => h.trim().toLowerCase());
+    const findIdx = (...names: string[]) => header.findIndex((h) => names.includes(h));
+    const di = findIdx("date");
+    const desci = header.findIndex((h) => h.includes("description") || h.includes("memo"));
+    const ai = findIdx("amount");
+    const ci = header.findIndex((h) => h.includes("check"));
+    if (di !== -1) dateIdx = di;
+    if (desci !== -1) descriptionIdx = desci;
+    if (ai !== -1) amountIdx = ai;
+    if (ci !== -1) checkIdx = ci;
+  } else if (firstFields.length >= 5 && !isNaN(parseFloat(firstFields[1]?.replace(/[,"$]/g, "") ?? ""))) {
+    // Legacy headerless layout: date, amount, *, check_number, description
+    amountIdx = 1;
+    checkIdx = 3;
+    descriptionIdx = 4;
+  }
+
+  for (let i = 0; i < lines.length; i++) {
+    if (skipFirst && i === 0) continue;
+    const line = lines[i];
     if (!line.trim()) continue;
 
-    // Parse CSV with quoted fields
     const fields = parseCSVLine(line);
-    if (fields.length < 5) continue;
+    if (fields.length < 3) continue;
 
-    // Skip header if present
-    if (fields[0].toLowerCase() === "date") continue;
-
-    const [dateStr, amountStr, , checkNumber, description] = fields;
-
-    // Parse date (MM/DD/YYYY)
+    const dateStr = fields[dateIdx] ?? "";
     const dateParts = dateStr.split("/");
     if (dateParts.length !== 3) continue;
     const date = `${dateParts[2]}-${dateParts[0].padStart(2, "0")}-${dateParts[1].padStart(2, "0")}`;
 
-    const amount = parseFloat(amountStr.replace(/[,"$]/g, ""));
+    const amount = parseFloat((fields[amountIdx] ?? "").replace(/[,"$]/g, ""));
     if (isNaN(amount)) continue;
+
+    const description = (fields[descriptionIdx] ?? "").trim();
+    const checkNumber = (fields[checkIdx] ?? "").trim();
 
     transactions.push({
       date,
       amount,
-      description: description.trim(),
-      payee: extractPayee(description.trim()),
+      description,
+      payee: extractPayee(description),
       checkNumber: checkNumber || undefined,
       rawData: line,
     });
