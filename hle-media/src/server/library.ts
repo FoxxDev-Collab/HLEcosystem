@@ -1,4 +1,10 @@
 import { sql } from "./db";
+import {
+  allowedMovieRatings,
+  allowedTvRatings,
+  blocksUnrated,
+  type ParentalProfile,
+} from "./parental";
 
 export type LibraryItem =
   | {
@@ -31,7 +37,14 @@ type RawRow = {
   episodeCount: string | number | null;
 };
 
-export async function listLibrary(householdId: string): Promise<LibraryItem[]> {
+export async function listLibrary(
+  householdId: string,
+  parental: ParentalProfile | null,
+): Promise<LibraryItem[]> {
+  const movieRatings = allowedMovieRatings(parental);
+  const tvRatings = allowedTvRatings(parental);
+  const allowUnrated = !blocksUnrated(parental);
+
   const rows = (await sql`
     SELECT
       'movie'::text                      AS kind,
@@ -44,6 +57,10 @@ export async function listLibrary(householdId: string): Promise<LibraryItem[]> {
       NULL::int                          AS "episodeCount"
     FROM media."Movie" m
     WHERE m."householdId" = ${householdId}
+      AND (
+        m."contentRating" = ANY(${movieRatings})
+        OR (m."contentRating" IS NULL AND ${allowUnrated})
+      )
     UNION ALL
     SELECT
       'series'::text                     AS kind,
@@ -61,6 +78,10 @@ export async function listLibrary(householdId: string): Promise<LibraryItem[]> {
       )                                  AS "episodeCount"
     FROM media."Series" s
     WHERE s."householdId" = ${householdId}
+      AND (
+        s."contentRating" = ANY(${tvRatings})
+        OR (s."contentRating" IS NULL AND ${allowUnrated})
+      )
     ORDER BY title
   `) as RawRow[];
 
@@ -103,12 +124,19 @@ export type MovieDetail = {
 export async function getMovie(
   householdId: string,
   movieId: string,
+  parental: ParentalProfile | null,
 ): Promise<MovieDetail | null> {
+  const movieRatings = allowedMovieRatings(parental);
+  const allowUnrated = !blocksUnrated(parental);
   const rows = (await sql`
     SELECT "id", "title", "year", "synopsis", "posterPath", "backdropPath",
            "durationSec", "contentRating", "tmdbId", "mediaFileId"
     FROM media."Movie"
     WHERE "householdId" = ${householdId} AND "id" = ${movieId}
+      AND (
+        "contentRating" = ANY(${movieRatings})
+        OR ("contentRating" IS NULL AND ${allowUnrated})
+      )
     LIMIT 1
   `) as Array<{
     id: string;
@@ -159,12 +187,19 @@ export type SeriesDetail = {
 export async function getSeries(
   householdId: string,
   seriesId: string,
+  parental: ParentalProfile | null,
 ): Promise<SeriesDetail | null> {
+  const tvRatings = allowedTvRatings(parental);
+  const allowUnrated = !blocksUnrated(parental);
   const seriesRows = (await sql`
     SELECT "id", "title", "year", "synopsis", "posterPath", "backdropPath",
            "contentRating", "tmdbId"
     FROM media."Series"
     WHERE "householdId" = ${householdId} AND "id" = ${seriesId}
+      AND (
+        "contentRating" = ANY(${tvRatings})
+        OR ("contentRating" IS NULL AND ${allowUnrated})
+      )
     LIMIT 1
   `) as Array<Omit<SeriesDetail, "seasons">>;
   const series = seriesRows[0];
@@ -234,12 +269,41 @@ export async function getSeries(
 
 export async function getLibraryCounts(
   householdId: string,
+  parental: ParentalProfile | null,
 ): Promise<{ movies: number; series: number; episodes: number }> {
+  const movieRatings = allowedMovieRatings(parental);
+  const tvRatings = allowedTvRatings(parental);
+  const allowUnrated = !blocksUnrated(parental);
+  // Episode count reflects only episodes whose parent Series is visible to
+  // this profile — episodes don't carry their own rating, the series does.
   const rows = (await sql`
     SELECT
-      (SELECT COUNT(*)::int FROM media."Movie"   WHERE "householdId" = ${householdId}) AS movies,
-      (SELECT COUNT(*)::int FROM media."Series"  WHERE "householdId" = ${householdId}) AS series,
-      (SELECT COUNT(*)::int FROM media."Episode" WHERE "householdId" = ${householdId}) AS episodes
+      (
+        SELECT COUNT(*)::int FROM media."Movie"
+        WHERE "householdId" = ${householdId}
+          AND (
+            "contentRating" = ANY(${movieRatings})
+            OR ("contentRating" IS NULL AND ${allowUnrated})
+          )
+      ) AS movies,
+      (
+        SELECT COUNT(*)::int FROM media."Series"
+        WHERE "householdId" = ${householdId}
+          AND (
+            "contentRating" = ANY(${tvRatings})
+            OR ("contentRating" IS NULL AND ${allowUnrated})
+          )
+      ) AS series,
+      (
+        SELECT COUNT(*)::int FROM media."Episode" e
+        JOIN media."Season"  se ON se."id" = e."seasonId"
+        JOIN media."Series"  s  ON s."id"  = se."seriesId"
+        WHERE e."householdId" = ${householdId}
+          AND (
+            s."contentRating" = ANY(${tvRatings})
+            OR (s."contentRating" IS NULL AND ${allowUnrated})
+          )
+      ) AS episodes
   `) as Array<{ movies: number; series: number; episodes: number }>;
   return rows[0] ?? { movies: 0, series: 0, episodes: 0 };
 }

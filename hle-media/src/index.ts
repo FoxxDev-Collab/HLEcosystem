@@ -83,32 +83,32 @@ const server = serve({
 
     // ─── Library ──────────────────────────────────────────────────────────
     "/api/library/summary": {
-      GET: requireHousehold(async (_req, { householdId }) =>
-        Response.json(await getLibraryCounts(householdId)),
+      GET: requireHousehold(async (_req, { householdId, parental }) =>
+        Response.json(await getLibraryCounts(householdId, parental)),
       ),
     },
 
     "/api/library": {
-      GET: requireHousehold(async (_req, { householdId }) =>
-        Response.json({ items: await listLibrary(householdId) }),
+      GET: requireHousehold(async (_req, { householdId, parental }) =>
+        Response.json({ items: await listLibrary(householdId, parental) }),
       ),
     },
 
     "/api/movies/:id": {
-      GET: requireHousehold(async (req, { householdId }) => {
+      GET: requireHousehold(async (req, { householdId, parental }) => {
         const id = param(req, "id");
         if (!id) return Response.json({ error: "missing_id" }, { status: 400 });
-        const movie = await getMovie(householdId, id);
+        const movie = await getMovie(householdId, id, parental);
         if (!movie) return Response.json({ error: "not_found" }, { status: 404 });
         return Response.json(movie);
       }),
     },
 
     "/api/series/:id": {
-      GET: requireHousehold(async (req, { householdId }) => {
+      GET: requireHousehold(async (req, { householdId, parental }) => {
         const id = param(req, "id");
         if (!id) return Response.json({ error: "missing_id" }, { status: 400 });
-        const series = await getSeries(householdId, id);
+        const series = await getSeries(householdId, id, parental);
         if (!series) return Response.json({ error: "not_found" }, { status: 404 });
         return Response.json(series);
       }),
