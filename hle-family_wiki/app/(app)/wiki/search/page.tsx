@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { getCurrentHouseholdId } from "@/lib/household";
 import prisma from "@/lib/prisma";
@@ -23,7 +24,8 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
   const { q, tag } = await searchParams;
   const user = await getCurrentUser();
   if (!user) return null;
-  const householdId = (await getCurrentHouseholdId())!;
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) redirect("/setup");
 
   let results: Result[] = [];
 

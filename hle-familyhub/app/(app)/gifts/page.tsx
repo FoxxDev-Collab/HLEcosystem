@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { getCurrentHouseholdId } from "@/lib/household";
 import prisma from "@/lib/prisma";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,7 +25,8 @@ function renderRating(rating: number | null): string {
 }
 
 export default async function GiftsPage() {
-  const householdId = (await getCurrentHouseholdId())!;
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) redirect("/setup");
 
   const [gifts, familyMembers] = await Promise.all([
     prisma.gift.findMany({
