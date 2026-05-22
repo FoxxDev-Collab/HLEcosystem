@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { getCurrentHouseholdId, getAllHouseholds } from "@/lib/household";
 import prisma from "@/lib/prisma";
@@ -35,7 +35,8 @@ export default async function PageViewPage({ params }: { params: Promise<{ pageI
   const { pageId } = await params;
   const user = await getCurrentUser();
   if (!user) return null;
-  const householdId = (await getCurrentHouseholdId())!;
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) redirect("/setup");
 
   const page = await prisma.wikiPage.findUnique({
     where: { id: pageId },

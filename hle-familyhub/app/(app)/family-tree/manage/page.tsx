@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { getCurrentHouseholdId, getHouseholdById, getAllHouseholds } from "@/lib/household";
 import prisma from "@/lib/prisma";
 import { FAMILY_RELATIONSHIPS, formatRelationship } from "@/lib/relationships";
@@ -11,7 +12,8 @@ import { ArrowLeft, Plus, Trash2, ArrowRight } from "lucide-react";
 import { createRelationAction, deleteRelationAction } from "../actions";
 
 export default async function ManageRelationsPage() {
-  const householdId = (await getCurrentHouseholdId())!;
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) redirect("/setup");
 
   // Fetch all households so we can connect members from any household
   const allHouseholds = await getAllHouseholds();

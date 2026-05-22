@@ -60,7 +60,9 @@ export async function deleteFileFromDisk(storagePath: string): Promise<void> {
 
 export function readFileStream(storagePath: string): ReadableStream {
   const nodeStream = createReadStream(storagePath);
-  return Readable.toWeb(nodeStream) as ReadableStream;
+  // Node's stream/web ReadableStream -> Web standard ReadableStream
+  // (see comment in the other direction below for the interop rationale).
+  return Readable.toWeb(nodeStream) as unknown as ReadableStream;
 }
 
 export async function readFileBuffer(storagePath: string): Promise<Buffer> {
@@ -104,7 +106,11 @@ export async function saveFileStreaming(
   const hash = createHash("sha256");
   let totalSize = 0;
 
-  const nodeStream = Readable.fromWeb(stream as import("stream/web").ReadableStream);
+  // `as unknown as` is required for the Web -> Node stream/web interop: the
+  // two ReadableStream types are structurally close but not assignment-
+  // compatible (Node's adds .values/.blob/.text). Runtime-compatible since
+  // Node 18+.
+  const nodeStream = Readable.fromWeb(stream as unknown as import("stream/web").ReadableStream);
   const writeStream = createWriteStream(tempPath);
 
   // Pipe through hash computation
@@ -195,7 +201,11 @@ export async function saveChunk(
   const chunksDir = getChunksDir(householdId, uploadId);
   const chunkPath = join(chunksDir, `chunk_${String(chunkIndex).padStart(6, "0")}`);
 
-  const nodeStream = Readable.fromWeb(stream as import("stream/web").ReadableStream);
+  // `as unknown as` is required for the Web -> Node stream/web interop: the
+  // two ReadableStream types are structurally close but not assignment-
+  // compatible (Node's adds .values/.blob/.text). Runtime-compatible since
+  // Node 18+.
+  const nodeStream = Readable.fromWeb(stream as unknown as import("stream/web").ReadableStream);
   const writeStream = createWriteStream(chunkPath);
 
   let size = 0;

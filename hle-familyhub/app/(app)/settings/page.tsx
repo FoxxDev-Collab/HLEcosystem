@@ -1,9 +1,11 @@
+import { redirect } from "next/navigation";
 import { getCurrentHouseholdId, getHouseholdById } from "@/lib/household";
 import prisma from "@/lib/prisma";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default async function SettingsPage() {
-  const householdId = (await getCurrentHouseholdId())!;
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) redirect("/setup");
 
   const [household, memberCount, dateCount, giftCount, ideaCount] = await Promise.all([
     getHouseholdById(householdId),

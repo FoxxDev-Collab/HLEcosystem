@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { getCurrentHouseholdId, getHouseholdMembersWithRelationships, getHouseholdById } from "@/lib/household";
 import { formatRelationship } from "@/lib/relationships";
@@ -33,7 +34,8 @@ function formatBirthday(birthday: Date | null): string {
 }
 
 export default async function PeoplePage() {
-  const householdId = (await getCurrentHouseholdId())!;
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) redirect("/setup");
   const user = await getCurrentUser();
 
   const [members, householdMembers, relativeMap] = await Promise.all([

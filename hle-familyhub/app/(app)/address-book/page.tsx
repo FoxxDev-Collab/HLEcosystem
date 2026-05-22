@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { getCurrentHouseholdId } from "@/lib/household";
 import prisma from "@/lib/prisma";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,7 +24,8 @@ function formatAddress(member: {
 }
 
 export default async function AddressBookPage() {
-  const householdId = (await getCurrentHouseholdId())!;
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) redirect("/setup");
 
   const members = await prisma.familyMember.findMany({
     where: { householdId, includeInHolidayCards: true, isActive: true },
