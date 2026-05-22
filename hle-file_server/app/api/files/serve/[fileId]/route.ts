@@ -103,7 +103,7 @@ export async function GET(
 
     const chunkSize = end - start + 1;
     const nodeStream = createReadStream(file.storagePath, { start, end });
-    const stream = Readable.toWeb(nodeStream) as ReadableStream;
+    const stream = Readable.toWeb(nodeStream) as unknown as ReadableStream;
 
     return new NextResponse(stream, {
       status: 206,
@@ -121,7 +121,7 @@ export async function GET(
 
   // Full file serve (inline)
   const nodeStream = createReadStream(file.storagePath);
-  const stream = Readable.toWeb(nodeStream) as ReadableStream;
+  const stream = Readable.toWeb(nodeStream) as unknown as ReadableStream;
 
   return new NextResponse(stream, {
     headers: {
