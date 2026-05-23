@@ -21,6 +21,7 @@ jobs:
   # overly-permissive tokens, unpinned actions, etc.
   zizmor:
     name: Workflow audit (zizmor)
+    if: github.server_url == 'https://github.com'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -48,7 +49,7 @@ jobs:
   dependency-review:
     name: Dependency review (PR only)
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
+    if: github.server_url == 'https://github.com' && github.event_name == 'pull_request'
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
@@ -64,7 +65,7 @@ jobs:
   invariant-gate:
     name: Security invariant gate
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
+    if: github.server_url == 'https://github.com' && github.event_name == 'pull_request'
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
@@ -104,6 +105,7 @@ jobs:
 
   gitleaks:
     name: Secret scan (gitleaks)
+    if: github.server_url == 'https://github.com'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
@@ -118,6 +120,7 @@ jobs:
 
   trivy-fs:
     name: Dependency + config scan (trivy)
+    if: github.server_url == 'https://github.com'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -159,6 +162,7 @@ jobs:
 
   npm-audit:
     name: npm audit (${{ matrix.app }})
+    if: github.server_url == 'https://github.com'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -198,6 +202,7 @@ jobs:
 
   codeql:
     name: CodeQL (JavaScript/TypeScript)
+    if: github.server_url == 'https://github.com'
     runs-on: ubuntu-latest
     permissions:
       security-events: write
@@ -229,7 +234,7 @@ jobs:
   security-report:
     name: Security alert summary
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
+    if: github.server_url == 'https://github.com' && github.event_name == 'pull_request'
     permissions:
       contents: read
       security-events: read
