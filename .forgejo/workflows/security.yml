@@ -41,8 +41,13 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      # Pinned to v6.0.0 — last release that ships with `runs.using: node20`.
+      # v7+ requires node24, which the act binary embedded in the current
+      # forgejo-runner does not yet support (fails at action.yml parse with
+      # "must be one of: [composite docker node12 node16 node20 go sh]").
+      # Bump when forgejo-runner ships an act with node24 support.
       - name: SonarQube scan
-        uses: https://github.com/SonarSource/sonarqube-scan-action@7006c4492b2e0ee0f816d36501671557c97f5995 # v8.1.0
+        uses: https://github.com/SonarSource/sonarqube-scan-action@fd88b7d7ccbaefd23d8f36f73b59db7a3d246602 # v6.0.0
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
