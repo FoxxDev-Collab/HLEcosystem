@@ -8,6 +8,65 @@ export type ParsedTransaction = {
   rawData: string;
 };
 
+type WellsFargoColumns = {
+  dateIdx: number;
+  descriptionIdx: number;
+  amountIdx: number;
+  checkIdx: number;
+  skipFirst: boolean;
+};
+
+function detectWellsFargoColumns(firstFields: string[]): WellsFargoColumns {
+  // Modern export carries a header whose first cell is "DATE".
+  if (firstFields[0]?.trim().toLowerCase() === "date") {
+    const header = firstFields.map((h) => h.trim().toLowerCase());
+    const findIdx = (...names: string[]) => header.findIndex((h) => names.includes(h));
+    const di = findIdx("date");
+    const desci = header.findIndex((h) => h.includes("description") || h.includes("memo"));
+    const ai = findIdx("amount");
+    const ci = header.findIndex((h) => h.includes("check"));
+    return {
+      dateIdx: di !== -1 ? di : 0,
+      descriptionIdx: desci !== -1 ? desci : 1,
+      amountIdx: ai !== -1 ? ai : 2,
+      checkIdx: ci !== -1 ? ci : 3,
+      skipFirst: true,
+    };
+  }
+  // Legacy headerless layout: date, amount, *, check_number, description.
+  // Confirm by checking that field 1 parses as a number.
+  const legacyAmount = Number.parseFloat(firstFields[1]?.replaceAll(/[,"$]/g, "") ?? "");
+  if (firstFields.length >= 5 && !Number.isNaN(legacyAmount)) {
+    return { dateIdx: 0, descriptionIdx: 4, amountIdx: 1, checkIdx: 3, skipFirst: false };
+  }
+  return { dateIdx: 0, descriptionIdx: 1, amountIdx: 2, checkIdx: 3, skipFirst: false };
+}
+
+function parseWellsFargoLine(line: string, cols: WellsFargoColumns): ParsedTransaction | null {
+  if (!line.trim()) return null;
+  const fields = parseCSVLine(line);
+  if (fields.length < 3) return null;
+
+  const dateParts = (fields[cols.dateIdx] ?? "").split("/");
+  if (dateParts.length !== 3) return null;
+  const date = `${dateParts[2]}-${dateParts[0].padStart(2, "0")}-${dateParts[1].padStart(2, "0")}`;
+
+  const amount = Number.parseFloat((fields[cols.amountIdx] ?? "").replaceAll(/[,"$]/g, ""));
+  if (Number.isNaN(amount)) return null;
+
+  const description = (fields[cols.descriptionIdx] ?? "").trim();
+  const checkNumber = (fields[cols.checkIdx] ?? "").trim();
+
+  return {
+    date,
+    amount,
+    description,
+    payee: extractPayee(description),
+    checkNumber: checkNumber || undefined,
+    rawData: line,
+  };
+}
+
 /**
  * Parse Wells Fargo CSV format.
  *
@@ -22,67 +81,15 @@ export type ParsedTransaction = {
  */
 export function parseWellsFargoCSV(content: string): ParsedTransaction[] {
   const lines = content.trim().split(/\r?\n/);
-  const transactions: ParsedTransaction[] = [];
-
-  // Detect column layout. Modern format has a header whose first cell is "DATE".
-  // Legacy format has no header — field index 1 is the numeric amount.
-  let dateIdx = 0;
-  let descriptionIdx = 1;
-  let amountIdx = 2;
-  let checkIdx = 3;
-  let skipFirst = false;
-
   const firstLine = lines.find((l) => l.trim()) ?? "";
-  const firstFields = parseCSVLine(firstLine);
+  const cols = detectWellsFargoColumns(parseCSVLine(firstLine));
 
-  if (firstFields[0]?.trim().toLowerCase() === "date") {
-    skipFirst = true;
-    const header = firstFields.map((h) => h.trim().toLowerCase());
-    const findIdx = (...names: string[]) => header.findIndex((h) => names.includes(h));
-    const di = findIdx("date");
-    const desci = header.findIndex((h) => h.includes("description") || h.includes("memo"));
-    const ai = findIdx("amount");
-    const ci = header.findIndex((h) => h.includes("check"));
-    if (di !== -1) dateIdx = di;
-    if (desci !== -1) descriptionIdx = desci;
-    if (ai !== -1) amountIdx = ai;
-    if (ci !== -1) checkIdx = ci;
-  } else if (firstFields.length >= 5 && !isNaN(parseFloat(firstFields[1]?.replace(/[,"$]/g, "") ?? ""))) {
-    // Legacy headerless layout: date, amount, *, check_number, description
-    amountIdx = 1;
-    checkIdx = 3;
-    descriptionIdx = 4;
-  }
-
+  const transactions: ParsedTransaction[] = [];
   for (let i = 0; i < lines.length; i++) {
-    if (skipFirst && i === 0) continue;
-    const line = lines[i];
-    if (!line.trim()) continue;
-
-    const fields = parseCSVLine(line);
-    if (fields.length < 3) continue;
-
-    const dateStr = fields[dateIdx] ?? "";
-    const dateParts = dateStr.split("/");
-    if (dateParts.length !== 3) continue;
-    const date = `${dateParts[2]}-${dateParts[0].padStart(2, "0")}-${dateParts[1].padStart(2, "0")}`;
-
-    const amount = parseFloat((fields[amountIdx] ?? "").replace(/[,"$]/g, ""));
-    if (isNaN(amount)) continue;
-
-    const description = (fields[descriptionIdx] ?? "").trim();
-    const checkNumber = (fields[checkIdx] ?? "").trim();
-
-    transactions.push({
-      date,
-      amount,
-      description,
-      payee: extractPayee(description),
-      checkNumber: checkNumber || undefined,
-      rawData: line,
-    });
+    if (cols.skipFirst && i === 0) continue;
+    const tx = parseWellsFargoLine(lines[i], cols);
+    if (tx) transactions.push(tx);
   }
-
   return transactions;
 }
 

@@ -25,6 +25,12 @@ type FileRow = {
   seriesRating: string | null;
 };
 
+function resolveKind(row: FileRow): "movie" | "series" | null {
+  if (row.movieRating !== null) return "movie";
+  if (row.seriesRating !== null) return "series";
+  return null;
+}
+
 /**
  * GET /api/stream/:fileId
  *
@@ -71,12 +77,7 @@ export async function streamHandler(
   // Parental gate. Decide which rating ladder applies based on which
   // parent entity owns this file. If neither Movie nor Series resolved,
   // the file is orphaned — refuse to stream.
-  const kind: "movie" | "series" | null =
-    row.movieRating !== null || row.seriesRating === null
-      ? row.movieRating !== null
-        ? "movie"
-        : null
-      : "series";
+  const kind = resolveKind(row);
   if (kind === null) {
     return Response.json({ error: "not_found" }, { status: 404 });
   }

@@ -81,4 +81,3 @@ export function requireHouseholdAdmin(
   });
 }
 
-export type { User, Household, ParentalProfile };
