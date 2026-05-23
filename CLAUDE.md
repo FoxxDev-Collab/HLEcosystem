@@ -128,13 +128,16 @@ If you are an AI assistant, you must execute the equivalent checks (Read the cha
 | Family Wiki | `hle-family_wiki/` | 8087 | `family_wiki` | `fw_` | Active |
 | Claude API | `hle-claude_api/` | 8088 | `claude_api` | — | Active (internal AI gateway) |
 | Family Travel | `hle-family_travel/` | 8089 | `family_travel` | `ft_` | Active |
+| Media | `hle-media/` | 8090 | `media` | `mv_` | Active (Bun runtime) |
 
 ## Tech Stack
 
-- **Runtime**: Next.js 16 + React 19 + TypeScript 5
+- **Runtime**: Next.js 16 + React 19 + TypeScript 5 (most apps)
+  - Exception: `hle-media` runs on Bun directly (`Bun.serve`, `Bun.sql`); see `hle-media/README.md`.
 - **Styling**: Tailwind CSS 4 + shadcn/ui (Radix primitives)
 - **ORM**: Prisma 6 (one client per app, raw SQL for cross-schema)
-- **Database**: PostgreSQL 16 — single `foxxlab` DB, 7 schemas
+  - Exception: `hle-media` uses `Bun.sql` with raw SQL and a hand-rolled migration runner; no Prisma.
+- **Database**: PostgreSQL 16 — single `foxxlab` DB, 11 schemas (one per app)
 - **Auth**: Cookie-based sessions (httpOnly, SameSite=lax)
 - **Containers**: Podman + podman-compose (NOT Docker)
 - **Node**: 22-alpine in containers

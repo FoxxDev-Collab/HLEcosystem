@@ -11,7 +11,8 @@ import { FamilyTreeView } from "@/components/family-tree-view";
 export default async function FamilyTreePage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
-  const householdId = (await getCurrentHouseholdId())!;
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) redirect("/setup");
 
   // Step 1: Get current household members
   const currentMembers = await prisma.familyMember.findMany({

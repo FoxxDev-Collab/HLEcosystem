@@ -21,6 +21,48 @@ x-nextjs-app: &nextjs-app
     AUTH_URL: ${AUTH_URL:-http://localhost:8080}
     AUTH_DOMAIN: ${AUTH_DOMAIN:-}
     SECURE_COOKIES: ${SECURE_COOKIES:-true}
+    # App-switcher targets — read by app/(app)/layout.tsx in every Next app
+    # and passed as props to <AppSidebar />. Omit MEDIA until it ships.
+    NEXT_PUBLIC_APP_URL_MANAGER: ${AUTH_URL:-http://localhost:8080}
+    NEXT_PUBLIC_APP_URL_HUB: ${HUB_URL:-http://localhost:8081}
+    NEXT_PUBLIC_APP_URL_FINANCE: ${FINANCE_URL:-http://localhost:8082}
+    NEXT_PUBLIC_APP_URL_HEALTH: ${HEALTH_URL:-http://localhost:8083}
+    NEXT_PUBLIC_APP_URL_HOME: ${HOMECARE_URL:-http://localhost:8084}
+    NEXT_PUBLIC_APP_URL_FILES: ${FILES_URL:-http://localhost:8085}
+    NEXT_PUBLIC_APP_URL_MEALS: ${MEALS_URL:-http://localhost:8086}
+    NEXT_PUBLIC_APP_URL_WIKI: ${WIKI_URL:-http://localhost:8087}
+    NEXT_PUBLIC_APP_URL_TRAVEL: ${TRAVEL_URL:-http://localhost:8089}
+  healthcheck:
+    test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1"]
+    interval: 30s
+    timeout: 5s
+    retries: 3
+    start_period: 20s
+  logging:
+    driver: "json-file"
+    options:
+      max-size: "100m"
+      max-file: "10"
+  deploy:
+    resources:
+      limits:
+        memory: 512M
+      reservations:
+        memory: 128M
+
+x-bun-app: &bun-app
+  restart: unless-stopped
+  networks:
+    - hle-net
+  depends_on:
+    postgres:
+      condition: service_healthy
+  environment: &bun-env
+    NODE_ENV: production
+    PORT: "3000"
+    AUTH_URL: ${AUTH_URL:-http://localhost:8080}
+    AUTH_DOMAIN: ${AUTH_DOMAIN:-}
+    SECURE_COOKIES: ${SECURE_COOKIES:-true}
   healthcheck:
     test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1"]
     interval: 30s
@@ -80,6 +122,18 @@ services:
     environment:
       <<: *nextjs-env
       DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/foxxlab?schema=family_manager"
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      ADMIN_NAME: ${ADMIN_NAME:-Admin}
+      HOUSEHOLD_NAME: ${HOUSEHOLD_NAME:-My Household}
+      HUB_URL: ${HUB_URL:-http://localhost:8081}
+      FINANCE_URL: ${FINANCE_URL:-http://localhost:8082}
+      HEALTH_URL: ${HEALTH_URL:-http://localhost:8083}
+      HOMECARE_URL: ${HOMECARE_URL:-http://localhost:8084}
+      FILES_URL: ${FILES_URL:-http://localhost:8085}
+      MEALS_URL: ${MEALS_URL:-http://localhost:8086}
+      WIKI_URL: ${WIKI_URL:-http://localhost:8087}
+      MEDIA_URL: ${MEDIA_URL:-http://localhost:8090}
 
   # FamilyHub — Family relationships, events, gifts
   hle-familyhub:
@@ -205,6 +259,23 @@ services:
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
       CLAUDE_API_SERVICE_SECRET: ${CLAUDE_API_SERVICE_SECRET}
 
+  # Media — Bun + React. Library, IPTV channels (Phase 2), Plex-lite player.
+  hle-media:
+    <<: *bun-app
+    image: ghcr.io/foxxdev-collab/hle-media:latest
+    container_name: foxxlab-media
+    ports:
+      - "${MEDIA_PORT:-8090}:3000"
+    volumes:
+      - media-library:/app/library
+    environment:
+      <<: *bun-env
+      DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/foxxlab"
+      APP_URL: ${MEDIA_URL:-http://localhost:8090}
+      BUN_PUBLIC_AUTH_URL: ${AUTH_URL:-http://localhost:8080}
+      MEDIA_LIBRARY_PATH: "/app/library"
+      TMDB_API_KEY: ${TMDB_API_KEY:-}
+
 networks:
   hle-net:
     driver: bridge
@@ -219,3 +290,5 @@ volumes:
     name: hle-home-care-uploads
   file-server-uploads:
     name: hle-file-server-uploads
+  media-library:
+    name: hle-media-library

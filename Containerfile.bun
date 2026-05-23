@@ -1,0 +1,70 @@
+# Containerfile.bun
+# Shared multi-stage build for HLEcosystem Bun apps.
+#
+# Build arg APP_DIR specifies which app to build.
+# Usage: podman-compose build hle-media
+#
+# Stages:
+#   1. deps    — frozen-lockfile install of every declared dep (prod + dev).
+#                Bun's runtime bundles HTML imports on first request, so we
+#                do not have a separate "build" stage that emits a dist/;
+#                the runner simply executes `bun src/index.ts`.
+#   2. runner  — minimal runtime, non-root, apk upgrade for base CVEs
+
+ARG APP_DIR=hle-media
+
+# ============================================
+# Stage 1: Install dependencies
+# ============================================
+# Pinning policy: keep parity with Containerfile.nextjs — pin to a digest
+# once Dependabot's docker ecosystem is rewired (currently the inline
+# security-report job does not pin Bun digests). Tag-only for now.
+FROM docker.io/oven/bun:1-alpine AS deps
+ARG APP_DIR
+WORKDIR /app
+
+COPY ${APP_DIR}/package.json ${APP_DIR}/bun.lock ./
+RUN bun install --frozen-lockfile
+
+# ============================================
+# Stage 2: Production runtime
+# ============================================
+FROM docker.io/oven/bun:1-alpine AS runner
+ARG APP_DIR
+WORKDIR /app
+
+# Apply pending apk security updates on top of the base image, and install
+# ffmpeg (which also provides ffprobe). The library scanner shells out to
+# ffprobe to read codec/duration/resolution metadata, and Phase 2 IPTV
+# channels will drive HLS streams via ffmpeg. Both binaries ship in the
+# single `ffmpeg` package on alpine. Adds ~50MB to the runtime image.
+RUN apk upgrade --no-cache && \
+    apk add --no-cache ffmpeg
+
+RUN addgroup --system --gid 1001 bunapp && \
+    adduser  --system --uid 1001 --ingroup bunapp bunapp
+
+ENV NODE_ENV=production
+ENV PORT=3000
+
+COPY --from=deps /app/node_modules ./node_modules
+
+COPY --chown=bunapp:bunapp ${APP_DIR}/package.json     ./package.json
+COPY --chown=bunapp:bunapp ${APP_DIR}/bunfig.toml      ./bunfig.toml
+COPY --chown=bunapp:bunapp ${APP_DIR}/tsconfig.json    ./tsconfig.json
+COPY --chown=bunapp:bunapp ${APP_DIR}/bun-env.d.ts     ./bun-env.d.ts
+COPY --chown=bunapp:bunapp ${APP_DIR}/components.json  ./components.json
+COPY --chown=bunapp:bunapp ${APP_DIR}/src              ./src
+COPY --chown=bunapp:bunapp ${APP_DIR}/styles           ./styles
+COPY --chown=bunapp:bunapp ${APP_DIR}/scripts          ./scripts
+COPY --chown=bunapp:bunapp ${APP_DIR}/migrations       ./migrations
+COPY --chown=bunapp:bunapp ${APP_DIR}/entrypoint.sh    ./entrypoint.sh
+RUN chmod +x entrypoint.sh
+
+USER bunapp
+EXPOSE 3000
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:3000/api/health || exit 1
+
+CMD ["./entrypoint.sh"]

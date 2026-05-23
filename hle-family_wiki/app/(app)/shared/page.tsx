@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { getCurrentHouseholdId } from "@/lib/household";
 import prisma from "@/lib/prisma";
@@ -10,7 +11,8 @@ import { FileText, Share2, ChevronRight, Eye, Pencil } from "lucide-react";
 export default async function SharedPage() {
   const user = await getCurrentUser();
   if (!user) return null;
-  const householdId = (await getCurrentHouseholdId())!;
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) redirect("/setup");
 
   const shares = await prisma.pageShare.findMany({
     where: { householdId },

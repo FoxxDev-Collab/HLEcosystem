@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { getCurrentHouseholdId } from "@/lib/household";
 import { formatRelationship } from "@/lib/relationships";
@@ -63,7 +63,8 @@ function formatAge(birthday: Date | null): string | null {
 
 export default async function FamilyMemberDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const householdId = (await getCurrentHouseholdId())!;
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) redirect("/setup");
   const user = await getCurrentUser();
 
   const [member, connections] = await Promise.all([

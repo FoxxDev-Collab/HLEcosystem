@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { getCurrentHouseholdId } from "@/lib/household";
 import prisma from "@/lib/prisma";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -42,7 +43,8 @@ function daysUntil(date: Date): number {
 }
 
 export default async function ImportantDatesPage() {
-  const householdId = (await getCurrentHouseholdId())!;
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) redirect("/setup");
 
   const [dates, familyMembers] = await Promise.all([
     prisma.importantDate.findMany({

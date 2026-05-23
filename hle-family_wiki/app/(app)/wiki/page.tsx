@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { getCurrentHouseholdId } from "@/lib/household";
 import prisma from "@/lib/prisma";
@@ -40,7 +41,8 @@ const VIS: Record<string, { icon: typeof Lock; label: string; color: string }> =
 export default async function WikiPage() {
   const user = await getCurrentUser();
   if (!user) return null;
-  const householdId = (await getCurrentHouseholdId())!;
+  const householdId = await getCurrentHouseholdId();
+  if (!householdId) redirect("/setup");
 
   const [ownedPages, sharedIds] = await Promise.all([
     prisma.wikiPage.findMany({

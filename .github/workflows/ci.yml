@@ -16,13 +16,15 @@ permissions:
 jobs:
   detect:
     name: Detect changed apps
+    if: github.server_url == 'https://github.com'
     runs-on: ubuntu-latest
     outputs:
       apps: ${{ steps.set.outputs.apps }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           fetch-depth: 2
+          persist-credentials: false
 
       - id: set
         name: Determine matrix
@@ -50,17 +52,19 @@ jobs:
   build:
     name: lint + typecheck (${{ matrix.app }})
     needs: detect
-    if: needs.detect.outputs.apps != '[]'
+    if: github.server_url == 'https://github.com' && needs.detect.outputs.apps != '[]'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         app: ${{ fromJSON(needs.detect.outputs.apps) }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version-file: .nvmrc
           cache: npm
@@ -101,7 +105,7 @@ jobs:
   ci-passed:
     name: CI passed
     needs: [detect, build]
-    if: always()
+    if: always() && github.server_url == 'https://github.com'
     runs-on: ubuntu-latest
     steps:
       - name: Verify all jobs succeeded

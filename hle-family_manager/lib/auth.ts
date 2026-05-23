@@ -11,7 +11,8 @@ export async function getCurrentUser(): Promise<UserPublic | null> {
 
   const result = await validateSession(token);
   if (!result) {
-    cookieStore.delete(SESSION_COOKIE);
+    // Stale cookie — don't delete here (Next 16 forbids cookie writes in
+    // Server Components). The next login will overwrite it.
     return null;
   }
   return result.user;

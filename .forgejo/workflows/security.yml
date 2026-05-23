@@ -1,0 +1,78 @@
+name: Security (Forgejo)
+
+# Mirror of .github/workflows/security.yml, trimmed to what the self-hosted
+# Forgejo runner on the gitops VM needs: SonarQube Community Build analysis
+# and a Trivy filesystem scan. Both run against the same VM-local SonarQube
+# server so no traffic leaves the private network.
+#
+# Conventions copied from the GitHub security workflow:
+#   - Every third-party action pinned to a commit SHA via full https:// URL
+#     (Forgejo otherwise resolves bare `actions/x` against code.forgejo.org
+#     mirrors, which have different SHAs than upstream).
+#   - persist-credentials: false on every checkout (zizmor SC-1).
+#   - Per-job permissions block, default-deny at workflow level.
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  schedule:
+    # Weekly scan every Monday 06:00 UTC — catches new CVEs in unchanged deps
+    - cron: "0 6 * * 1"
+
+concurrency:
+  group: forgejo-security-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  sonarqube:
+    name: SonarQube scan (Community Build)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (full history)
+        uses: https://github.com/actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          # SonarQube needs full history to compute new-code metrics and
+          # accurate blame for issue assignment.
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: SonarQube scan
+        uses: https://github.com/SonarSource/sonarqube-scan-action@7006c4492b2e0ee0f816d36501671557c97f5995 # v8.1.0
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+
+  trivy-fs:
+    name: Dependency + config scan (trivy)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: https://github.com/actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+
+      # Pinned to commit SHA — trivy-action runs with workspace access, so
+      # a compromised master branch could exfiltrate secrets via the env.
+      - name: Trivy filesystem scan (report)
+        uses: https://github.com/aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # master @ 2026-04-08
+        with:
+          scan-type: fs
+          scan-ref: .
+          ignore-unfixed: true
+          severity: CRITICAL,HIGH,MEDIUM
+          format: table
+          skip-dirs: node_modules,.next,HLEcosystem_Dotnet_Backup
+
+      - name: Trivy filesystem scan (fail on critical/high)
+        uses: https://github.com/aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # master @ 2026-04-08
+        with:
+          scan-type: fs
+          scan-ref: .
+          ignore-unfixed: true
+          severity: CRITICAL,HIGH
+          exit-code: "1"
+          skip-dirs: node_modules,.next,HLEcosystem_Dotnet_Backup
