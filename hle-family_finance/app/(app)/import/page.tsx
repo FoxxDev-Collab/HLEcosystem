@@ -5,13 +5,8 @@ import { getCurrentHouseholdId } from "@/lib/household";
 import prisma from "@/lib/prisma";
 import { formatDate } from "@/lib/format";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Upload } from "lucide-react";
-import { uploadImportAction } from "./actions";
+import { ImportForm } from "./import-form";
 
 export default async function ImportPage() {
   const user = await getCurrentUser();
@@ -47,40 +42,7 @@ export default async function ImportPage() {
           {accounts.length === 0 ? (
             <p className="text-sm text-muted-foreground">Create an account first.</p>
           ) : (
-            <form action={uploadImportAction} encType="multipart/form-data" className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-3">
-                <div className="space-y-2">
-                  <Label>Account</Label>
-                  <Select name="accountId" defaultValue={accounts[0]?.id}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {accounts.map((a) => (
-                        <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Format</Label>
-                  <Select name="format" defaultValue="WELLS_FARGO">
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="WELLS_FARGO">Wells Fargo CSV</SelectItem>
-                      <SelectItem value="GENERIC">Generic CSV</SelectItem>
-                      <SelectItem value="OFX">OFX / QFX</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>File</Label>
-                  <Input name="file" type="file" accept=".csv,.ofx,.qfx" required />
-                </div>
-              </div>
-              <Button type="submit">
-                <Upload className="size-4 mr-2" />
-                Upload & Parse
-              </Button>
-            </form>
+            <ImportForm accounts={accounts.map((a) => ({ id: a.id, name: a.name }))} />
           )}
         </CardContent>
       </Card>

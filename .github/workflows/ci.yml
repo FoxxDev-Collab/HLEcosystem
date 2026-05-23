@@ -19,7 +19,8 @@ jobs:
     if: github.server_url == 'https://github.com'
     runs-on: ubuntu-latest
     outputs:
-      apps: ${{ steps.set.outputs.apps }}
+      node-apps: ${{ steps.set.outputs.node-apps }}
+      bun-apps: ${{ steps.set.outputs.bun-apps }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
@@ -27,7 +28,7 @@ jobs:
           persist-credentials: false
 
       - id: set
-        name: Determine matrix
+        name: Determine matrices
         run: |
           set -euo pipefail
           if [ "${{ github.event_name }}" = "pull_request" ]; then
@@ -37,27 +38,43 @@ jobs:
           else
             changed=$(git diff --name-only HEAD^ HEAD || true)
           fi
-          # Always run the full matrix on shared-infra or workflow changes
-          if echo "$changed" | grep -qE '^(compose\.yaml|Containerfile\.nextjs|hle\.sh|\.github/workflows/)'; then
-            apps='["hle-claude_api","hle-family_finance","hle-family_health","hle-family_home_care","hle-family_manager","hle-family_travel","hle-family_wiki","hle-familyhub","hle-file_server","hle-meal_prep"]'
+          # Always run the full matrix on shared-infra or workflow changes.
+          # Containerfile.bun changes also force a full run since they affect
+          # the Bun-runtime apps.
+          if echo "$changed" | grep -qE '^(compose\.yaml|Containerfile\.nextjs|Containerfile\.bun|hle\.sh|\.github/workflows/)'; then
+            apps='["hle-claude_api","hle-family_finance","hle-family_health","hle-family_home_care","hle-family_manager","hle-family_travel","hle-family_wiki","hle-familyhub","hle-file_server","hle-meal_prep","hle-media"]'
           else
             apps=$(echo "$changed" | awk -F/ '/^hle-/ {print $1}' | sort -u | jq -R . | jq -s -c .)
             if [ "$apps" = "[]" ] || [ -z "$apps" ]; then
               apps='[]'
             fi
           fi
-          echo "apps=$apps" >> "$GITHUB_OUTPUT"
-          echo "Matrix: $apps"
+          # Split into Node (package-lock.json) vs Bun (bun.lock) apps.
+          node_apps='[]'
+          bun_apps='[]'
+          for app in $(echo "$apps" | jq -r '.[]'); do
+            if [ -f "$app/bun.lock" ] || [ -f "$app/bun.lockb" ]; then
+              bun_apps=$(echo "$bun_apps" | jq -c --arg a "$app" '. + [$a]')
+            elif [ -f "$app/package-lock.json" ]; then
+              node_apps=$(echo "$node_apps" | jq -c --arg a "$app" '. + [$a]')
+            else
+              echo "::warning::$app has neither bun.lock nor package-lock.json — skipping"
+            fi
+          done
+          echo "node-apps=$node_apps" >> "$GITHUB_OUTPUT"
+          echo "bun-apps=$bun_apps" >> "$GITHUB_OUTPUT"
+          echo "Node matrix: $node_apps"
+          echo "Bun matrix:  $bun_apps"
 
-  build:
+  build-node:
     name: lint + typecheck (${{ matrix.app }})
     needs: detect
-    if: github.server_url == 'https://github.com' && needs.detect.outputs.apps != '[]'
+    if: github.server_url == 'https://github.com' && needs.detect.outputs.node-apps != '[]'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        app: ${{ fromJSON(needs.detect.outputs.apps) }}
+        app: ${{ fromJSON(needs.detect.outputs.node-apps) }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
@@ -98,23 +115,66 @@ jobs:
             echo "No vitest config in $APP — skipping (see docs/TESTING.md roadmap)."
           fi
 
+  build-bun:
+    name: lint + typecheck (${{ matrix.app }})
+    needs: detect
+    if: github.server_url == 'https://github.com' && needs.detect.outputs.bun-apps != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        app: ${{ fromJSON(needs.detect.outputs.bun-apps) }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version: latest
+
+      - name: Install
+        working-directory: ${{ matrix.app }}
+        run: bun install --frozen-lockfile
+
+      # No `lint` script in Bun-runtime apps yet (hle-media has no eslint/biome
+      # config). Add one and a Lint step here when it exists. The Security
+      # invariant gate (security.yml) still applies the project-wide forbidden-
+      # patterns check across the diff.
+      - name: Typecheck
+        working-directory: ${{ matrix.app }}
+        run: bunx tsc --noEmit
+
+      - name: Test
+        working-directory: ${{ matrix.app }}
+        run: bun test
+
   # Summary job so branch protection can require a single check.
   # Note: the lint/type suppression check (formerly no-disable-smuggling here)
   # is now covered by the `invariant-gate` job in security.yml, which also
   # checks for $queryRawUnsafe, dangerouslySetInnerHTML, and explicit `any`.
   ci-passed:
     name: CI passed
-    needs: [detect, build]
+    needs: [detect, build-node, build-bun]
     if: always() && github.server_url == 'https://github.com'
     runs-on: ubuntu-latest
     steps:
       - name: Verify all jobs succeeded
         env:
-          BUILD_RESULT: ${{ needs.build.result }}
-          DETECT_APPS: ${{ needs.detect.outputs.apps }}
+          NODE_RESULT: ${{ needs.build-node.result }}
+          BUN_RESULT: ${{ needs.build-bun.result }}
+          NODE_APPS: ${{ needs.detect.outputs.node-apps }}
+          BUN_APPS: ${{ needs.detect.outputs.bun-apps }}
         run: |
-          if [ "$BUILD_RESULT" != "success" ] && [ "$DETECT_APPS" != "[]" ]; then
-            echo "build job failed"
+          # A skipped result is success for our purposes (no apps of that
+          # runtime were changed). Only an actual failure should fail this job.
+          if [ "$NODE_APPS" != "[]" ] && [ "$NODE_RESULT" != "success" ]; then
+            echo "build-node failed (result=$NODE_RESULT)"
+            exit 1
+          fi
+          if [ "$BUN_APPS" != "[]" ] && [ "$BUN_RESULT" != "success" ]; then
+            echo "build-bun failed (result=$BUN_RESULT)"
             exit 1
           fi
           echo "All checks passed."

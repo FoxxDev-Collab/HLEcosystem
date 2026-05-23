@@ -200,6 +200,15 @@ jobs:
         working-directory: ${{ matrix.app }}
         run: npm audit --audit-level=high --omit=dev
 
+  # Bun-runtime apps (hle-media) are not in the npm-audit matrix above —
+  # they have no package-lock.json and `bun pm scan` requires a third-party
+  # scanner package configured in bunfig.toml (no built-in CVE database).
+  # Trivy already understands bun.lock as of trivy v0.49+ and runs over the
+  # full repo in the trivy-fs job above, so Bun deps are covered by the
+  # "Dependency + config scan (trivy)" check. Revisit if we ever want a
+  # dedicated Bun-side audit (e.g., add `bun-pm-scan` with socket.dev or
+  # snyk as the scanner).
+
   codeql:
     name: CodeQL (JavaScript/TypeScript)
     if: github.server_url == 'https://github.com'

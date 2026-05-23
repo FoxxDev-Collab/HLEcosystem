@@ -6,6 +6,7 @@ import {
   userBelongsToHousehold,
   type Household,
 } from "./household";
+import { getParentalProfile, type ParentalProfile } from "./parental";
 import type { User } from "./users";
 
 export type AuthContext = {
@@ -14,6 +15,9 @@ export type AuthContext = {
 
 export type HouseholdContext = AuthContext & {
   householdId: string;
+  // null = unrestricted. Loaded once per request in requireHousehold so every
+  // downstream query/handler can filter content without re-querying.
+  parental: ParentalProfile | null;
 };
 
 type Handler<C> = (req: Request, ctx: C) => Response | Promise<Response>;
@@ -56,7 +60,8 @@ export function requireHousehold(
     if (!(await userBelongsToHousehold(user.id, householdId))) {
       return forbidden();
     }
-    return handler(req, { user, householdId });
+    const parental = await getParentalProfile(user.id, householdId);
+    return handler(req, { user, householdId, parental });
   });
 }
 
@@ -76,4 +81,4 @@ export function requireHouseholdAdmin(
   });
 }
 
-export type { User, Household };
+export type { User, Household, ParentalProfile };
