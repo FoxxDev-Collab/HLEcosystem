@@ -60,6 +60,15 @@ jobs:
         with:
           persist-credentials: false
 
+      # trivy-action internally calls `uses: aquasecurity/setup-trivy@SHA`
+      # with a *bare* reference, which Forgejo's act runner cannot resolve
+      # the same way it resolves explicit https://github.com/... URLs. The
+      # nested install silently no-ops and the scan step then fails with
+      # "trivy: command not found". Install trivy ourselves first and pass
+      # skip-setup-trivy: true to bypass the broken nested resolution.
+      - name: Install Trivy
+        uses: https://github.com/aquasecurity/setup-trivy@3fb12ec12f41e471780db15c232d5dd185dcb514 # v0.2.6
+
       # Pinned to commit SHA — trivy-action runs with workspace access, so
       # a compromised master branch could exfiltrate secrets via the env.
       - name: Trivy filesystem scan (report)
@@ -71,6 +80,7 @@ jobs:
           severity: CRITICAL,HIGH,MEDIUM
           format: table
           skip-dirs: node_modules,.next,HLEcosystem_Dotnet_Backup
+          skip-setup-trivy: true
 
       - name: Trivy filesystem scan (fail on critical/high)
         uses: https://github.com/aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # master @ 2026-04-08
@@ -81,3 +91,4 @@ jobs:
           severity: CRITICAL,HIGH
           exit-code: "1"
           skip-dirs: node_modules,.next,HLEcosystem_Dotnet_Backup
+          skip-setup-trivy: true
