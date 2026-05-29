@@ -13,8 +13,71 @@ permissions:
   contents: read
 
 jobs:
-  build-and-push:
+  # Decide which images actually need rebuilding. Mirrors the `detect` job in
+  # ci.yml so the GHCR build matrix only spins up jobs for apps the push
+  # touched, instead of rebuilding + Grype-scanning + pushing all 11 images on
+  # every commit to master. Shared-infra / workflow / Containerfile changes
+  # force the full matrix (they affect every image). The full app->image
+  # mapping lives here as the single source of truth and is filtered down to
+  # the changed set.
+  detect:
+    name: Detect changed apps
     if: github.server_url == 'https://github.com'
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+
+      - id: set
+        name: Determine build matrix
+        run: |
+          set -euo pipefail
+          # Single source of truth: every buildable image and its build args.
+          all='[
+            {"app_dir":"hle-family_manager","image_name":"hle-family-manager","app_name":"HLE Family Manager","dockerfile":"Containerfile.nextjs"},
+            {"app_dir":"hle-familyhub","image_name":"hle-familyhub","app_name":"HLE FamilyHub","dockerfile":"Containerfile.nextjs"},
+            {"app_dir":"hle-family_finance","image_name":"hle-family-finance","app_name":"HLE Family Finance","dockerfile":"Containerfile.nextjs"},
+            {"app_dir":"hle-family_health","image_name":"hle-family-health","app_name":"HLE Family Health","dockerfile":"Containerfile.nextjs"},
+            {"app_dir":"hle-family_home_care","image_name":"hle-family-home-care","app_name":"HLE Family Home Care","dockerfile":"Containerfile.nextjs"},
+            {"app_dir":"hle-file_server","image_name":"hle-file-server","app_name":"HLE File Server","dockerfile":"Containerfile.nextjs"},
+            {"app_dir":"hle-meal_prep","image_name":"hle-meal-prep","app_name":"HLE Meal Prep","dockerfile":"Containerfile.nextjs"},
+            {"app_dir":"hle-family_wiki","image_name":"hle-family-wiki","app_name":"HLE Family Wiki","dockerfile":"Containerfile.nextjs"},
+            {"app_dir":"hle-claude_api","image_name":"hle-claude-api","app_name":"HLE Claude API","dockerfile":"Containerfile.nextjs"},
+            {"app_dir":"hle-family_travel","image_name":"hle-family-travel","app_name":"HLE Family Travel","dockerfile":"Containerfile.nextjs"},
+            {"app_dir":"hle-media","image_name":"hle-media","app_name":"HLE Media","dockerfile":"Containerfile.bun"}
+          ]'
+
+          full=false
+          if [ "${{ github.event_name }}" != "push" ]; then
+            # workflow_dispatch (or anything non-push) has no reliable diff base
+            # — rebuild everything.
+            full=true
+          else
+            changed=$(git diff --name-only HEAD^ HEAD || true)
+            # Shared build inputs affect every image — force the full matrix.
+            if echo "$changed" | grep -qE '^(compose\.yaml|Containerfile\.nextjs|Containerfile\.bun|hle\.sh|\.github/workflows/)'; then
+              full=true
+            fi
+          fi
+
+          if [ "$full" = "true" ]; then
+            matrix=$(echo "$all" | jq -c .)
+          else
+            changed_dirs=$(echo "$changed" | awk -F/ '/^hle-/ {print $1}' | sort -u | jq -R . | jq -s -c .)
+            matrix=$(echo "$all" | jq -c --argjson keep "$changed_dirs" \
+              '[.[] | select(.app_dir as $d | $keep | index($d))]')
+          fi
+
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+          echo "Build matrix: $matrix"
+
+  build-and-push:
+    needs: detect
+    if: github.server_url == 'https://github.com' && needs.detect.outputs.matrix != '[]'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -23,54 +86,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - app_dir: hle-family_manager
-            image_name: hle-family-manager
-            app_name: "HLE Family Manager"
-            dockerfile: Containerfile.nextjs
-          - app_dir: hle-familyhub
-            image_name: hle-familyhub
-            app_name: "HLE FamilyHub"
-            dockerfile: Containerfile.nextjs
-          - app_dir: hle-family_finance
-            image_name: hle-family-finance
-            app_name: "HLE Family Finance"
-            dockerfile: Containerfile.nextjs
-          - app_dir: hle-family_health
-            image_name: hle-family-health
-            app_name: "HLE Family Health"
-            dockerfile: Containerfile.nextjs
-          - app_dir: hle-family_home_care
-            image_name: hle-family-home-care
-            app_name: "HLE Family Home Care"
-            dockerfile: Containerfile.nextjs
-          - app_dir: hle-file_server
-            image_name: hle-file-server
-            app_name: "HLE File Server"
-            dockerfile: Containerfile.nextjs
-          - app_dir: hle-meal_prep
-            image_name: hle-meal-prep
-            app_name: "HLE Meal Prep"
-            dockerfile: Containerfile.nextjs
-          - app_dir: hle-family_wiki
-            image_name: hle-family-wiki
-            app_name: "HLE Family Wiki"
-            dockerfile: Containerfile.nextjs
-          - app_dir: hle-claude_api
-            image_name: hle-claude-api
-            app_name: "HLE Claude API"
-            dockerfile: Containerfile.nextjs
-          - app_dir: hle-family_travel
-            image_name: hle-family-travel
-            app_name: "HLE Family Travel"
-            dockerfile: Containerfile.nextjs
-          # Bun app — uses Containerfile.bun. NEXT_PUBLIC_APP_NAME is
-          # passed as an unused build-arg for matrix uniformity; Bun's
-          # Containerfile silently ignores it.
-          - app_dir: hle-media
-            image_name: hle-media
-            app_name: "HLE Media"
-            dockerfile: Containerfile.bun
+        include: ${{ fromJSON(needs.detect.outputs.matrix) }}
 
     steps:
       - name: Checkout
