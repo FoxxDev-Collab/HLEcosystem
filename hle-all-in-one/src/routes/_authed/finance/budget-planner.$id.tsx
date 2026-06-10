@@ -22,7 +22,7 @@ import type {
   ProjectItemRow,
   ProjectRow,
 } from "@/server/finance/budget-planner"
-import { PROJECT_STATUSES } from "@/server/finance/budget-planner"
+import { PROJECT_STATUSES } from "@/lib/finance-constants"
 import { formatCurrency } from "@/lib/format"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"

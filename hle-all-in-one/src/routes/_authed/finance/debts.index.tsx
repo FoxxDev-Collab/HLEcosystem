@@ -6,7 +6,7 @@ import {
   recordDebtPaymentFn,
   toggleDebtArchivedFn,
 } from "@/server/finance/fns.debts"
-import { DEBT_TYPE_LABELS } from "@/server/finance/debts"
+import { DEBT_TYPE_LABELS } from "@/lib/finance-constants"
 import { DebtFormDialog } from "@/components/finance/debt-form"
 import { formatCurrency, formatPercent } from "@/lib/format"
 import { Badge } from "@/components/ui/badge"

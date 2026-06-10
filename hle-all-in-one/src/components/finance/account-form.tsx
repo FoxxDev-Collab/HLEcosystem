@@ -5,7 +5,7 @@
 import { useState } from "react"
 import { createAccountFn, updateAccountFn } from "@/server/finance/fns.accounts"
 import type { AccountRow, AccountType } from "@/server/finance/accounts"
-import { ACCOUNT_TYPES, ACCOUNT_TYPE_LABELS } from "@/server/finance/accounts"
+import { ACCOUNT_TYPES, ACCOUNT_TYPE_LABELS } from "@/lib/finance-constants"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"

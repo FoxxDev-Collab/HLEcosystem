@@ -4,7 +4,7 @@
 import { useState } from "react"
 import { createBillFn, updateBillFn } from "@/server/finance/fns.bills"
 import type { BillCategory, BillRow } from "@/server/finance/bills"
-import { BILL_CATEGORIES } from "@/server/finance/bills"
+import { BILL_CATEGORIES } from "@/lib/finance-constants"
 import type { AccountPickerRow } from "@/server/finance/accounts"
 import type { CategoryPickerRow } from "@/server/finance/categories"
 import type { DebtPickerRow } from "@/server/finance/debts"

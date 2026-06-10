@@ -7,7 +7,7 @@ import {
   getTravelDocumentsPageFn,
   updateTravelDocumentFn,
 } from "@/server/travel/fns.documents"
-import { TRAVEL_DOCUMENT_TYPES } from "@/server/travel/documents"
+import { TRAVEL_DOCUMENT_TYPES } from "@/lib/travel-constants"
 import type {
   TravelDocumentRow,
   TravelDocumentType,

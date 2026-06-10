@@ -21,7 +21,7 @@ import {
   getAccountDetailFn,
   toggleAccountArchivedFn,
 } from "@/server/finance/fns.accounts"
-import { ACCOUNT_TYPE_LABELS } from "@/server/finance/accounts"
+import { ACCOUNT_TYPE_LABELS } from "@/lib/finance-constants"
 import { AccountFormDialog } from "@/components/finance/account-form"
 import { formatCurrency, formatDate } from "@/lib/format"
 import { Badge } from "@/components/ui/badge"

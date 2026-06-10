@@ -25,7 +25,10 @@ import type {
   TripDetailRow,
   TripExpenseRow,
 } from "@/server/finance/trips"
-import { TRIP_EXPENSE_TYPE_LABELS, TRIP_STATUSES } from "@/server/finance/trips"
+import {
+  TRIP_EXPENSE_TYPE_LABELS,
+  TRIP_STATUSES,
+} from "@/lib/finance-constants"
 import {
   deleteTripExpenseFn,
   deleteTripFn,

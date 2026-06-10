@@ -20,7 +20,7 @@ import {
   toggleAssetArchivedFn,
   updateAssetValueFn,
 } from "@/server/finance/fns.assets"
-import { ASSET_TYPE_LABELS } from "@/server/finance/assets"
+import { ASSET_TYPE_LABELS } from "@/lib/finance-constants"
 import { AssetFormDialog } from "@/components/finance/asset-form"
 import { AssetSoldDialog } from "@/components/finance/asset-sold-dialog"
 import { formatCurrency, formatDate, formatPercent } from "@/lib/format"

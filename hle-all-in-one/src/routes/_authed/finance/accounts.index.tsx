@@ -5,7 +5,7 @@ import {
   getAccountsPageFn,
   toggleAccountArchivedFn,
 } from "@/server/finance/fns.accounts"
-import { ACCOUNT_TYPES, ACCOUNT_TYPE_LABELS } from "@/server/finance/accounts"
+import { ACCOUNT_TYPES, ACCOUNT_TYPE_LABELS } from "@/lib/finance-constants"
 import { AccountFormDialog } from "@/components/finance/account-form"
 import { formatCurrency } from "@/lib/format"
 import { Badge } from "@/components/ui/badge"

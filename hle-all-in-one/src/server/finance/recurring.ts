@@ -5,25 +5,10 @@
 import { sql } from "@/server/db"
 import type { TransactionType } from "./transactions"
 
-export type RecurrenceFrequency =
-  | "DAILY"
-  | "WEEKLY"
-  | "BI_WEEKLY"
-  | "MONTHLY"
-  | "QUARTERLY"
-  | "YEARLY"
+import type { RecurrenceFrequency } from "@/lib/finance-constants"
 
-export const RECURRENCE_FREQUENCIES: Array<{
-  value: RecurrenceFrequency
-  label: string
-}> = [
-  { value: "DAILY", label: "Daily" },
-  { value: "WEEKLY", label: "Weekly" },
-  { value: "BI_WEEKLY", label: "Bi-Weekly" },
-  { value: "MONTHLY", label: "Monthly" },
-  { value: "QUARTERLY", label: "Quarterly" },
-  { value: "YEARLY", label: "Yearly" },
-]
+export { RECURRENCE_FREQUENCIES } from "@/lib/finance-constants"
+export type { RecurrenceFrequency }
 
 export type RecurringRow = {
   id: string

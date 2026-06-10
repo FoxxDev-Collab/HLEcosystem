@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { createDebtFn, updateDebtFn } from "@/server/finance/fns.debts"
 import type { DebtRow, DebtType } from "@/server/finance/debts"
-import { DEBT_TYPES, DEBT_TYPE_LABELS } from "@/server/finance/debts"
+import { DEBT_TYPES, DEBT_TYPE_LABELS } from "@/lib/finance-constants"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"

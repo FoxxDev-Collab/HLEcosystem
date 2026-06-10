@@ -6,37 +6,10 @@
 // archiveAssetAction mutated by bare id; those gaps are closed here.
 import { sql } from "@/server/db"
 
-export type AssetType =
-  | "REAL_ESTATE"
-  | "VEHICLE"
-  | "JEWELRY"
-  | "ELECTRONICS"
-  | "COLLECTIBLES"
-  | "RETIREMENT"
-  | "INVESTMENT"
-  | "OTHER"
+import type { AssetType } from "@/lib/finance-constants"
 
-export const ASSET_TYPES: Array<AssetType> = [
-  "REAL_ESTATE",
-  "VEHICLE",
-  "INVESTMENT",
-  "RETIREMENT",
-  "JEWELRY",
-  "ELECTRONICS",
-  "COLLECTIBLES",
-  "OTHER",
-]
-
-export const ASSET_TYPE_LABELS: Record<AssetType, string> = {
-  REAL_ESTATE: "Real Estate",
-  VEHICLE: "Vehicle",
-  INVESTMENT: "Investment",
-  RETIREMENT: "Retirement",
-  JEWELRY: "Jewelry",
-  ELECTRONICS: "Electronics",
-  COLLECTIBLES: "Collectibles",
-  OTHER: "Other",
-}
+export { ASSET_TYPES, ASSET_TYPE_LABELS } from "@/lib/finance-constants"
+export type { AssetType }
 
 export type AssetRow = {
   id: string
