@@ -1,6 +1,3 @@
-// TODO(finance): the legacy app could optionally hand visit costs off to
-// family_finance (see src/server/health/visits.ts header). Deliberately NOT
-// ported until the finance module lands in hle-all-in-one.
 import { createServerFn } from "@tanstack/react-start"
 import { z } from "zod"
 import { householdMiddleware } from "@/server/middleware"

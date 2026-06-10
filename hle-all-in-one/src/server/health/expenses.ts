@@ -2,11 +2,10 @@
 // "HealthMember"."householdId". paidFromHsa / insuranceReimbursement are kept
 // as data fields and feed the year summary totals.
 //
-// TODO(finance): the legacy app could also write an EXPENSE transaction into
-// family_finance via lib/finance-bridge.ts ("Sync to Family Finance"). The
-// finance module has not been ported into hle-all-in-one yet — re-add that
-// hand-off (account/category pickers + transaction insert + balance update)
-// once finance lands. Deliberately NOT ported now.
+// The optional "Sync to Family Finance" hand-off from the legacy app is
+// wired up in fns.expenses.ts via the in-process finance module (the legacy
+// cross-schema lib/finance-bridge.ts is obsolete — the balance is now owned
+// by the sync_account_balance trigger, so only the INSERT happens here).
 import { sql } from "@/server/db"
 
 export type ExpenseCategory =
@@ -75,6 +74,19 @@ export async function createMedicalExpense(
       ${input.amount}, ${input.expenseDate}, ${input.paidFromHsa},
       ${input.insuranceReimbursement}, ${input.notes}
     )`
+}
+
+// Name lookup for the finance hand-off's transaction description. Scoped —
+// returns null for members outside the household.
+export async function getHealthMemberName(
+  householdId: string,
+  memberId: string
+): Promise<string | null> {
+  const rows = await sql<Array<{ firstName: string; lastName: string }>>`
+    SELECT "firstName", "lastName" FROM "HealthMember"
+    WHERE "id" = ${memberId} AND "householdId" = ${householdId}`
+  const row = rows[0]
+  return row ? `${row.firstName} ${row.lastName}` : null
 }
 
 export async function deleteMedicalExpense(

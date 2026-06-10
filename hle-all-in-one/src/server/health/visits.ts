@@ -3,12 +3,11 @@
 // link is rejected with { error } in the server fn). Scoped through
 // "HealthMember"."householdId".
 //
-// TODO(finance): the legacy health app could hand visit/expense costs off to
-// family_finance via lib/finance-bridge.ts (account/category pickers +
-// transaction insert + balance update). The finance module has not been
-// ported into hle-all-in-one yet — re-add that hand-off once finance lands.
-// Deliberately NOT ported now; "paidFromHsa" and the billed/insurance/
-// out-of-pocket amounts are kept as plain data.
+// Note: the legacy health app's finance-bridge was only ever wired to the
+// /expenses page, NOT to visits (no finance import exists in the legacy
+// visits/actions.ts). Visit costs ("paidFromHsa", billed/insurance/
+// out-of-pocket) stay plain data here; the expenses page's finance sync
+// (fns.expenses.ts) is the hand-off, same as legacy.
 import { sql } from "@/server/db"
 
 export type VisitType =

@@ -8,8 +8,12 @@ import {
 import {
   createMedicalExpense,
   deleteMedicalExpense,
+  getHealthMemberName,
   listMedicalExpenses,
 } from "./expenses"
+import { listAccountsForPicker } from "@/server/finance/accounts"
+import { listCategoriesForPicker } from "@/server/finance/categories"
+import { createTransaction } from "@/server/finance/transactions"
 
 // Empty form fields mean NULL.
 const optText = z
@@ -35,11 +39,19 @@ const categorySchema = z.enum([
 export const getExpensesPageFn = createServerFn({ method: "GET" })
   .middleware([householdMiddleware])
   .handler(async ({ context }) => {
-    const [members, expenses] = await Promise.all([
-      listActiveHealthMembers(context.householdId),
-      listMedicalExpenses(context.householdId),
-    ])
-    return { members, expenses }
+    const [members, expenses, financeAccounts, financeCategories] =
+      await Promise.all([
+        listActiveHealthMembers(context.householdId),
+        listMedicalExpenses(context.householdId),
+        listAccountsForPicker(context.householdId),
+        listCategoriesForPicker(context.householdId),
+      ])
+    return {
+      members,
+      expenses,
+      financeAccounts,
+      financeCategories: financeCategories.filter((c) => c.type === "EXPENSE"),
+    }
   })
 
 const expenseSchema = z.object({
@@ -51,21 +63,59 @@ const expenseSchema = z.object({
   paidFromHsa: z.boolean(),
   insuranceReimbursement: z.number().nonnegative().max(99999999).nullable(),
   notes: optText,
+  // Optional "Sync to Family Finance" hand-off (legacy finance-bridge).
+  finance: z
+    .object({
+      accountId: z.string().min(1),
+      categoryId: z.string().min(1).nullable(),
+    })
+    .nullable(),
 })
 
 export const createMedicalExpenseFn = createServerFn({ method: "POST" })
   .middleware([householdMiddleware])
   .inputValidator((d: unknown) => expenseSchema.parse(d))
   .handler(async ({ data, context }) => {
-    const { memberId, ...input } = data
+    const { memberId, finance, ...input } = data
     const owned = await healthMemberBelongsToHousehold(
       context.householdId,
       memberId
     )
     if (!owned) return { error: "Family member not found." }
     await createMedicalExpense(memberId, input)
-    // TODO(finance): legacy optionally mirrored this expense into
-    // family_finance (see src/server/health/expenses.ts header).
+
+    // Optional finance mirror (legacy "Sync to Family Finance"). The expense
+    // record above is the source of truth — a finance failure is reported as
+    // a warning, not a rollback (matches legacy ordering). createTransaction
+    // re-verifies account/category ownership (ADR-0005); the account balance
+    // is owned by the sync_account_balance trigger.
+    if (finance) {
+      const memberName = await getHealthMemberName(
+        context.householdId,
+        memberId
+      )
+      const categoryLabel = input.category.replace(/_/g, " ")
+      const result = await createTransaction(
+        context.householdId,
+        context.user.id,
+        {
+          type: "EXPENSE",
+          accountId: finance.accountId,
+          categoryId: finance.categoryId,
+          amount: input.amount,
+          date: input.expenseDate,
+          payee: "Medical Expense",
+          description: `${input.description} (${memberName ?? "Unknown"} - ${categoryLabel})`,
+          transferToAccountId: null,
+        }
+      )
+      if ("error" in result) {
+        return {
+          ok: true as const,
+          financeWarning: `Expense saved, but the finance sync failed: ${result.error}`,
+        }
+      }
+    }
     return { ok: true as const }
   })
 

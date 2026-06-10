@@ -3,11 +3,10 @@
 // scan result lives in the client until the user commits it (same as the
 // legacy app).
 //
-// TODO(finance): the legacy app could also write an EXPENSE transaction into
-// family_finance via lib/finance-bridge.ts ("Also add expense to Family
-// Finance"). The finance module has not been ported into hle-all-in-one yet —
-// re-add that hand-off (account/category pickers + transaction insert +
-// balance update) once finance lands. Deliberately NOT ported now.
+// The optional "Also add expense to Family Finance" hand-off from the legacy
+// app is wired up in fns.receipts.ts via the in-process finance module (the
+// legacy cross-schema lib/finance-bridge.ts is obsolete — the balance is now
+// owned by the sync_account_balance trigger, so only the INSERT happens).
 import { sql } from "@/server/db"
 import { findProductByName } from "./ingredients"
 
@@ -25,6 +24,17 @@ export async function storeBelongsToHousehold(
     SELECT "id" FROM "Store"
     WHERE "id" = ${storeId} AND "householdId" = ${householdId}`
   return rows.length > 0
+}
+
+// Scoped name lookup for the finance hand-off's transaction payee.
+export async function getStoreName(
+  householdId: string,
+  storeId: string
+): Promise<string | null> {
+  const rows = await sql<Array<{ name: string }>>`
+    SELECT "name" FROM "Store"
+    WHERE "id" = ${storeId} AND "householdId" = ${householdId}`
+  return rows[0]?.name ?? null
 }
 
 // Find-or-create the product for a receipt line; new products get the

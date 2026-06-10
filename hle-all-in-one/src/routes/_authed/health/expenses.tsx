@@ -11,6 +11,8 @@ import type {
   MedicalExpenseRow,
 } from "@/server/health/expenses"
 import type { HealthMemberOption } from "@/server/health/medications"
+import type { AccountPickerRow } from "@/server/finance/accounts"
+import type { CategoryPickerRow } from "@/server/finance/categories"
 import { formatCurrency, formatDate, toDateInputValue } from "@/lib/format"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -54,7 +56,8 @@ function categoryLabel(c: string): string {
 }
 
 function ExpensesPage() {
-  const { members, expenses } = Route.useLoaderData()
+  const { members, expenses, financeAccounts, financeCategories } =
+    Route.useLoaderData()
   const router = useRouter()
   const [year, setYear] = useState(new Date().getFullYear())
   const [deleteTarget, setDeleteTarget] = useState<MedicalExpenseRow | null>(
@@ -150,7 +153,12 @@ function ExpensesPage() {
         </Card>
       </div>
 
-      <AddExpenseCard members={members} onSaved={refresh} />
+      <AddExpenseCard
+        members={members}
+        financeAccounts={financeAccounts}
+        financeCategories={financeCategories}
+        onSaved={refresh}
+      />
 
       {yearExpenses.length === 0 ? (
         <Card>
@@ -234,21 +242,30 @@ function ExpensesPage() {
 
 function AddExpenseCard({
   members,
+  financeAccounts,
+  financeCategories,
   onSaved,
 }: {
   members: Array<HealthMemberOption>
+  financeAccounts: Array<AccountPickerRow>
+  financeCategories: Array<CategoryPickerRow>
   onSaved: () => void
 }) {
   const [error, setError] = useState<string | null>(null)
+  const [warning, setWarning] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
+  const [syncToFinance, setSyncToFinance] = useState(false)
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setError(null)
+    setWarning(null)
     setPending(true)
     const form = e.currentTarget
     const f = new FormData(form)
     try {
+      const financeAccountId = String(f.get("financeAccountId") ?? "")
+      const financeCategoryId = String(f.get("financeCategoryId") ?? "")
       const result = await createMedicalExpenseFn({
         data: {
           memberId: String(f.get("memberId") ?? ""),
@@ -261,6 +278,13 @@ function AddExpenseCard({
             ? Number(f.get("insuranceReimbursement"))
             : null,
           notes: String(f.get("notes") ?? ""),
+          finance:
+            syncToFinance && financeAccountId
+              ? {
+                  accountId: financeAccountId,
+                  categoryId: financeCategoryId || null,
+                }
+              : null,
         },
       })
       if ("error" in result && typeof result.error === "string") {
@@ -268,7 +292,11 @@ function AddExpenseCard({
         setPending(false)
         return
       }
+      if ("financeWarning" in result && result.financeWarning) {
+        setWarning(result.financeWarning)
+      }
       form.reset()
+      setSyncToFinance(false)
       setPending(false)
       onSaved()
     } catch {
@@ -288,9 +316,6 @@ function AddExpenseCard({
     )
   }
 
-  // TODO(finance): legacy offered an optional "Sync to Family Finance"
-  // section here (account/category pickers). Re-add once the finance module
-  // is ported — see src/server/health/expenses.ts.
   return (
     <Card>
       <CardHeader>
@@ -382,6 +407,56 @@ function AddExpenseCard({
               Paid from HSA
             </Label>
           </div>
+          {financeAccounts.length > 0 && (
+            <div className="flex items-center gap-2 pb-2">
+              <input
+                type="checkbox"
+                id="exp-syncFinance"
+                className="size-4 accent-primary"
+                checked={syncToFinance}
+                onChange={(e) => setSyncToFinance(e.target.checked)}
+              />
+              <Label htmlFor="exp-syncFinance" className="text-sm">
+                Sync to Family Finance
+              </Label>
+            </div>
+          )}
+          {syncToFinance && (
+            <>
+              <div className="space-y-1">
+                <Label htmlFor="exp-financeAccount">Finance Account</Label>
+                <select
+                  id="exp-financeAccount"
+                  name="financeAccountId"
+                  className={selectClass}
+                  defaultValue={financeAccounts[0]?.id}
+                  required
+                >
+                  {financeAccounts.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="exp-financeCategory">Finance Category</Label>
+                <select
+                  id="exp-financeCategory"
+                  name="financeCategoryId"
+                  className={selectClass}
+                  defaultValue=""
+                >
+                  <option value="">No category</option>
+                  {financeCategories.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </>
+          )}
           <Button type="submit" disabled={pending}>
             <Plus className="size-4" />
             {pending ? "Adding…" : "Add Expense"}
@@ -389,6 +464,11 @@ function AddExpenseCard({
           {error && (
             <p className="text-sm text-destructive sm:col-span-2 lg:col-span-4">
               {error}
+            </p>
+          )}
+          {warning && (
+            <p className="text-sm text-orange-600 sm:col-span-2 lg:col-span-4">
+              {warning}
             </p>
           )}
         </form>
