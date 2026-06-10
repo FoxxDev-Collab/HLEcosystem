@@ -88,3 +88,4 @@ HLEcosystem_Dotnet_Backup/
 **/uploads/
 
 /grype-findings
+.gstack/
