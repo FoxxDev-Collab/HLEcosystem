@@ -72,11 +72,21 @@ function SettingsPage() {
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label htmlFor="s-first">First name</Label>
-                <Input id="s-first" name="firstName" defaultValue={user.firstName} required />
+                <Input
+                  id="s-first"
+                  name="firstName"
+                  defaultValue={user.firstName}
+                  required
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="s-last">Last name</Label>
-                <Input id="s-last" name="lastName" defaultValue={user.lastName} required />
+                <Input
+                  id="s-last"
+                  name="lastName"
+                  defaultValue={user.lastName}
+                  required
+                />
               </div>
             </div>
             <div className="space-y-2">

@@ -22,7 +22,9 @@ export type User = {
 
 // password + totpSecret stripped, `name` derived (firstName + lastName) — the
 // only shape that leaves the server.
-export type UserPublic = Omit<User, "password" | "totpSecret"> & { name: string }
+export type UserPublic = Omit<User, "password" | "totpSecret"> & {
+  name: string
+}
 
 export type Household = {
   id: string

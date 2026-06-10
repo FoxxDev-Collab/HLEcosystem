@@ -3,7 +3,7 @@
 
 export function formatCurrency(
   amount: number | string | null | undefined,
-  currency = "USD",
+  currency = "USD"
 ): string {
   if (amount === null || amount === undefined) return ""
   const num = typeof amount === "string" ? parseFloat(amount) : amount
@@ -44,7 +44,9 @@ export function formatDateLong(date: Date | string | null | undefined): string {
   }).format(toDate(date))
 }
 
-export function formatDateShort(date: Date | string | null | undefined): string {
+export function formatDateShort(
+  date: Date | string | null | undefined
+): string {
   if (!date) return "—"
   return new Intl.DateTimeFormat("en-US", {
     month: "short",
@@ -68,7 +70,7 @@ export function formatPercent(value: number, decimals = 1): string {
 }
 
 export function formatAge(
-  dateOfBirth: Date | string | null | undefined,
+  dateOfBirth: Date | string | null | undefined
 ): number | null {
   if (!dateOfBirth) return null
   const dob = toDate(dateOfBirth)
@@ -83,7 +85,7 @@ export function formatAge(
 
 /** Input value for <input type="date"> from a DATE string or Date. */
 export function toDateInputValue(
-  date: Date | string | null | undefined,
+  date: Date | string | null | undefined
 ): string {
   if (!date) return ""
   if (typeof date === "string") return date.slice(0, 10)

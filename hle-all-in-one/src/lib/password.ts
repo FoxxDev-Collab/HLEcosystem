@@ -9,7 +9,10 @@ export const PASSWORD_RULES: Array<PasswordRule> = [
   { label: "An uppercase letter (A–Z)", test: (pw) => /[A-Z]/.test(pw) },
   { label: "A lowercase letter (a–z)", test: (pw) => /[a-z]/.test(pw) },
   { label: "A number (0–9)", test: (pw) => /[0-9]/.test(pw) },
-  { label: "A special character (!@#$…)", test: (pw) => /[^A-Za-z0-9]/.test(pw) },
+  {
+    label: "A special character (!@#$…)",
+    test: (pw) => /[^A-Za-z0-9]/.test(pw),
+  },
 ]
 
 export function passwordIsValid(pw: string): boolean {
@@ -17,5 +20,7 @@ export function passwordIsValid(pw: string): boolean {
 }
 
 export function passwordFailures(pw: string): Array<string> {
-  return PASSWORD_RULES.filter((rule) => !rule.test(pw)).map((rule) => rule.label)
+  return PASSWORD_RULES.filter((rule) => !rule.test(pw)).map(
+    (rule) => rule.label
+  )
 }

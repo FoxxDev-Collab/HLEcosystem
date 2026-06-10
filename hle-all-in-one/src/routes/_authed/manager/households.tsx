@@ -122,7 +122,8 @@ function HouseholdsPage() {
         ))}
         {households.length === 0 && (
           <p className="text-sm text-muted-foreground">
-            You don&apos;t belong to any household yet. Create one to get started.
+            You don&apos;t belong to any household yet. Create one to get
+            started.
           </p>
         )}
       </div>
@@ -132,7 +133,9 @@ function HouseholdsPage() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle className="text-base">{active.name} · Members</CardTitle>
+                <CardTitle className="text-base">
+                  {active.name} · Members
+                </CardTitle>
                 <CardDescription>
                   {isOwner
                     ? "Add existing users by email. Only an admin can create new accounts."
@@ -153,7 +156,9 @@ function HouseholdsPage() {
                   <TableHead>Name</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Role</TableHead>
-                  {isOwner && <TableHead className="text-right">Actions</TableHead>}
+                  {isOwner && (
+                    <TableHead className="text-right">Actions</TableHead>
+                  )}
                 </TableRow>
               </TableHeader>
               <TableBody>

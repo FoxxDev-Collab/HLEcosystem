@@ -42,7 +42,7 @@ export async function runMigrations(): Promise<void> {
         throw new Error(
           `migration drift: ${id} on disk does not match the checksum recorded ` +
             `in "_migrations". Applied migrations must not be edited. If this is ` +
-            `intentional, write a new migration that fixes the prior one.`,
+            `intentional, write a new migration that fixes the prior one.`
         )
       }
       continue

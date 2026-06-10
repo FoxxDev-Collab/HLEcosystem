@@ -77,7 +77,7 @@ export function AppSidebar({
                 <Fingerprint className="size-3.5" />
               </div>
               <div className="text-left">
-                <div className="text-sm font-semibold leading-none">
+                <div className="text-sm leading-none font-semibold">
                   {activeHousehold?.name ?? "No household"}
                 </div>
                 <div className="mt-0.5 text-[11px] text-muted-foreground">
@@ -115,12 +115,12 @@ export function AppSidebar({
       <SidebarContent>
         {(activeModule?.nav ?? []).map((group) => {
           const items = group.items.filter(
-            (item) => !item.adminOnly || user.role === "ADMIN",
+            (item) => !item.adminOnly || user.role === "ADMIN"
           )
           if (items.length === 0) return null
           return (
             <SidebarGroup key={group.label}>
-              <SidebarGroupLabel className="text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/70">
+              <SidebarGroupLabel className="text-[10px] font-semibold tracking-[0.08em] text-muted-foreground/70 uppercase">
                 {group.label}
               </SidebarGroupLabel>
               <SidebarGroupContent>
@@ -147,17 +147,21 @@ export function AppSidebar({
 
         {/* mt-auto pins the switcher to the bottom; the group collapses via
             its label (click "Apps" to toggle). */}
-        <Collapsible open={appsOpen} onOpenChange={setAppsOpen} className="mt-auto">
+        <Collapsible
+          open={appsOpen}
+          onOpenChange={setAppsOpen}
+          className="mt-auto"
+        >
           <SidebarGroup>
             <SidebarGroupLabel
               render={<CollapsibleTrigger />}
-              className="flex w-full cursor-pointer items-center justify-between text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/70 transition-colors hover:text-foreground"
+              className="flex w-full cursor-pointer items-center justify-between text-[10px] font-semibold tracking-[0.08em] text-muted-foreground/70 uppercase transition-colors hover:text-foreground"
             >
               Apps
               <ChevronDown
                 className={cn(
                   "size-3.5 transition-transform duration-200",
-                  appsOpen ? "" : "-rotate-90",
+                  appsOpen ? "" : "-rotate-90"
                 )}
               />
             </SidebarGroupLabel>

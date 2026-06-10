@@ -19,7 +19,7 @@ export const authMiddleware = createMiddleware({ type: "function" }).server(
         activeHouseholdId: result.activeHouseholdId,
       },
     })
-  },
+  }
 )
 
 // Instance-admin gate (account provisioning, user CRUD).

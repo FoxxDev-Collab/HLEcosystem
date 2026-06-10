@@ -72,7 +72,9 @@ function SecurityPage() {
                     <span className="flex items-center gap-2">
                       <Monitor className="size-4 text-muted-foreground" />
                       {s.userAgent ?? "Unknown device"}
-                      {s.current && <Badge variant="outline">This device</Badge>}
+                      {s.current && (
+                        <Badge variant="outline">This device</Badge>
+                      )}
                     </span>
                   </TableCell>
                   <TableCell className="text-muted-foreground">
@@ -135,7 +137,9 @@ function ChangePasswordCard() {
       setNewPassword("")
       form.reset()
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not change password.")
+      setError(
+        err instanceof Error ? err.message : "Could not change password."
+      )
       setPending(false)
     }
   }
@@ -166,7 +170,10 @@ function ChangePasswordCard() {
           />
           {error && <p className="text-sm text-destructive">{error}</p>}
           {ok && <p className="text-sm text-emerald-600">Password updated.</p>}
-          <Button type="submit" disabled={pending || !passwordIsValid(newPassword)}>
+          <Button
+            type="submit"
+            disabled={pending || !passwordIsValid(newPassword)}
+          >
             {pending ? "Updating…" : "Update password"}
           </Button>
         </form>

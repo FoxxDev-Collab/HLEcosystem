@@ -67,7 +67,8 @@ function MembersPage() {
         <div>
           <h1 className="text-xl font-semibold">Users</h1>
           <p className="text-sm text-muted-foreground">
-            {counts.total} total · {counts.active} active · {counts.admins} admin
+            {counts.total} total · {counts.active} active · {counts.admins}{" "}
+            admin
           </p>
         </div>
         <Button onClick={() => setCreateOpen(true)}>
@@ -91,9 +92,13 @@ function MembersPage() {
               {users.map((u) => (
                 <TableRow key={u.id}>
                   <TableCell className="font-medium">{u.name}</TableCell>
-                  <TableCell className="text-muted-foreground">{u.email}</TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {u.email}
+                  </TableCell>
                   <TableCell>
-                    <Badge variant={u.role === "ADMIN" ? "default" : "secondary"}>
+                    <Badge
+                      variant={u.role === "ADMIN" ? "default" : "secondary"}
+                    >
                       {u.role}
                     </Badge>
                   </TableCell>
@@ -104,13 +109,28 @@ function MembersPage() {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">
-                      <Button variant="ghost" size="icon" title="Edit" onClick={() => setEditUser(u)}>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        title="Edit"
+                        onClick={() => setEditUser(u)}
+                      >
                         <Pencil className="size-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" title="Set password" onClick={() => setPwUser(u)}>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        title="Set password"
+                        onClick={() => setPwUser(u)}
+                      >
                         <KeyRound className="size-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" title="Delete" onClick={() => setDeleteTarget(u)}>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        title="Delete"
+                        onClick={() => setDeleteTarget(u)}
+                      >
                         <Trash2 className="size-4 text-destructive" />
                       </Button>
                     </div>
@@ -123,20 +143,48 @@ function MembersPage() {
       </Card>
 
       {createOpen && (
-        <CreateUserDialog onClose={() => setCreateOpen(false)} onSaved={() => { setCreateOpen(false); refresh() }} />
+        <CreateUserDialog
+          onClose={() => setCreateOpen(false)}
+          onSaved={() => {
+            setCreateOpen(false)
+            refresh()
+          }}
+        />
       )}
       {editUser && (
-        <EditUserDialog user={editUser} onClose={() => setEditUser(null)} onSaved={() => { setEditUser(null); refresh() }} />
+        <EditUserDialog
+          user={editUser}
+          onClose={() => setEditUser(null)}
+          onSaved={() => {
+            setEditUser(null)
+            refresh()
+          }}
+        />
       )}
-      {pwUser && <PasswordDialog user={pwUser} onClose={() => setPwUser(null)} />}
+      {pwUser && (
+        <PasswordDialog user={pwUser} onClose={() => setPwUser(null)} />
+      )}
       {deleteTarget && (
-        <DeleteUserDialog user={deleteTarget} onClose={() => setDeleteTarget(null)} onDeleted={() => { setDeleteTarget(null); refresh() }} />
+        <DeleteUserDialog
+          user={deleteTarget}
+          onClose={() => setDeleteTarget(null)}
+          onDeleted={() => {
+            setDeleteTarget(null)
+            refresh()
+          }}
+        />
       )}
     </div>
   )
 }
 
-function CreateUserDialog({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
+function CreateUserDialog({
+  onClose,
+  onSaved,
+}: {
+  onClose: () => void
+  onSaved: () => void
+}) {
   const [password, setPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
@@ -192,18 +240,34 @@ function CreateUserDialog({ onClose, onSaved }: { onClose: () => void; onSaved: 
             <Label htmlFor="c-email">Email</Label>
             <Input id="c-email" name="email" type="email" required />
           </div>
-          <PasswordField id="c-password" name="password" label="Password" value={password} onChange={setPassword} />
+          <PasswordField
+            id="c-password"
+            name="password"
+            label="Password"
+            value={password}
+            onChange={setPassword}
+          />
           <div className="space-y-2">
             <Label htmlFor="c-role">Role</Label>
-            <select id="c-role" name="role" className={selectClass} defaultValue="MEMBER">
+            <select
+              id="c-role"
+              name="role"
+              className={selectClass}
+              defaultValue="MEMBER"
+            >
               <option value="MEMBER">Member</option>
               <option value="ADMIN">Admin</option>
             </select>
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
-            <Button type="submit" disabled={pending || !passwordIsValid(password)}>
+            <Button type="button" variant="outline" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={pending || !passwordIsValid(password)}
+            >
               {pending ? "Creating…" : "Create user"}
             </Button>
           </DialogFooter>
@@ -213,7 +277,15 @@ function CreateUserDialog({ onClose, onSaved }: { onClose: () => void; onSaved: 
   )
 }
 
-function EditUserDialog({ user, onClose, onSaved }: { user: UserPublic; onClose: () => void; onSaved: () => void }) {
+function EditUserDialog({
+  user,
+  onClose,
+  onSaved,
+}: {
+  user: UserPublic
+  onClose: () => void
+  onSaved: () => void
+}) {
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
 
@@ -255,28 +327,54 @@ function EditUserDialog({ user, onClose, onSaved }: { user: UserPublic; onClose:
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label htmlFor="e-first">First name</Label>
-              <Input id="e-first" name="firstName" defaultValue={user.firstName} required />
+              <Input
+                id="e-first"
+                name="firstName"
+                defaultValue={user.firstName}
+                required
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="e-last">Last name</Label>
-              <Input id="e-last" name="lastName" defaultValue={user.lastName} required />
+              <Input
+                id="e-last"
+                name="lastName"
+                defaultValue={user.lastName}
+                required
+              />
             </div>
           </div>
           <div className="space-y-2">
             <Label htmlFor="e-email">Email</Label>
-            <Input id="e-email" name="email" type="email" defaultValue={user.email} required />
+            <Input
+              id="e-email"
+              name="email"
+              type="email"
+              defaultValue={user.email}
+              required
+            />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label htmlFor="e-role">Role</Label>
-              <select id="e-role" name="role" className={selectClass} defaultValue={user.role}>
+              <select
+                id="e-role"
+                name="role"
+                className={selectClass}
+                defaultValue={user.role}
+              >
                 <option value="MEMBER">Member</option>
                 <option value="ADMIN">Admin</option>
               </select>
             </div>
             <div className="space-y-2">
               <Label htmlFor="e-active">Status</Label>
-              <select id="e-active" name="active" className={selectClass} defaultValue={String(user.active)}>
+              <select
+                id="e-active"
+                name="active"
+                className={selectClass}
+                defaultValue={String(user.active)}
+              >
                 <option value="true">Active</option>
                 <option value="false">Inactive</option>
               </select>
@@ -284,7 +382,9 @@ function EditUserDialog({ user, onClose, onSaved }: { user: UserPublic; onClose:
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
+            <Button type="button" variant="outline" onClick={onClose}>
+              Cancel
+            </Button>
             <Button type="submit" disabled={pending}>
               {pending ? "Saving…" : "Save changes"}
             </Button>
@@ -295,7 +395,13 @@ function EditUserDialog({ user, onClose, onSaved }: { user: UserPublic; onClose:
   )
 }
 
-function PasswordDialog({ user, onClose }: { user: UserPublic; onClose: () => void }) {
+function PasswordDialog({
+  user,
+  onClose,
+}: {
+  user: UserPublic
+  onClose: () => void
+}) {
   const [password, setPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [done, setDone] = useState(false)
@@ -306,7 +412,9 @@ function PasswordDialog({ user, onClose }: { user: UserPublic; onClose: () => vo
     setError(null)
     setPending(true)
     try {
-      const result = await setUserPasswordFn({ data: { id: user.id, password } })
+      const result = await setUserPasswordFn({
+        data: { id: user.id, password },
+      })
       if ("error" in result && typeof result.error === "string") {
         setError(result.error)
         setPending(false)
@@ -325,7 +433,9 @@ function PasswordDialog({ user, onClose }: { user: UserPublic; onClose: () => vo
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Set password</DialogTitle>
-          <DialogDescription>Set a new password for {user.name}.</DialogDescription>
+          <DialogDescription>
+            Set a new password for {user.name}.
+          </DialogDescription>
         </DialogHeader>
         {done ? (
           <div className="space-y-4">
@@ -336,11 +446,23 @@ function PasswordDialog({ user, onClose }: { user: UserPublic; onClose: () => vo
           </div>
         ) : (
           <form onSubmit={onSubmit} className="space-y-4">
-            <PasswordField id="p-password" name="password" label="New password" value={password} onChange={setPassword} autoFocus />
+            <PasswordField
+              id="p-password"
+              name="password"
+              label="New password"
+              value={password}
+              onChange={setPassword}
+              autoFocus
+            />
             {error && <p className="text-sm text-destructive">{error}</p>}
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
-              <Button type="submit" disabled={pending || !passwordIsValid(password)}>
+              <Button type="button" variant="outline" onClick={onClose}>
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={pending || !passwordIsValid(password)}
+              >
                 {pending ? "Saving…" : "Set password"}
               </Button>
             </DialogFooter>
@@ -351,7 +473,15 @@ function PasswordDialog({ user, onClose }: { user: UserPublic; onClose: () => vo
   )
 }
 
-function DeleteUserDialog({ user, onClose, onDeleted }: { user: UserPublic; onClose: () => void; onDeleted: () => void }) {
+function DeleteUserDialog({
+  user,
+  onClose,
+  onDeleted,
+}: {
+  user: UserPublic
+  onClose: () => void
+  onDeleted: () => void
+}) {
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
 
@@ -378,13 +508,20 @@ function DeleteUserDialog({ user, onClose, onDeleted }: { user: UserPublic; onCl
         <AlertDialogHeader>
           <AlertDialogTitle>Delete {user.name}?</AlertDialogTitle>
           <AlertDialogDescription>
-            This permanently removes the account and its household memberships. This cannot be undone.
+            This permanently removes the account and its household memberships.
+            This cannot be undone.
           </AlertDialogDescription>
         </AlertDialogHeader>
         {error && <p className="text-sm text-destructive">{error}</p>}
         <AlertDialogFooter>
           <AlertDialogCancel onClick={onClose}>Cancel</AlertDialogCancel>
-          <AlertDialogAction onClick={(e) => { e.preventDefault(); confirm() }} disabled={pending}>
+          <AlertDialogAction
+            onClick={(e) => {
+              e.preventDefault()
+              confirm()
+            }}
+            disabled={pending}
+          >
             {pending ? "Deleting…" : "Delete"}
           </AlertDialogAction>
         </AlertDialogFooter>

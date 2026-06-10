@@ -24,7 +24,7 @@ async function hashPassword(password: string): Promise<string> {
 
 export async function verifyPassword(
   user: User,
-  password: string,
+  password: string
 ): Promise<boolean> {
   if (!user.password) return false
   return Bun.password.verify(password, user.password)
@@ -52,7 +52,7 @@ export async function getUserPublic(id: string): Promise<UserPublic | null> {
 
 // Full row incl. password — only for auth (login / password change).
 export async function getUserWithSecretByEmail(
-  email: string,
+  email: string
 ): Promise<User | null> {
   const rows = await sql`
     SELECT * FROM "User" WHERE lower("email") = lower(${email})
@@ -90,7 +90,7 @@ export async function updateUser(
     email: string
     role: Role
     active: boolean
-  },
+  }
 ): Promise<UserPublic> {
   const rows = await sql`
     UPDATE "User"
@@ -108,7 +108,7 @@ export async function updateUser(
 
 export async function updateProfile(
   id: string,
-  data: { firstName: string; lastName: string; email: string },
+  data: { firstName: string; lastName: string; email: string }
 ): Promise<UserPublic> {
   const rows = await sql`
     UPDATE "User"
@@ -124,7 +124,7 @@ export async function updateProfile(
 
 export async function setUserPassword(
   id: string,
-  password: string,
+  password: string
 ): Promise<void> {
   const hashed = await hashPassword(password)
   await sql`UPDATE "User" SET "password" = ${hashed}, "updatedAt" = now() WHERE "id" = ${id}`
@@ -136,7 +136,7 @@ export async function deleteUser(id: string): Promise<void> {
 
 export async function emailExists(
   email: string,
-  excludeId?: string,
+  excludeId?: string
 ): Promise<boolean> {
   // Note: no `"id" <> ${excludeId ?? ""}` — comparing a uuid column to an
   // empty string errors. Only add the exclusion when an id is actually given.
