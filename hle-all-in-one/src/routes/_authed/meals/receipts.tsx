@@ -66,7 +66,8 @@ function fileToBase64(file: File): Promise<string> {
 }
 
 function ReceiptsPage() {
-  const { stores, aiConfigured } = Route.useLoaderData()
+  const { stores, aiConfigured, financeAccounts, financeCategories } =
+    Route.useLoaderData()
   const router = useRouter()
   const [scanning, setScanning] = useState(false)
   const [processing, setProcessing] = useState(false)
@@ -76,6 +77,10 @@ function ReceiptsPage() {
   const [file, setFile] = useState<File | null>(null)
   const [success, setSuccess] = useState<number | null>(null)
   const [storeId, setStoreId] = useState("")
+  const [financeWarning, setFinanceWarning] = useState<string | null>(null)
+  const [addToFinance, setAddToFinance] = useState(false)
+  const [financeAccountId, setFinanceAccountId] = useState("")
+  const [financeCategoryId, setFinanceCategoryId] = useState("")
 
   // Auto-match the parsed store name against configured stores.
   function autoMatchStore(parsed: ReceiptData) {
@@ -125,17 +130,33 @@ function ReceiptsPage() {
   async function onProcess() {
     if (!result || !storeId) return
     setError(null)
+    setFinanceWarning(null)
     setProcessing(true)
     try {
       const date = /^\d{4}-\d{2}-\d{2}$/.test(result.date)
         ? result.date
         : new Date().toISOString().split("T")[0]
       const res = await processReceiptFn({
-        data: { storeId, date, items: result.items },
+        data: {
+          storeId,
+          date,
+          items: result.items,
+          finance:
+            addToFinance && financeAccountId && result.total > 0
+              ? {
+                  accountId: financeAccountId,
+                  categoryId: financeCategoryId || null,
+                  total: result.total,
+                }
+              : null,
+        },
       })
       if ("error" in res && typeof res.error === "string") {
         setError(res.error)
       } else if ("recorded" in res) {
+        if ("financeWarning" in res && res.financeWarning) {
+          setFinanceWarning(res.financeWarning)
+        }
         setSuccess(res.recorded)
         router.invalidate()
       }
@@ -149,6 +170,8 @@ function ReceiptsPage() {
     setResult(null)
     setError(null)
     setSuccess(null)
+    setFinanceWarning(null)
+    setAddToFinance(false)
     setFile(null)
     if (preview) {
       URL.revokeObjectURL(preview)
@@ -176,6 +199,9 @@ function ReceiptsPage() {
               <p className="mt-1 text-sm text-muted-foreground">
                 {success} price{success !== 1 ? "s" : ""} recorded
               </p>
+              {financeWarning && (
+                <p className="mt-2 text-sm text-orange-600">{financeWarning}</p>
+              )}
             </div>
             <Button variant="outline" onClick={onReset}>
               <Camera className="size-4" />
@@ -365,10 +391,58 @@ function ReceiptsPage() {
                 )}
               </div>
 
-              {/* TODO(finance): the legacy app offered "Also add expense to
-                  Family Finance" here (account + category pickers, EXPENSE
-                  transaction + balance update via the finance bridge). Restore
-                  it once the finance module is ported into hle-all-in-one. */}
+              {financeAccounts.length > 0 && (
+                <div className="space-y-3">
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      className="size-4 accent-primary"
+                      checked={addToFinance}
+                      onChange={(e) => {
+                        setAddToFinance(e.target.checked)
+                        if (e.target.checked && !financeAccountId) {
+                          setFinanceAccountId(financeAccounts[0]?.id ?? "")
+                        }
+                      }}
+                    />
+                    Also add expense to Family Finance (
+                    {formatCurrency(result.total)})
+                  </label>
+                  {addToFinance && (
+                    <div className="grid max-w-xl gap-3 sm:grid-cols-2">
+                      <div className="space-y-1">
+                        <Label>Finance Account</Label>
+                        <select
+                          className={selectClass}
+                          value={financeAccountId}
+                          onChange={(e) => setFinanceAccountId(e.target.value)}
+                        >
+                          {financeAccounts.map((a) => (
+                            <option key={a.id} value={a.id}>
+                              {a.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="space-y-1">
+                        <Label>Finance Category</Label>
+                        <select
+                          className={selectClass}
+                          value={financeCategoryId}
+                          onChange={(e) => setFinanceCategoryId(e.target.value)}
+                        >
+                          <option value="">No category</option>
+                          {financeCategories.map((c) => (
+                            <option key={c.id} value={c.id}>
+                              {c.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {error && <p className="text-sm text-destructive">{error}</p>}
 
