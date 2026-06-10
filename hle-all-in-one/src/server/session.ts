@@ -15,7 +15,7 @@ export async function createSession(
     userAgent: string | null
     ipAddress: string | null
     activeHouseholdId: string | null
-  },
+  }
 ): Promise<string> {
   const token = generateToken()
   const expiresAt = new Date(Date.now() + SESSION_DURATION_MS)
@@ -36,10 +36,14 @@ export type ValidatedSession = {
 }
 
 export async function validateSession(
-  token: string,
+  token: string
 ): Promise<ValidatedSession | null> {
   const rows: Array<
-    User & { sessionId: string; activeHouseholdId: string | null; expiresAt: Date }
+    User & {
+      sessionId: string
+      activeHouseholdId: string | null
+      expiresAt: Date
+    }
   > = await sql`
     SELECT s."id" AS "sessionId", s."activeHouseholdId", s."expiresAt", u.*
     FROM "Session" s
@@ -64,7 +68,7 @@ export async function validateSession(
 
 export async function setActiveHousehold(
   token: string,
-  householdId: string,
+  householdId: string
 ): Promise<void> {
   await sql`UPDATE "Session" SET "activeHouseholdId" = ${householdId} WHERE "token" = ${token}`
 }
@@ -75,20 +79,20 @@ export async function deleteSession(token: string): Promise<void> {
 
 export async function deleteSessionById(
   id: string,
-  userId: string,
+  userId: string
 ): Promise<void> {
   await sql`DELETE FROM "Session" WHERE "id" = ${id} AND "userId" = ${userId}`
 }
 
 export async function listUserSessions(
   userId: string,
-  currentToken: string,
+  currentToken: string
 ): Promise<Array<SessionInfo>> {
-  return (await sql`
+  return await sql`
     SELECT "id", "userAgent", "ipAddress", "createdAt", "expiresAt",
            ("token" = ${currentToken}) AS "current"
     FROM "Session"
     WHERE "userId" = ${userId} AND "expiresAt" > now()
     ORDER BY "createdAt" DESC
-  `)
+  `
 }

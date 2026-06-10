@@ -38,17 +38,29 @@ async function main() {
     password: "initial-pw-123",
     role: "MEMBER",
   })
-  check("createUser returns public shape (no password field)", !("password" in created))
+  check(
+    "createUser returns public shape (no password field)",
+    !("password" in created)
+  )
   check("createUser derives display name", created.name === "CRUD Smoke")
 
   // READ (list)
   const all = await listUsers()
-  check("listUsers includes new user", all.some((u) => u.email === EMAIL))
+  check(
+    "listUsers includes new user",
+    all.some((u) => u.email === EMAIL)
+  )
 
   // Password verify
   const withSecret = await getUserWithSecretByEmail(EMAIL)
-  check("verifyPassword true for correct pw", await verifyPassword(withSecret!, "initial-pw-123"))
-  check("verifyPassword false for wrong pw", !(await verifyPassword(withSecret!, "nope")))
+  check(
+    "verifyPassword true for correct pw",
+    await verifyPassword(withSecret!, "initial-pw-123")
+  )
+  check(
+    "verifyPassword false for wrong pw",
+    !(await verifyPassword(withSecret!, "nope"))
+  )
 
   // UPDATE (promote + deactivate)
   const updated = await updateUser(created.id, {
@@ -58,12 +70,20 @@ async function main() {
     role: "ADMIN",
     active: false,
   })
-  check("updateUser applied role+name+active", updated.role === "ADMIN" && updated.lastName === "Smoke2" && updated.active === false)
+  check(
+    "updateUser applied role+name+active",
+    updated.role === "ADMIN" &&
+      updated.lastName === "Smoke2" &&
+      updated.active === false
+  )
 
   // SET PASSWORD
   await setUserPassword(created.id, "rotated-pw-456")
   const after = await getUserWithSecretByEmail(EMAIL)
-  check("setUserPassword rotates hash", await verifyPassword(after!, "rotated-pw-456"))
+  check(
+    "setUserPassword rotates hash",
+    await verifyPassword(after!, "rotated-pw-456")
+  )
 
   // Household membership: add the test user to the admin's household.
   const admin = await getUserWithSecretByEmail("admin@hle.local")
@@ -80,7 +100,10 @@ async function main() {
 
   await removeMember(hid, memberRow!.membershipId)
   const membersAfter = await listMembers(hid)
-  check("removeMember removed the user", !membersAfter.some((m) => m.email === EMAIL))
+  check(
+    "removeMember removed the user",
+    !membersAfter.some((m) => m.email === EMAIL)
+  )
 
   // DELETE
   await deleteUser(created.id)

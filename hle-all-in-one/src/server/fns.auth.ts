@@ -11,11 +11,7 @@ import {
 import { authMiddleware } from "./middleware"
 import { getUserWithSecretByEmail, verifyPassword } from "./users"
 import { getMembership, listHouseholdsForUser } from "./households"
-import {
-  createSession,
-  deleteSession,
-  setActiveHousehold,
-} from "./session"
+import { createSession, deleteSession, setActiveHousehold } from "./session"
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -86,13 +82,13 @@ export const getSessionContextFn = createServerFn({ method: "GET" }).handler(
       })),
       activeHousehold: active ? { id: active.id, name: active.name } : null,
     }
-  },
+  }
 )
 
 export const switchHouseholdFn = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
   .inputValidator((d: unknown) =>
-    z.object({ householdId: z.string().min(1) }).parse(d),
+    z.object({ householdId: z.string().min(1) }).parse(d)
   )
   .handler(async ({ data, context }) => {
     // Verify membership before honoring the switch (never trust the input id).

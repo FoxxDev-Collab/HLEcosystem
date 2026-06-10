@@ -30,10 +30,14 @@ export const getHouseholdsPageFn = createServerFn({ method: "GET" })
 export const createHouseholdFn = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
   .inputValidator((d: unknown) =>
-    z.object({ name: z.string().min(1).max(120) }).parse(d),
+    z.object({ name: z.string().min(1).max(120) }).parse(d)
   )
   .handler(async ({ data, context }) => {
-    const hh = await createHousehold(data.name, context.user.id, context.user.name)
+    const hh = await createHousehold(
+      data.name,
+      context.user.id,
+      context.user.name
+    )
     // New household becomes the active one immediately.
     await setActiveHousehold(context.sessionToken, hh.id)
     return { ok: true as const, household: hh }
@@ -56,7 +60,7 @@ export const addMemberFn = createServerFn({ method: "POST" })
         email: z.string().email(),
         role: z.enum(["OWNER", "MEMBER"]),
       })
-      .parse(d),
+      .parse(d)
   )
   .handler(async ({ data, context }) => {
     if (context.membership.role !== "OWNER") {
@@ -68,7 +72,7 @@ export const addMemberFn = createServerFn({ method: "POST" })
 export const removeMemberFn = createServerFn({ method: "POST" })
   .middleware([householdMiddleware])
   .inputValidator((d: unknown) =>
-    z.object({ membershipId: z.string().min(1) }).parse(d),
+    z.object({ membershipId: z.string().min(1) }).parse(d)
   )
   .handler(async ({ data, context }) => {
     if (context.membership.role !== "OWNER") {

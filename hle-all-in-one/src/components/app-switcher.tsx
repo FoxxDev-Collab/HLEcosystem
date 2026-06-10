@@ -1,5 +1,5 @@
-import { Link,  useLocation } from "@tanstack/react-router"
-import type {LinkProps} from "@tanstack/react-router";
+import { Link, useLocation } from "@tanstack/react-router"
+import type { LinkProps } from "@tanstack/react-router"
 import { MODULES, getActiveModule } from "@/lib/modules"
 
 /**
@@ -43,7 +43,9 @@ export function AppSwitcher() {
         }`
         const inner = (
           <>
-            <Icon className={`size-4 ${isCurrent ? m.color : "text-muted-foreground"}`} />
+            <Icon
+              className={`size-4 ${isCurrent ? m.color : "text-muted-foreground"}`}
+            />
             <span
               className={`text-[10px] leading-tight ${isCurrent ? "font-semibold" : "text-muted-foreground"}`}
             >

@@ -7,7 +7,7 @@ import appCss from "../styles.css?url"
 
 // Runs synchronously in <head> before first paint: applies the persisted
 // theme (or OS preference) so there's no light-mode flash on load. Injected
-// via TanStack's head `scripts` API (not dangerouslySetInnerHTML).
+// via TanStack's head `scripts` API (no raw HTML injection).
 const THEME_INIT = `(function(){try{var t=localStorage.getItem('hle-theme')||'system';var d=t==='dark'||(t==='system'&&window.matchMedia('(prefers-color-scheme: dark)').matches);var e=document.documentElement;e.classList.toggle('dark',d);e.style.colorScheme=d?'dark':'light';}catch(e){}})();`
 
 export const Route = createRootRoute({

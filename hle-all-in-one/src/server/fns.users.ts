@@ -17,7 +17,10 @@ const nameField = z.string().trim().min(1).max(80)
 const passwordField = z
   .string()
   .max(200)
-  .refine(passwordIsValid, "Password does not meet the complexity requirements.")
+  .refine(
+    passwordIsValid,
+    "Password does not meet the complexity requirements."
+  )
 
 export const listUsersFn = createServerFn({ method: "GET" })
   .middleware([adminMiddleware])
@@ -60,7 +63,10 @@ export const updateUserFn = createServerFn({ method: "POST" })
     if (await emailExists(data.email, data.id)) {
       return { error: "Another user already uses that email." }
     }
-    if (data.id === context.user.id && (data.role !== "ADMIN" || !data.active)) {
+    if (
+      data.id === context.user.id &&
+      (data.role !== "ADMIN" || !data.active)
+    ) {
       return { error: "You cannot remove your own admin access." }
     }
     const user = await updateUser(data.id, {
@@ -76,7 +82,7 @@ export const updateUserFn = createServerFn({ method: "POST" })
 export const setUserPasswordFn = createServerFn({ method: "POST" })
   .middleware([adminMiddleware])
   .inputValidator((d: unknown) =>
-    z.object({ id: z.string().min(1), password: passwordField }).parse(d),
+    z.object({ id: z.string().min(1), password: passwordField }).parse(d)
   )
   .handler(async ({ data }) => {
     await setUserPassword(data.id, data.password)

@@ -14,28 +14,28 @@ async function main() {
     cost: 12,
   })
 
-  const [admin] = (await sql`
+  const [admin] = await sql`
     INSERT INTO "User" ("email", "firstName", "lastName", "password", "role", "active")
     VALUES (${ADMIN_EMAIL}, ${ADMIN_FIRST}, ${ADMIN_LAST}, ${passwordHash}, 'ADMIN', true)
     ON CONFLICT ("email") DO UPDATE
       SET "firstName" = EXCLUDED."firstName", "lastName" = EXCLUDED."lastName"
     RETURNING "id", "email", "firstName", "lastName", "role"
-  `)
+  `
 
   const displayName = `${admin.firstName} ${admin.lastName}`.trim()
 
-  const member = (await sql`
+  const member = await sql`
     SELECT "householdId" FROM "HouseholdMember"
     WHERE "userId" = ${admin.id} LIMIT 1
-  `)
+  `
 
   if (member.length === 0) {
     await sql.begin(async (tx) => {
-      const [hh] = (await tx`
+      const [hh] = await tx`
         INSERT INTO "Household" ("name", "createdById")
         VALUES (${"Admin Household"}, ${admin.id})
         RETURNING "id"
-      `)
+      `
       await tx`
         INSERT INTO "HouseholdMember" ("householdId", "userId", "displayName", "role")
         VALUES (${hh.id}, ${admin.id}, ${displayName}, 'OWNER')

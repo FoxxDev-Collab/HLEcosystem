@@ -15,7 +15,10 @@ const nameField = z.string().trim().min(1).max(80)
 const passwordField = z
   .string()
   .max(200)
-  .refine(passwordIsValid, "Password does not meet the complexity requirements.")
+  .refine(
+    passwordIsValid,
+    "Password does not meet the complexity requirements."
+  )
 
 export const getMySessionsFn = createServerFn({ method: "GET" })
   .middleware([authMiddleware])
@@ -41,7 +44,7 @@ export const changePasswordFn = createServerFn({ method: "POST" })
         currentPassword: z.string().min(1),
         newPassword: passwordField,
       })
-      .parse(d),
+      .parse(d)
   )
   .handler(async ({ data, context }) => {
     const user = await getUserWithSecretById(context.user.id)
@@ -61,7 +64,7 @@ export const updateProfileFn = createServerFn({ method: "POST" })
         lastName: nameField,
         email: z.string().email(),
       })
-      .parse(d),
+      .parse(d)
   )
   .handler(async ({ data, context }) => {
     if (await emailExists(data.email, context.user.id)) {

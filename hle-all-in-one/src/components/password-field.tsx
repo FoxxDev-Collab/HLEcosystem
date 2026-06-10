@@ -41,7 +41,9 @@ export function PasswordField({
               key={rule.label}
               className={cn(
                 "flex items-center gap-1.5 text-xs transition-colors",
-                ok ? "text-emerald-600 dark:text-emerald-500" : "text-muted-foreground",
+                ok
+                  ? "text-emerald-600 dark:text-emerald-500"
+                  : "text-muted-foreground"
               )}
             >
               {ok ? (
