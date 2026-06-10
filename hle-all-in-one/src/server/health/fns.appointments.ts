@@ -7,8 +7,14 @@ import {
   listAppointments,
   updateAppointmentStatus,
 } from "./appointments"
-import { healthMemberBelongsToHousehold, listActiveHealthMembers } from "./members"
-import { listActiveProviderOptions, providerBelongsToHousehold } from "./providers"
+import {
+  healthMemberBelongsToHousehold,
+  listActiveHealthMembers,
+} from "./members"
+import {
+  listActiveProviderOptions,
+  providerBelongsToHousehold,
+} from "./providers"
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i

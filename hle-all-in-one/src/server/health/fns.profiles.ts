@@ -1,7 +1,10 @@
 import { createServerFn } from "@tanstack/react-start"
 import { z } from "zod"
 import { householdMiddleware } from "@/server/middleware"
-import { healthMemberBelongsToHousehold, listActiveHealthMembers } from "./members"
+import {
+  healthMemberBelongsToHousehold,
+  listActiveHealthMembers,
+} from "./members"
 import {
   createProfileRecord,
   deleteProfileRecord,

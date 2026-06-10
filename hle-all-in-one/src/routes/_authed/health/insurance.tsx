@@ -170,7 +170,9 @@ function PolicyCard({
                 <Badge variant="outline" className="text-xs">
                   {policy.insuranceType}
                 </Badge>
-                {!policy.isActive && <Badge variant="secondary">Inactive</Badge>}
+                {!policy.isActive && (
+                  <Badge variant="secondary">Inactive</Badge>
+                )}
               </div>
               <div className="mt-1 space-y-0.5 text-sm text-muted-foreground">
                 <div>
