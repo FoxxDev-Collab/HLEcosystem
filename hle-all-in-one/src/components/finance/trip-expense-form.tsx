@@ -6,7 +6,7 @@ import type { FinanceTripExpenseType } from "@/server/finance/trips"
 import {
   TRIP_EXPENSE_TYPES,
   TRIP_EXPENSE_TYPE_LABELS,
-} from "@/server/finance/trips"
+} from "@/lib/finance-constants"
 import { addTripExpenseFn } from "@/server/finance/fns.trips"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"

@@ -17,45 +17,17 @@ import { sql } from "@/server/db"
 import { deleteFileFromDisk } from "@/server/file-storage"
 import { saveFinanceUpload } from "./taxes"
 
-export type FinanceTripStatus =
-  | "PLANNING"
-  | "ACTIVE"
-  | "COMPLETED"
-  | "CANCELLED"
+import type {
+  FinanceTripExpenseType,
+  FinanceTripStatus,
+} from "@/lib/finance-constants"
 
-export const TRIP_STATUSES: Array<FinanceTripStatus> = [
-  "PLANNING",
-  "ACTIVE",
-  "COMPLETED",
-  "CANCELLED",
-]
-
-export type FinanceTripExpenseType =
-  | "GAS"
-  | "FOOD"
-  | "LODGING"
-  | "TRANSPORT"
-  | "SUPPLIES"
-  | "OTHER"
-
-export const TRIP_EXPENSE_TYPES: Array<FinanceTripExpenseType> = [
-  "GAS",
-  "FOOD",
-  "LODGING",
-  "TRANSPORT",
-  "SUPPLIES",
-  "OTHER",
-]
-
-export const TRIP_EXPENSE_TYPE_LABELS: Record<FinanceTripExpenseType, string> =
-  {
-    GAS: "Gas",
-    FOOD: "Food",
-    LODGING: "Lodging",
-    TRANSPORT: "Transport",
-    SUPPLIES: "Supplies",
-    OTHER: "Other",
-  }
+export {
+  TRIP_STATUSES,
+  TRIP_EXPENSE_TYPES,
+  TRIP_EXPENSE_TYPE_LABELS,
+} from "@/lib/finance-constants"
+export type { FinanceTripExpenseType, FinanceTripStatus }
 
 // Legacy: each expense type auto-maps to a default top-level expense
 // category by name when no override is picked.

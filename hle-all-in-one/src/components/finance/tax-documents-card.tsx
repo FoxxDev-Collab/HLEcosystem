@@ -12,7 +12,7 @@ import type { TaxDocumentRow, TaxDocumentType } from "@/server/finance/taxes"
 import {
   TAX_DOCUMENT_TYPES,
   TAX_DOCUMENT_TYPE_LABELS,
-} from "@/server/finance/taxes"
+} from "@/lib/finance-constants"
 import {
   addTaxDocumentFn,
   deleteTaxDocumentFn,

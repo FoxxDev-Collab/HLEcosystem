@@ -7,7 +7,7 @@ import {
 } from "@tanstack/react-router"
 import { ArrowLeft, Check, DollarSign, Pencil, Trash2 } from "lucide-react"
 import type { TaxFilingStatus, TaxYearRow } from "@/server/finance/taxes"
-import { FILING_STATUSES, FILING_STATUS_LABELS } from "@/server/finance/taxes"
+import { FILING_STATUSES, FILING_STATUS_LABELS } from "@/lib/finance-constants"
 import {
   deleteTaxYearFn,
   getTaxYearDetailFn,

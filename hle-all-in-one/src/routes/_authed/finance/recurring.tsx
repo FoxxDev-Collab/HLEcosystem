@@ -9,7 +9,7 @@ import {
   skipNextOccurrenceFn,
   toggleRecurringActiveFn,
 } from "@/server/finance/fns.recurring"
-import { RECURRENCE_FREQUENCIES } from "@/server/finance/recurring"
+import { RECURRENCE_FREQUENCIES } from "@/lib/finance-constants"
 import type { RecurringRow } from "@/server/finance/recurring"
 import type { TransactionType } from "@/server/finance/transactions"
 import { formatCurrency, formatDate, toDateInputValue } from "@/lib/format"

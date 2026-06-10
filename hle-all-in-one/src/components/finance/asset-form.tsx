@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { createAssetFn, updateAssetFn } from "@/server/finance/fns.assets"
 import type { AssetRow, AssetType } from "@/server/finance/assets"
-import { ASSET_TYPES, ASSET_TYPE_LABELS } from "@/server/finance/assets"
+import { ASSET_TYPES, ASSET_TYPE_LABELS } from "@/lib/finance-constants"
 import type { DebtPickerRow } from "@/server/finance/debts"
 import { formatCurrency } from "@/lib/format"
 import { Button } from "@/components/ui/button"

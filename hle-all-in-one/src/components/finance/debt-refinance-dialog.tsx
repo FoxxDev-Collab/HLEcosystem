@@ -4,7 +4,7 @@
 import { useState } from "react"
 import { refinanceDebtFn } from "@/server/finance/fns.debts"
 import type { DebtRow, DebtType } from "@/server/finance/debts"
-import { DEBT_TYPES, DEBT_TYPE_LABELS } from "@/server/finance/debts"
+import { DEBT_TYPES, DEBT_TYPE_LABELS } from "@/lib/finance-constants"
 import { formatCurrency, formatPercent } from "@/lib/format"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"

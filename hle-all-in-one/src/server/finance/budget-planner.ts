@@ -8,18 +8,10 @@
 // regression test ported from the legacy actions.test.ts.
 import { sql } from "@/server/db"
 
-export type BudgetPlannerProjectStatus =
-  | "PLANNING"
-  | "ACTIVE"
-  | "COMPLETED"
-  | "CANCELLED"
+import type { BudgetPlannerProjectStatus } from "@/lib/finance-constants"
 
-export const PROJECT_STATUSES: Array<BudgetPlannerProjectStatus> = [
-  "PLANNING",
-  "ACTIVE",
-  "COMPLETED",
-  "CANCELLED",
-]
+export { PROJECT_STATUSES } from "@/lib/finance-constants"
+export type { BudgetPlannerProjectStatus }
 
 export type ProjectRow = {
   id: string

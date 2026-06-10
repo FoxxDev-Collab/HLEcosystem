@@ -10,37 +10,10 @@
 // form percentages by 100 (legacy behavior).
 import { sql } from "@/server/db"
 
-export type DebtType =
-  | "MORTGAGE"
-  | "AUTO_LOAN"
-  | "STUDENT_LOAN"
-  | "PERSONAL_LOAN"
-  | "HELOC"
-  | "CREDIT_CARD"
-  | "MEDICAL_DEBT"
-  | "OTHER"
+import type { DebtType } from "@/lib/finance-constants"
 
-export const DEBT_TYPES: Array<DebtType> = [
-  "MORTGAGE",
-  "AUTO_LOAN",
-  "STUDENT_LOAN",
-  "PERSONAL_LOAN",
-  "HELOC",
-  "CREDIT_CARD",
-  "MEDICAL_DEBT",
-  "OTHER",
-]
-
-export const DEBT_TYPE_LABELS: Record<DebtType, string> = {
-  MORTGAGE: "Mortgage",
-  AUTO_LOAN: "Auto Loan",
-  STUDENT_LOAN: "Student Loan",
-  PERSONAL_LOAN: "Personal Loan",
-  HELOC: "HELOC",
-  CREDIT_CARD: "Credit Card",
-  MEDICAL_DEBT: "Medical Debt",
-  OTHER: "Other",
-}
+export { DEBT_TYPES, DEBT_TYPE_LABELS } from "@/lib/finance-constants"
+export type { DebtType }
 
 export type DebtRow = {
   id: string

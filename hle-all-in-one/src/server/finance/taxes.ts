@@ -12,6 +12,7 @@ import {
   deleteFileFromDisk,
   fileExistsOnDisk,
 } from "@/server/file-storage"
+import type { TaxDocumentType, TaxFilingStatus } from "@/lib/finance-constants"
 
 // ---------------------------------------------------------------------------
 // Shared upload helpers (also used by trips.ts for expense receipts)
@@ -81,69 +82,14 @@ async function deleteTaxFileIfUnreferenced(storagePath: string): Promise<void> {
 // Types
 // ---------------------------------------------------------------------------
 
-export type TaxFilingStatus =
-  | "SINGLE"
-  | "MARRIED_FILING_JOINTLY"
-  | "MARRIED_FILING_SEPARATELY"
-  | "HEAD_OF_HOUSEHOLD"
-  | "QUALIFYING_WIDOWER"
 
-export const FILING_STATUSES: Array<TaxFilingStatus> = [
-  "SINGLE",
-  "MARRIED_FILING_JOINTLY",
-  "MARRIED_FILING_SEPARATELY",
-  "HEAD_OF_HOUSEHOLD",
-  "QUALIFYING_WIDOWER",
-]
-
-export const FILING_STATUS_LABELS: Record<TaxFilingStatus, string> = {
-  SINGLE: "Single",
-  MARRIED_FILING_JOINTLY: "Married Filing Jointly",
-  MARRIED_FILING_SEPARATELY: "Married Filing Separately",
-  HEAD_OF_HOUSEHOLD: "Head of Household",
-  QUALIFYING_WIDOWER: "Qualifying Widower",
-}
-
-export type TaxDocumentType =
-  | "W2"
-  | "FORM_1099_INT"
-  | "FORM_1099_DIV"
-  | "FORM_1099_NEC"
-  | "FORM_1098"
-  | "FORM_1099_B"
-  | "FORM_1099_R"
-  | "K1"
-  | "FORM_1099_SA"
-  | "FORM_5498_SA"
-  | "OTHER"
-
-export const TAX_DOCUMENT_TYPES: Array<TaxDocumentType> = [
-  "W2",
-  "FORM_1099_INT",
-  "FORM_1099_DIV",
-  "FORM_1099_NEC",
-  "FORM_1098",
-  "FORM_1099_B",
-  "FORM_1099_R",
-  "K1",
-  "FORM_1099_SA",
-  "FORM_5498_SA",
-  "OTHER",
-]
-
-export const TAX_DOCUMENT_TYPE_LABELS: Record<TaxDocumentType, string> = {
-  W2: "W-2",
-  FORM_1099_INT: "1099-INT",
-  FORM_1099_DIV: "1099-DIV",
-  FORM_1099_NEC: "1099-NEC",
-  FORM_1098: "1098",
-  FORM_1099_B: "1099-B",
-  FORM_1099_R: "1099-R",
-  K1: "K-1",
-  FORM_1099_SA: "1099-SA",
-  FORM_5498_SA: "5498-SA",
-  OTHER: "Other",
-}
+export {
+  FILING_STATUSES,
+  FILING_STATUS_LABELS,
+  TAX_DOCUMENT_TYPES,
+  TAX_DOCUMENT_TYPE_LABELS,
+} from "@/lib/finance-constants"
+export type { TaxDocumentType, TaxFilingStatus }
 
 export type TaxYearRow = {
   id: string

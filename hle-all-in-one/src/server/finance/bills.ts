@@ -9,32 +9,10 @@
 // toggleBillActiveAction skipped the household check entirely; closed here.
 import { sql } from "@/server/db"
 
-export type BillCategory =
-  | "UTILITIES"
-  | "INSURANCE"
-  | "SUBSCRIPTIONS"
-  | "PHONE"
-  | "INTERNET"
-  | "RENT"
-  | "MORTGAGE"
-  | "CAR_PAYMENT"
-  | "CHILD_CARE"
-  | "STREAMING"
-  | "OTHER"
+import type { BillCategory } from "@/lib/finance-constants"
 
-export const BILL_CATEGORIES: Array<BillCategory> = [
-  "UTILITIES",
-  "INSURANCE",
-  "SUBSCRIPTIONS",
-  "PHONE",
-  "INTERNET",
-  "RENT",
-  "MORTGAGE",
-  "CAR_PAYMENT",
-  "CHILD_CARE",
-  "STREAMING",
-  "OTHER",
-]
+export { BILL_CATEGORIES } from "@/lib/finance-constants"
+export type { BillCategory }
 
 export type BillPaymentStatus = "PENDING" | "PAID" | "OVERDUE" | "SCHEDULED"
 

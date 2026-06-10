@@ -7,37 +7,10 @@
 // deliberately has no ON DELETE action.
 import { sql } from "@/server/db"
 
-export type AccountType =
-  | "CHECKING"
-  | "SAVINGS"
-  | "CREDIT_CARD"
-  | "CASH"
-  | "INVESTMENT"
-  | "LOAN"
-  | "HSA"
-  | "OTHER"
+import type { AccountType } from "@/lib/finance-constants"
 
-export const ACCOUNT_TYPES: Array<AccountType> = [
-  "CHECKING",
-  "SAVINGS",
-  "CREDIT_CARD",
-  "CASH",
-  "INVESTMENT",
-  "LOAN",
-  "HSA",
-  "OTHER",
-]
-
-export const ACCOUNT_TYPE_LABELS: Record<AccountType, string> = {
-  CHECKING: "Checking",
-  SAVINGS: "Savings",
-  CREDIT_CARD: "Credit Card",
-  CASH: "Cash",
-  INVESTMENT: "Investment",
-  LOAN: "Loan",
-  HSA: "HSA",
-  OTHER: "Other",
-}
+export { ACCOUNT_TYPES, ACCOUNT_TYPE_LABELS } from "@/lib/finance-constants"
+export type { AccountType }
 
 export type AccountRow = {
   id: string

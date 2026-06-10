@@ -4,18 +4,10 @@ import { sql } from "@/server/db"
 // "fileServerFileId" is intentionally ignored). "TravelDocument" is
 // householdId-scoped directly: documents can exist without a trip.
 
-export const TRAVEL_DOCUMENT_TYPES = [
-  "PASSPORT",
-  "VISA",
-  "TRAVEL_INSURANCE",
-  "DRIVERS_LICENSE",
-  "VACCINATION_RECORD",
-  "ITINERARY",
-  "BOOKING_CONFIRMATION",
-  "OTHER",
-] as const
+import type { TravelDocumentType } from "@/lib/travel-constants"
 
-export type TravelDocumentType = (typeof TRAVEL_DOCUMENT_TYPES)[number]
+export { TRAVEL_DOCUMENT_TYPES } from "@/lib/travel-constants"
+export type { TravelDocumentType }
 
 export type TravelDocumentRow = {
   id: string
