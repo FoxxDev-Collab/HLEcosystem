@@ -1,0 +1,37 @@
+# Dedicated PostgreSQL 18 for the hle-all-in-one app. Isolated from the legacy
+# foxxlab PG16 (foxxlab-postgres) so the existing apps keep running untouched
+# during the migration. Dev-only credentials.
+#
+# NOTE: the app's DATABASE_URL must NOT carry a ?schema= suffix. Bun.sql
+# forwards unknown URL query params as Postgres startup options, and the
+# server rejects ?schema= with `unrecognized configuration parameter`.
+services:
+  hle-aio-postgres:
+    # Debian-based (not -alpine): 18-alpine's musl hits a RELRO relocation
+    # failure under this podman/kernel combo and exits on boot.
+    image: docker.io/library/postgres:18
+    container_name: hle-aio-postgres
+    environment:
+      POSTGRES_USER: hle
+      POSTGRES_PASSWORD: hle_dev_pw
+      POSTGRES_DB: hle_aio
+    # SELinux (enforcing on this el10 host) blocks the RELRO mprotect the
+    # newer glibc performs at load ("cannot apply additional memory protection
+    # after relocation"), so the container exits 127. label=disable is the
+    # minimal fix for this local dev DB (seccomp was not the cause).
+    security_opt:
+      - label=disable
+    ports:
+      - "5433:5432"
+    # PG18+ official image stores data in a version subdir; mount the volume at
+    # /var/lib/postgresql (NOT /var/lib/postgresql/data) per docker-library#1259.
+    volumes:
+      - hle-aio-pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hle -d hle_aio"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  hle-aio-pgdata:
