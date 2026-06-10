@@ -1,4 +1,5 @@
 import {
+  ArrowLeftRight,
   Award,
   BarChart3,
   BookOpen,
@@ -15,6 +16,7 @@ import {
   FileKey,
   FileText,
   Gauge,
+  Gem,
   Globe,
   Gift,
   GitBranch,
@@ -23,8 +25,10 @@ import {
   HardHat,
   HeartPulse,
   Home,
+  Landmark,
   LayoutDashboard,
   Lightbulb,
+  Link2,
   ListChecks,
   ListTodo,
   Lock,
@@ -32,10 +36,13 @@ import {
   Package,
   PawPrint,
   Phone,
+  PiggyBank,
   Pill,
   Plane,
   Plus,
+  ReceiptText,
   Refrigerator,
+  Repeat,
   Route,
   Search,
   ScanLine,
@@ -52,9 +59,12 @@ import {
   Store,
   Tag,
   TicketCheck,
+  TrendingDown,
   Trophy,
+  Upload,
   UtensilsCrossed,
   Users,
+  Wand2,
   Wrench,
   Zap,
 } from "lucide-react"
@@ -195,8 +205,77 @@ export const MODULES: Array<ModuleDef> = [
     icon: DollarSign,
     base: "/finance",
     color: "text-green-600 dark:text-green-400",
-    enabled: false,
-    nav: [],
+    enabled: true,
+    nav: [
+      {
+        label: "Overview",
+        items: [
+          {
+            title: "Dashboard",
+            href: "/finance/dashboard",
+            icon: LayoutDashboard,
+          },
+          { title: "Accounts", href: "/finance/accounts", icon: Landmark },
+          {
+            title: "Transactions",
+            href: "/finance/transactions",
+            icon: ArrowLeftRight,
+          },
+          { title: "Recurring", href: "/finance/recurring", icon: Repeat },
+        ],
+      },
+      {
+        label: "Planning",
+        items: [
+          { title: "Budgets", href: "/finance/budgets", icon: PiggyBank },
+          {
+            title: "Budget Planner",
+            href: "/finance/budget-planner",
+            icon: ClipboardList,
+          },
+          { title: "Categories", href: "/finance/categories", icon: Tag },
+          { title: "Bills", href: "/finance/bills", icon: ReceiptText },
+        ],
+      },
+      {
+        label: "Wealth",
+        items: [
+          { title: "Assets", href: "/finance/assets", icon: Gem },
+          { title: "Debts", href: "/finance/debts", icon: TrendingDown },
+          { title: "Taxes", href: "/finance/taxes", icon: FileText },
+          { title: "Reports", href: "/finance/reports", icon: BarChart3 },
+        ],
+      },
+      {
+        label: "Tools",
+        items: [
+          { title: "Import", href: "/finance/import", icon: Upload },
+          {
+            title: "Receipt Scanner",
+            href: "/finance/receipts",
+            icon: ScanLine,
+          },
+          {
+            title: "Categorize",
+            href: "/finance/transactions/categorize",
+            icon: Wand2,
+          },
+          {
+            title: "Smart Link",
+            href: "/finance/transactions/smart-link",
+            icon: Link2,
+          },
+          { title: "Advisor", href: "/finance/advisor", icon: Sparkles },
+        ],
+      },
+      {
+        label: "More",
+        items: [
+          { title: "Trips", href: "/finance/trips", icon: Route },
+          { title: "Wishlists", href: "/finance/wishlist", icon: Star },
+        ],
+      },
+    ],
   },
   {
     key: "health",

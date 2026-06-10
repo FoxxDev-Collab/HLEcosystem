@@ -5,8 +5,14 @@ import { createServerFn } from "@tanstack/react-start"
 import { z } from "zod"
 import { householdMiddleware } from "@/server/middleware"
 import { getAppointmentMemberId } from "./appointments"
-import { healthMemberBelongsToHousehold, listActiveHealthMembers } from "./members"
-import { listActiveProviderOptions, providerBelongsToHousehold } from "./providers"
+import {
+  healthMemberBelongsToHousehold,
+  listActiveHealthMembers,
+} from "./members"
+import {
+  listActiveProviderOptions,
+  providerBelongsToHousehold,
+} from "./providers"
 import {
   appointmentAlreadyLinked,
   createVisitSummary,
