@@ -17,12 +17,24 @@ import { Route as AuthedManagerSecurityRouteImport } from './routes/_authed/mana
 import { Route as AuthedManagerMembersRouteImport } from './routes/_authed/manager/members'
 import { Route as AuthedManagerHouseholdsRouteImport } from './routes/_authed/manager/households'
 import { Route as AuthedManagerDashboardRouteImport } from './routes/_authed/manager/dashboard'
-import { Route as AuthedHubTreeRouteImport } from './routes/_authed/hub/tree'
-import { Route as AuthedHubRelationshipsRouteImport } from './routes/_authed/hub/relationships'
-import { Route as AuthedHubMembersRouteImport } from './routes/_authed/hub/members'
+import { Route as AuthedHubMediaRequestsRouteImport } from './routes/_authed/hub/media-requests'
 import { Route as AuthedHubGiftsRouteImport } from './routes/_authed/hub/gifts'
-import { Route as AuthedHubEventsRouteImport } from './routes/_authed/hub/events'
+import { Route as AuthedHubGiftIdeasRouteImport } from './routes/_authed/hub/gift-ideas'
+import { Route as AuthedHubDatesRouteImport } from './routes/_authed/hub/dates'
 import { Route as AuthedHubDashboardRouteImport } from './routes/_authed/hub/dashboard'
+import { Route as AuthedHubCalendarRouteImport } from './routes/_authed/hub/calendar'
+import { Route as AuthedHubAddressBookRouteImport } from './routes/_authed/hub/address-book'
+import { Route as AuthedHubTreeIndexRouteImport } from './routes/_authed/hub/tree.index'
+import { Route as AuthedHubTodosIndexRouteImport } from './routes/_authed/hub/todos.index'
+import { Route as AuthedHubPeopleIndexRouteImport } from './routes/_authed/hub/people.index'
+import { Route as AuthedHubEducationIndexRouteImport } from './routes/_authed/hub/education.index'
+import { Route as AuthedHubTreeManageRouteImport } from './routes/_authed/hub/tree.manage'
+import { Route as AuthedHubTodosListIdRouteImport } from './routes/_authed/hub/todos.$listId'
+import { Route as AuthedHubPeopleIdRouteImport } from './routes/_authed/hub/people.$id'
+import { Route as AuthedHubEducationGradesRouteImport } from './routes/_authed/hub/education.grades'
+import { Route as AuthedHubEducationCertificationsRouteImport } from './routes/_authed/hub/education.certifications'
+import { Route as AuthedHubEducationActivitiesRouteImport } from './routes/_authed/hub/education.activities'
+import { Route as AuthedHubEducationMemberIdRouteImport } from './routes/_authed/hub/education.$memberId'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -63,19 +75,9 @@ const AuthedManagerDashboardRoute = AuthedManagerDashboardRouteImport.update({
   path: '/manager/dashboard',
   getParentRoute: () => AuthedRouteRoute,
 } as any)
-const AuthedHubTreeRoute = AuthedHubTreeRouteImport.update({
-  id: '/hub/tree',
-  path: '/hub/tree',
-  getParentRoute: () => AuthedRouteRoute,
-} as any)
-const AuthedHubRelationshipsRoute = AuthedHubRelationshipsRouteImport.update({
-  id: '/hub/relationships',
-  path: '/hub/relationships',
-  getParentRoute: () => AuthedRouteRoute,
-} as any)
-const AuthedHubMembersRoute = AuthedHubMembersRouteImport.update({
-  id: '/hub/members',
-  path: '/hub/members',
+const AuthedHubMediaRequestsRoute = AuthedHubMediaRequestsRouteImport.update({
+  id: '/hub/media-requests',
+  path: '/hub/media-requests',
   getParentRoute: () => AuthedRouteRoute,
 } as any)
 const AuthedHubGiftsRoute = AuthedHubGiftsRouteImport.update({
@@ -83,9 +85,14 @@ const AuthedHubGiftsRoute = AuthedHubGiftsRouteImport.update({
   path: '/hub/gifts',
   getParentRoute: () => AuthedRouteRoute,
 } as any)
-const AuthedHubEventsRoute = AuthedHubEventsRouteImport.update({
-  id: '/hub/events',
-  path: '/hub/events',
+const AuthedHubGiftIdeasRoute = AuthedHubGiftIdeasRouteImport.update({
+  id: '/hub/gift-ideas',
+  path: '/hub/gift-ideas',
+  getParentRoute: () => AuthedRouteRoute,
+} as any)
+const AuthedHubDatesRoute = AuthedHubDatesRouteImport.update({
+  id: '/hub/dates',
+  path: '/hub/dates',
   getParentRoute: () => AuthedRouteRoute,
 } as any)
 const AuthedHubDashboardRoute = AuthedHubDashboardRouteImport.update({
@@ -93,101 +100,242 @@ const AuthedHubDashboardRoute = AuthedHubDashboardRouteImport.update({
   path: '/hub/dashboard',
   getParentRoute: () => AuthedRouteRoute,
 } as any)
+const AuthedHubCalendarRoute = AuthedHubCalendarRouteImport.update({
+  id: '/hub/calendar',
+  path: '/hub/calendar',
+  getParentRoute: () => AuthedRouteRoute,
+} as any)
+const AuthedHubAddressBookRoute = AuthedHubAddressBookRouteImport.update({
+  id: '/hub/address-book',
+  path: '/hub/address-book',
+  getParentRoute: () => AuthedRouteRoute,
+} as any)
+const AuthedHubTreeIndexRoute = AuthedHubTreeIndexRouteImport.update({
+  id: '/hub/tree/',
+  path: '/hub/tree/',
+  getParentRoute: () => AuthedRouteRoute,
+} as any)
+const AuthedHubTodosIndexRoute = AuthedHubTodosIndexRouteImport.update({
+  id: '/hub/todos/',
+  path: '/hub/todos/',
+  getParentRoute: () => AuthedRouteRoute,
+} as any)
+const AuthedHubPeopleIndexRoute = AuthedHubPeopleIndexRouteImport.update({
+  id: '/hub/people/',
+  path: '/hub/people/',
+  getParentRoute: () => AuthedRouteRoute,
+} as any)
+const AuthedHubEducationIndexRoute = AuthedHubEducationIndexRouteImport.update({
+  id: '/hub/education/',
+  path: '/hub/education/',
+  getParentRoute: () => AuthedRouteRoute,
+} as any)
+const AuthedHubTreeManageRoute = AuthedHubTreeManageRouteImport.update({
+  id: '/hub/tree/manage',
+  path: '/hub/tree/manage',
+  getParentRoute: () => AuthedRouteRoute,
+} as any)
+const AuthedHubTodosListIdRoute = AuthedHubTodosListIdRouteImport.update({
+  id: '/hub/todos/$listId',
+  path: '/hub/todos/$listId',
+  getParentRoute: () => AuthedRouteRoute,
+} as any)
+const AuthedHubPeopleIdRoute = AuthedHubPeopleIdRouteImport.update({
+  id: '/hub/people/$id',
+  path: '/hub/people/$id',
+  getParentRoute: () => AuthedRouteRoute,
+} as any)
+const AuthedHubEducationGradesRoute =
+  AuthedHubEducationGradesRouteImport.update({
+    id: '/hub/education/grades',
+    path: '/hub/education/grades',
+    getParentRoute: () => AuthedRouteRoute,
+  } as any)
+const AuthedHubEducationCertificationsRoute =
+  AuthedHubEducationCertificationsRouteImport.update({
+    id: '/hub/education/certifications',
+    path: '/hub/education/certifications',
+    getParentRoute: () => AuthedRouteRoute,
+  } as any)
+const AuthedHubEducationActivitiesRoute =
+  AuthedHubEducationActivitiesRouteImport.update({
+    id: '/hub/education/activities',
+    path: '/hub/education/activities',
+    getParentRoute: () => AuthedRouteRoute,
+  } as any)
+const AuthedHubEducationMemberIdRoute =
+  AuthedHubEducationMemberIdRouteImport.update({
+    id: '/hub/education/$memberId',
+    path: '/hub/education/$memberId',
+    getParentRoute: () => AuthedRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthedIndexRoute
   '/login': typeof LoginRoute
+  '/hub/address-book': typeof AuthedHubAddressBookRoute
+  '/hub/calendar': typeof AuthedHubCalendarRoute
   '/hub/dashboard': typeof AuthedHubDashboardRoute
-  '/hub/events': typeof AuthedHubEventsRoute
+  '/hub/dates': typeof AuthedHubDatesRoute
+  '/hub/gift-ideas': typeof AuthedHubGiftIdeasRoute
   '/hub/gifts': typeof AuthedHubGiftsRoute
-  '/hub/members': typeof AuthedHubMembersRoute
-  '/hub/relationships': typeof AuthedHubRelationshipsRoute
-  '/hub/tree': typeof AuthedHubTreeRoute
+  '/hub/media-requests': typeof AuthedHubMediaRequestsRoute
   '/manager/dashboard': typeof AuthedManagerDashboardRoute
   '/manager/households': typeof AuthedManagerHouseholdsRoute
   '/manager/members': typeof AuthedManagerMembersRoute
   '/manager/security': typeof AuthedManagerSecurityRoute
   '/manager/settings': typeof AuthedManagerSettingsRoute
+  '/hub/education/$memberId': typeof AuthedHubEducationMemberIdRoute
+  '/hub/education/activities': typeof AuthedHubEducationActivitiesRoute
+  '/hub/education/certifications': typeof AuthedHubEducationCertificationsRoute
+  '/hub/education/grades': typeof AuthedHubEducationGradesRoute
+  '/hub/people/$id': typeof AuthedHubPeopleIdRoute
+  '/hub/todos/$listId': typeof AuthedHubTodosListIdRoute
+  '/hub/tree/manage': typeof AuthedHubTreeManageRoute
+  '/hub/education/': typeof AuthedHubEducationIndexRoute
+  '/hub/people/': typeof AuthedHubPeopleIndexRoute
+  '/hub/todos/': typeof AuthedHubTodosIndexRoute
+  '/hub/tree/': typeof AuthedHubTreeIndexRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/': typeof AuthedIndexRoute
+  '/hub/address-book': typeof AuthedHubAddressBookRoute
+  '/hub/calendar': typeof AuthedHubCalendarRoute
   '/hub/dashboard': typeof AuthedHubDashboardRoute
-  '/hub/events': typeof AuthedHubEventsRoute
+  '/hub/dates': typeof AuthedHubDatesRoute
+  '/hub/gift-ideas': typeof AuthedHubGiftIdeasRoute
   '/hub/gifts': typeof AuthedHubGiftsRoute
-  '/hub/members': typeof AuthedHubMembersRoute
-  '/hub/relationships': typeof AuthedHubRelationshipsRoute
-  '/hub/tree': typeof AuthedHubTreeRoute
+  '/hub/media-requests': typeof AuthedHubMediaRequestsRoute
   '/manager/dashboard': typeof AuthedManagerDashboardRoute
   '/manager/households': typeof AuthedManagerHouseholdsRoute
   '/manager/members': typeof AuthedManagerMembersRoute
   '/manager/security': typeof AuthedManagerSecurityRoute
   '/manager/settings': typeof AuthedManagerSettingsRoute
+  '/hub/education/$memberId': typeof AuthedHubEducationMemberIdRoute
+  '/hub/education/activities': typeof AuthedHubEducationActivitiesRoute
+  '/hub/education/certifications': typeof AuthedHubEducationCertificationsRoute
+  '/hub/education/grades': typeof AuthedHubEducationGradesRoute
+  '/hub/people/$id': typeof AuthedHubPeopleIdRoute
+  '/hub/todos/$listId': typeof AuthedHubTodosListIdRoute
+  '/hub/tree/manage': typeof AuthedHubTreeManageRoute
+  '/hub/education': typeof AuthedHubEducationIndexRoute
+  '/hub/people': typeof AuthedHubPeopleIndexRoute
+  '/hub/todos': typeof AuthedHubTodosIndexRoute
+  '/hub/tree': typeof AuthedHubTreeIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_authed': typeof AuthedRouteRouteWithChildren
   '/login': typeof LoginRoute
   '/_authed/': typeof AuthedIndexRoute
+  '/_authed/hub/address-book': typeof AuthedHubAddressBookRoute
+  '/_authed/hub/calendar': typeof AuthedHubCalendarRoute
   '/_authed/hub/dashboard': typeof AuthedHubDashboardRoute
-  '/_authed/hub/events': typeof AuthedHubEventsRoute
+  '/_authed/hub/dates': typeof AuthedHubDatesRoute
+  '/_authed/hub/gift-ideas': typeof AuthedHubGiftIdeasRoute
   '/_authed/hub/gifts': typeof AuthedHubGiftsRoute
-  '/_authed/hub/members': typeof AuthedHubMembersRoute
-  '/_authed/hub/relationships': typeof AuthedHubRelationshipsRoute
-  '/_authed/hub/tree': typeof AuthedHubTreeRoute
+  '/_authed/hub/media-requests': typeof AuthedHubMediaRequestsRoute
   '/_authed/manager/dashboard': typeof AuthedManagerDashboardRoute
   '/_authed/manager/households': typeof AuthedManagerHouseholdsRoute
   '/_authed/manager/members': typeof AuthedManagerMembersRoute
   '/_authed/manager/security': typeof AuthedManagerSecurityRoute
   '/_authed/manager/settings': typeof AuthedManagerSettingsRoute
+  '/_authed/hub/education/$memberId': typeof AuthedHubEducationMemberIdRoute
+  '/_authed/hub/education/activities': typeof AuthedHubEducationActivitiesRoute
+  '/_authed/hub/education/certifications': typeof AuthedHubEducationCertificationsRoute
+  '/_authed/hub/education/grades': typeof AuthedHubEducationGradesRoute
+  '/_authed/hub/people/$id': typeof AuthedHubPeopleIdRoute
+  '/_authed/hub/todos/$listId': typeof AuthedHubTodosListIdRoute
+  '/_authed/hub/tree/manage': typeof AuthedHubTreeManageRoute
+  '/_authed/hub/education/': typeof AuthedHubEducationIndexRoute
+  '/_authed/hub/people/': typeof AuthedHubPeopleIndexRoute
+  '/_authed/hub/todos/': typeof AuthedHubTodosIndexRoute
+  '/_authed/hub/tree/': typeof AuthedHubTreeIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
     | '/login'
+    | '/hub/address-book'
+    | '/hub/calendar'
     | '/hub/dashboard'
-    | '/hub/events'
+    | '/hub/dates'
+    | '/hub/gift-ideas'
     | '/hub/gifts'
-    | '/hub/members'
-    | '/hub/relationships'
-    | '/hub/tree'
+    | '/hub/media-requests'
     | '/manager/dashboard'
     | '/manager/households'
     | '/manager/members'
     | '/manager/security'
     | '/manager/settings'
+    | '/hub/education/$memberId'
+    | '/hub/education/activities'
+    | '/hub/education/certifications'
+    | '/hub/education/grades'
+    | '/hub/people/$id'
+    | '/hub/todos/$listId'
+    | '/hub/tree/manage'
+    | '/hub/education/'
+    | '/hub/people/'
+    | '/hub/todos/'
+    | '/hub/tree/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
     | '/'
+    | '/hub/address-book'
+    | '/hub/calendar'
     | '/hub/dashboard'
-    | '/hub/events'
+    | '/hub/dates'
+    | '/hub/gift-ideas'
     | '/hub/gifts'
-    | '/hub/members'
-    | '/hub/relationships'
-    | '/hub/tree'
+    | '/hub/media-requests'
     | '/manager/dashboard'
     | '/manager/households'
     | '/manager/members'
     | '/manager/security'
     | '/manager/settings'
+    | '/hub/education/$memberId'
+    | '/hub/education/activities'
+    | '/hub/education/certifications'
+    | '/hub/education/grades'
+    | '/hub/people/$id'
+    | '/hub/todos/$listId'
+    | '/hub/tree/manage'
+    | '/hub/education'
+    | '/hub/people'
+    | '/hub/todos'
+    | '/hub/tree'
   id:
     | '__root__'
     | '/_authed'
     | '/login'
     | '/_authed/'
+    | '/_authed/hub/address-book'
+    | '/_authed/hub/calendar'
     | '/_authed/hub/dashboard'
-    | '/_authed/hub/events'
+    | '/_authed/hub/dates'
+    | '/_authed/hub/gift-ideas'
     | '/_authed/hub/gifts'
-    | '/_authed/hub/members'
-    | '/_authed/hub/relationships'
-    | '/_authed/hub/tree'
+    | '/_authed/hub/media-requests'
     | '/_authed/manager/dashboard'
     | '/_authed/manager/households'
     | '/_authed/manager/members'
     | '/_authed/manager/security'
     | '/_authed/manager/settings'
+    | '/_authed/hub/education/$memberId'
+    | '/_authed/hub/education/activities'
+    | '/_authed/hub/education/certifications'
+    | '/_authed/hub/education/grades'
+    | '/_authed/hub/people/$id'
+    | '/_authed/hub/todos/$listId'
+    | '/_authed/hub/tree/manage'
+    | '/_authed/hub/education/'
+    | '/_authed/hub/people/'
+    | '/_authed/hub/todos/'
+    | '/_authed/hub/tree/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -253,25 +401,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedManagerDashboardRouteImport
       parentRoute: typeof AuthedRouteRoute
     }
-    '/_authed/hub/tree': {
-      id: '/_authed/hub/tree'
-      path: '/hub/tree'
-      fullPath: '/hub/tree'
-      preLoaderRoute: typeof AuthedHubTreeRouteImport
-      parentRoute: typeof AuthedRouteRoute
-    }
-    '/_authed/hub/relationships': {
-      id: '/_authed/hub/relationships'
-      path: '/hub/relationships'
-      fullPath: '/hub/relationships'
-      preLoaderRoute: typeof AuthedHubRelationshipsRouteImport
-      parentRoute: typeof AuthedRouteRoute
-    }
-    '/_authed/hub/members': {
-      id: '/_authed/hub/members'
-      path: '/hub/members'
-      fullPath: '/hub/members'
-      preLoaderRoute: typeof AuthedHubMembersRouteImport
+    '/_authed/hub/media-requests': {
+      id: '/_authed/hub/media-requests'
+      path: '/hub/media-requests'
+      fullPath: '/hub/media-requests'
+      preLoaderRoute: typeof AuthedHubMediaRequestsRouteImport
       parentRoute: typeof AuthedRouteRoute
     }
     '/_authed/hub/gifts': {
@@ -281,11 +415,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedHubGiftsRouteImport
       parentRoute: typeof AuthedRouteRoute
     }
-    '/_authed/hub/events': {
-      id: '/_authed/hub/events'
-      path: '/hub/events'
-      fullPath: '/hub/events'
-      preLoaderRoute: typeof AuthedHubEventsRouteImport
+    '/_authed/hub/gift-ideas': {
+      id: '/_authed/hub/gift-ideas'
+      path: '/hub/gift-ideas'
+      fullPath: '/hub/gift-ideas'
+      preLoaderRoute: typeof AuthedHubGiftIdeasRouteImport
+      parentRoute: typeof AuthedRouteRoute
+    }
+    '/_authed/hub/dates': {
+      id: '/_authed/hub/dates'
+      path: '/hub/dates'
+      fullPath: '/hub/dates'
+      preLoaderRoute: typeof AuthedHubDatesRouteImport
       parentRoute: typeof AuthedRouteRoute
     }
     '/_authed/hub/dashboard': {
@@ -295,37 +436,152 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedHubDashboardRouteImport
       parentRoute: typeof AuthedRouteRoute
     }
+    '/_authed/hub/calendar': {
+      id: '/_authed/hub/calendar'
+      path: '/hub/calendar'
+      fullPath: '/hub/calendar'
+      preLoaderRoute: typeof AuthedHubCalendarRouteImport
+      parentRoute: typeof AuthedRouteRoute
+    }
+    '/_authed/hub/address-book': {
+      id: '/_authed/hub/address-book'
+      path: '/hub/address-book'
+      fullPath: '/hub/address-book'
+      preLoaderRoute: typeof AuthedHubAddressBookRouteImport
+      parentRoute: typeof AuthedRouteRoute
+    }
+    '/_authed/hub/tree/': {
+      id: '/_authed/hub/tree/'
+      path: '/hub/tree'
+      fullPath: '/hub/tree/'
+      preLoaderRoute: typeof AuthedHubTreeIndexRouteImport
+      parentRoute: typeof AuthedRouteRoute
+    }
+    '/_authed/hub/todos/': {
+      id: '/_authed/hub/todos/'
+      path: '/hub/todos'
+      fullPath: '/hub/todos/'
+      preLoaderRoute: typeof AuthedHubTodosIndexRouteImport
+      parentRoute: typeof AuthedRouteRoute
+    }
+    '/_authed/hub/people/': {
+      id: '/_authed/hub/people/'
+      path: '/hub/people'
+      fullPath: '/hub/people/'
+      preLoaderRoute: typeof AuthedHubPeopleIndexRouteImport
+      parentRoute: typeof AuthedRouteRoute
+    }
+    '/_authed/hub/education/': {
+      id: '/_authed/hub/education/'
+      path: '/hub/education'
+      fullPath: '/hub/education/'
+      preLoaderRoute: typeof AuthedHubEducationIndexRouteImport
+      parentRoute: typeof AuthedRouteRoute
+    }
+    '/_authed/hub/tree/manage': {
+      id: '/_authed/hub/tree/manage'
+      path: '/hub/tree/manage'
+      fullPath: '/hub/tree/manage'
+      preLoaderRoute: typeof AuthedHubTreeManageRouteImport
+      parentRoute: typeof AuthedRouteRoute
+    }
+    '/_authed/hub/todos/$listId': {
+      id: '/_authed/hub/todos/$listId'
+      path: '/hub/todos/$listId'
+      fullPath: '/hub/todos/$listId'
+      preLoaderRoute: typeof AuthedHubTodosListIdRouteImport
+      parentRoute: typeof AuthedRouteRoute
+    }
+    '/_authed/hub/people/$id': {
+      id: '/_authed/hub/people/$id'
+      path: '/hub/people/$id'
+      fullPath: '/hub/people/$id'
+      preLoaderRoute: typeof AuthedHubPeopleIdRouteImport
+      parentRoute: typeof AuthedRouteRoute
+    }
+    '/_authed/hub/education/grades': {
+      id: '/_authed/hub/education/grades'
+      path: '/hub/education/grades'
+      fullPath: '/hub/education/grades'
+      preLoaderRoute: typeof AuthedHubEducationGradesRouteImport
+      parentRoute: typeof AuthedRouteRoute
+    }
+    '/_authed/hub/education/certifications': {
+      id: '/_authed/hub/education/certifications'
+      path: '/hub/education/certifications'
+      fullPath: '/hub/education/certifications'
+      preLoaderRoute: typeof AuthedHubEducationCertificationsRouteImport
+      parentRoute: typeof AuthedRouteRoute
+    }
+    '/_authed/hub/education/activities': {
+      id: '/_authed/hub/education/activities'
+      path: '/hub/education/activities'
+      fullPath: '/hub/education/activities'
+      preLoaderRoute: typeof AuthedHubEducationActivitiesRouteImport
+      parentRoute: typeof AuthedRouteRoute
+    }
+    '/_authed/hub/education/$memberId': {
+      id: '/_authed/hub/education/$memberId'
+      path: '/hub/education/$memberId'
+      fullPath: '/hub/education/$memberId'
+      preLoaderRoute: typeof AuthedHubEducationMemberIdRouteImport
+      parentRoute: typeof AuthedRouteRoute
+    }
   }
 }
 
 interface AuthedRouteRouteChildren {
   AuthedIndexRoute: typeof AuthedIndexRoute
+  AuthedHubAddressBookRoute: typeof AuthedHubAddressBookRoute
+  AuthedHubCalendarRoute: typeof AuthedHubCalendarRoute
   AuthedHubDashboardRoute: typeof AuthedHubDashboardRoute
-  AuthedHubEventsRoute: typeof AuthedHubEventsRoute
+  AuthedHubDatesRoute: typeof AuthedHubDatesRoute
+  AuthedHubGiftIdeasRoute: typeof AuthedHubGiftIdeasRoute
   AuthedHubGiftsRoute: typeof AuthedHubGiftsRoute
-  AuthedHubMembersRoute: typeof AuthedHubMembersRoute
-  AuthedHubRelationshipsRoute: typeof AuthedHubRelationshipsRoute
-  AuthedHubTreeRoute: typeof AuthedHubTreeRoute
+  AuthedHubMediaRequestsRoute: typeof AuthedHubMediaRequestsRoute
   AuthedManagerDashboardRoute: typeof AuthedManagerDashboardRoute
   AuthedManagerHouseholdsRoute: typeof AuthedManagerHouseholdsRoute
   AuthedManagerMembersRoute: typeof AuthedManagerMembersRoute
   AuthedManagerSecurityRoute: typeof AuthedManagerSecurityRoute
   AuthedManagerSettingsRoute: typeof AuthedManagerSettingsRoute
+  AuthedHubEducationMemberIdRoute: typeof AuthedHubEducationMemberIdRoute
+  AuthedHubEducationActivitiesRoute: typeof AuthedHubEducationActivitiesRoute
+  AuthedHubEducationCertificationsRoute: typeof AuthedHubEducationCertificationsRoute
+  AuthedHubEducationGradesRoute: typeof AuthedHubEducationGradesRoute
+  AuthedHubPeopleIdRoute: typeof AuthedHubPeopleIdRoute
+  AuthedHubTodosListIdRoute: typeof AuthedHubTodosListIdRoute
+  AuthedHubTreeManageRoute: typeof AuthedHubTreeManageRoute
+  AuthedHubEducationIndexRoute: typeof AuthedHubEducationIndexRoute
+  AuthedHubPeopleIndexRoute: typeof AuthedHubPeopleIndexRoute
+  AuthedHubTodosIndexRoute: typeof AuthedHubTodosIndexRoute
+  AuthedHubTreeIndexRoute: typeof AuthedHubTreeIndexRoute
 }
 
 const AuthedRouteRouteChildren: AuthedRouteRouteChildren = {
   AuthedIndexRoute: AuthedIndexRoute,
+  AuthedHubAddressBookRoute: AuthedHubAddressBookRoute,
+  AuthedHubCalendarRoute: AuthedHubCalendarRoute,
   AuthedHubDashboardRoute: AuthedHubDashboardRoute,
-  AuthedHubEventsRoute: AuthedHubEventsRoute,
+  AuthedHubDatesRoute: AuthedHubDatesRoute,
+  AuthedHubGiftIdeasRoute: AuthedHubGiftIdeasRoute,
   AuthedHubGiftsRoute: AuthedHubGiftsRoute,
-  AuthedHubMembersRoute: AuthedHubMembersRoute,
-  AuthedHubRelationshipsRoute: AuthedHubRelationshipsRoute,
-  AuthedHubTreeRoute: AuthedHubTreeRoute,
+  AuthedHubMediaRequestsRoute: AuthedHubMediaRequestsRoute,
   AuthedManagerDashboardRoute: AuthedManagerDashboardRoute,
   AuthedManagerHouseholdsRoute: AuthedManagerHouseholdsRoute,
   AuthedManagerMembersRoute: AuthedManagerMembersRoute,
   AuthedManagerSecurityRoute: AuthedManagerSecurityRoute,
   AuthedManagerSettingsRoute: AuthedManagerSettingsRoute,
+  AuthedHubEducationMemberIdRoute: AuthedHubEducationMemberIdRoute,
+  AuthedHubEducationActivitiesRoute: AuthedHubEducationActivitiesRoute,
+  AuthedHubEducationCertificationsRoute: AuthedHubEducationCertificationsRoute,
+  AuthedHubEducationGradesRoute: AuthedHubEducationGradesRoute,
+  AuthedHubPeopleIdRoute: AuthedHubPeopleIdRoute,
+  AuthedHubTodosListIdRoute: AuthedHubTodosListIdRoute,
+  AuthedHubTreeManageRoute: AuthedHubTreeManageRoute,
+  AuthedHubEducationIndexRoute: AuthedHubEducationIndexRoute,
+  AuthedHubPeopleIndexRoute: AuthedHubPeopleIndexRoute,
+  AuthedHubTodosIndexRoute: AuthedHubTodosIndexRoute,
+  AuthedHubTreeIndexRoute: AuthedHubTreeIndexRoute,
 }
 
 const AuthedRouteRouteWithChildren = AuthedRouteRoute._addFileChildren(
