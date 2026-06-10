@@ -1,28 +1,53 @@
 import {
   Award,
+  BarChart3,
   BookOpen,
   BookUser,
+  CalendarClock,
   CalendarDays,
   CalendarHeart,
+  Car,
+  ChefHat,
   Clapperboard,
+  ClipboardList,
   DollarSign,
+  FileKey,
+  FileText,
+  Gauge,
   Gift,
   GitBranch,
   GraduationCap,
   HardDrive,
+  HardHat,
   HeartPulse,
   Home,
   LayoutDashboard,
   Lightbulb,
+  ListChecks,
   ListTodo,
+  Luggage,
+  Package,
+  Phone,
   Plane,
   Plus,
+  Refrigerator,
+  Route,
+  ScanLine,
   Settings,
+  Settings2,
   Shield,
+  ShieldCheck,
+  ShoppingCart,
+  Sparkles,
+  Star,
+  Store,
+  Tag,
+  TicketCheck,
   Trophy,
   UtensilsCrossed,
   Users,
   Wrench,
+  Zap,
 } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 
@@ -179,8 +204,108 @@ export const MODULES: Array<ModuleDef> = [
     icon: Wrench,
     base: "/home-care",
     color: "text-orange-600 dark:text-orange-400",
-    enabled: false,
-    nav: [],
+    enabled: true,
+    nav: [
+      {
+        label: "Overview",
+        items: [
+          {
+            title: "Dashboard",
+            href: "/home-care/dashboard",
+            icon: LayoutDashboard,
+          },
+          {
+            title: "Calendar",
+            href: "/home-care/calendar",
+            icon: CalendarDays,
+          },
+        ],
+      },
+      {
+        label: "Home",
+        items: [
+          { title: "Rooms", href: "/home-care/rooms", icon: Home },
+          {
+            title: "Items & Appliances",
+            href: "/home-care/items",
+            icon: Refrigerator,
+          },
+          {
+            title: "Warranties",
+            href: "/home-care/warranties",
+            icon: ShieldCheck,
+          },
+          { title: "Documents", href: "/home-care/documents", icon: FileText },
+          {
+            title: "Service Providers",
+            href: "/home-care/providers",
+            icon: HardHat,
+          },
+        ],
+      },
+      {
+        label: "Vehicles",
+        items: [
+          { title: "Vehicles", href: "/home-care/vehicles", icon: Car },
+          { title: "Mileage Log", href: "/home-care/mileage", icon: Gauge },
+        ],
+      },
+      {
+        label: "Maintenance",
+        items: [
+          {
+            title: "Schedules",
+            href: "/home-care/schedules",
+            icon: CalendarClock,
+          },
+          {
+            title: "Maintenance Log",
+            href: "/home-care/maintenance-log",
+            icon: ClipboardList,
+          },
+          { title: "Repairs", href: "/home-care/repairs", icon: Wrench },
+        ],
+      },
+      {
+        label: "Chores",
+        items: [
+          { title: "Chore Chart", href: "/home-care/chores", icon: ListChecks },
+          {
+            title: "Manage Chores",
+            href: "/home-care/chores/manage",
+            icon: Settings2,
+          },
+          { title: "Rewards", href: "/home-care/chores/rewards", icon: Star },
+        ],
+      },
+      {
+        label: "Emergency",
+        items: [
+          { title: "Overview", href: "/home-care/emergency", icon: Shield },
+          {
+            title: "Contacts",
+            href: "/home-care/emergency/contacts",
+            icon: Phone,
+          },
+          { title: "Plans", href: "/home-care/emergency/plans", icon: Route },
+          {
+            title: "Supplies",
+            href: "/home-care/emergency/supplies",
+            icon: Package,
+          },
+          {
+            title: "Documents",
+            href: "/home-care/emergency/documents",
+            icon: FileKey,
+          },
+          {
+            title: "Utilities",
+            href: "/home-care/emergency/utilities",
+            icon: Zap,
+          },
+        ],
+      },
+    ],
   },
   {
     key: "files",
@@ -197,8 +322,64 @@ export const MODULES: Array<ModuleDef> = [
     icon: UtensilsCrossed,
     base: "/meals",
     color: "text-amber-600 dark:text-amber-400",
-    enabled: false,
-    nav: [],
+    enabled: true,
+    nav: [
+      {
+        label: "Meals",
+        items: [
+          {
+            title: "Dashboard",
+            href: "/meals/dashboard",
+            icon: LayoutDashboard,
+          },
+          { title: "Meal Plan", href: "/meals/mealie", icon: ChefHat },
+          { title: "Recipes", href: "/meals/recipes", icon: BookOpen },
+          {
+            title: "What Can I Cook?",
+            href: "/meals/recipes/what-can-i-cook",
+            icon: UtensilsCrossed,
+          },
+          {
+            title: "Mealie Lists",
+            href: "/meals/mealie/shopping-lists",
+            icon: ListChecks,
+          },
+        ],
+      },
+      {
+        label: "Shopping",
+        items: [
+          {
+            title: "Shopping Lists",
+            href: "/meals/shopping-lists",
+            icon: ShoppingCart,
+          },
+          {
+            title: "Smart List",
+            href: "/meals/shopping-lists/generate",
+            icon: Sparkles,
+          },
+          { title: "Receipts", href: "/meals/receipts", icon: ScanLine },
+          {
+            title: "Price Compare",
+            href: "/meals/price-compare",
+            icon: BarChart3,
+          },
+          { title: "Pantry", href: "/meals/pantry", icon: Package },
+        ],
+      },
+      {
+        label: "Catalog",
+        items: [
+          { title: "Products", href: "/meals/products", icon: Tag },
+          { title: "Stores", href: "/meals/stores", icon: Store },
+        ],
+      },
+      {
+        label: "System",
+        items: [{ title: "Settings", href: "/meals/settings", icon: Settings }],
+      },
+    ],
   },
   {
     key: "wiki",
@@ -215,8 +396,40 @@ export const MODULES: Array<ModuleDef> = [
     icon: Plane,
     base: "/travel",
     color: "text-cyan-600 dark:text-cyan-400",
-    enabled: false,
-    nav: [],
+    enabled: true,
+    nav: [
+      {
+        label: "Overview",
+        items: [
+          {
+            title: "Dashboard",
+            href: "/travel/dashboard",
+            icon: LayoutDashboard,
+          },
+          { title: "Trips", href: "/travel/trips", icon: Plane },
+        ],
+      },
+      {
+        label: "Planning",
+        items: [
+          { title: "Itinerary", href: "/travel/itinerary", icon: CalendarDays },
+          {
+            title: "Reservations",
+            href: "/travel/reservations",
+            icon: TicketCheck,
+          },
+          { title: "Packing", href: "/travel/packing", icon: Luggage },
+          { title: "Budget", href: "/travel/budget", icon: DollarSign },
+          { title: "Contacts", href: "/travel/contacts", icon: Users },
+        ],
+      },
+      {
+        label: "Management",
+        items: [
+          { title: "Documents", href: "/travel/documents", icon: FileText },
+        ],
+      },
+    ],
   },
   {
     key: "media",
