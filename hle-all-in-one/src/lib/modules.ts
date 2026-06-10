@@ -594,8 +594,21 @@ export const MODULES: Array<ModuleDef> = [
     icon: Clapperboard,
     base: "/media",
     color: "text-pink-600 dark:text-pink-400",
-    enabled: false,
-    nav: [],
+    enabled: true,
+    nav: [
+      {
+        label: "Library",
+        items: [
+          { title: "Library", href: "/media", icon: Clapperboard },
+          {
+            title: "Parental Controls",
+            href: "/media/parental",
+            icon: ShieldCheck,
+            adminOnly: true,
+          },
+        ],
+      },
+    ],
   },
   // Reserved slots for two future apps.
   {
