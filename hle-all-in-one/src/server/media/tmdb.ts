@@ -66,7 +66,7 @@ export async function lookupMovie(
   const search = await get<{
     results: Array<{ id: number; title: string; release_date?: string }>
   }>("/search/movie", { query: title, year: year ?? undefined })
-  const first = search?.results[0]
+  const first = search?.results?.[0]
   if (!first) return null
 
   const details = await get<{
@@ -122,7 +122,7 @@ export async function lookupSeries(
     query: title,
     first_air_date_year: firstAirYear ?? undefined,
   })
-  const first = search?.results[0]
+  const first = search?.results?.[0]
   if (!first) return null
 
   const details = await get<{

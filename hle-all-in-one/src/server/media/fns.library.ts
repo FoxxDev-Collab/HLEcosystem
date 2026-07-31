@@ -2,13 +2,14 @@ import { createServerFn } from "@tanstack/react-start"
 import { z } from "zod"
 import { householdMiddleware } from "@/server/middleware"
 import { getLibraryCounts, getMovie, getSeries, listLibrary } from "./library"
+import { canManageMedia } from "./manage"
 import { getParentalProfile } from "./parental"
 import { listScanRunsForHousehold } from "./scan-runs"
 
 // Every read is filtered through the caller's parental profile (a member
 // with a ParentalProfile only sees titles within their rating ceiling; a
-// missing profile means unrestricted). isAdmin gates the Scan/Enrich UI —
-// the scan/enrich fns re-enforce it server-side via adminMiddleware.
+// missing profile means unrestricted). canManage gates the Scan/Enrich UI —
+// the scan/enrich fns re-enforce the same rule server-side (manage.ts).
 export const getLibraryPageFn = createServerFn({ method: "GET" })
   .middleware([householdMiddleware])
   .handler(async ({ context }) => {
@@ -23,7 +24,7 @@ export const getLibraryPageFn = createServerFn({ method: "GET" })
     return {
       counts,
       items,
-      isAdmin: context.user.role === "ADMIN",
+      canManage: canManageMedia(context),
       scanRuns: listScanRunsForHousehold(context.householdId),
       restricted: parental !== null,
     }

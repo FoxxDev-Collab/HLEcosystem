@@ -54,6 +54,9 @@ export function AppSidebar({
   const router = useRouter()
   const navigate = useNavigate()
   const activeModule = getActiveModule(pathname)
+  // Household-privileged nav items (ownerOrAdmin) mirror the server-side gate
+  // in the media fns: household OWNER or instance ADMIN.
+  const activeRole = households.find((h) => h.id === activeHousehold?.id)?.role
   const [appsOpen, setAppsOpen] = useState(true)
 
   async function switchTo(householdId: string) {
@@ -115,7 +118,11 @@ export function AppSidebar({
       <SidebarContent>
         {(activeModule?.nav ?? []).map((group) => {
           const items = group.items.filter(
-            (item) => !item.adminOnly || user.role === "ADMIN"
+            (item) =>
+              (!item.adminOnly || user.role === "ADMIN") &&
+              (!item.ownerOrAdmin ||
+                user.role === "ADMIN" ||
+                activeRole === "OWNER")
           )
           if (items.length === 0) return null
           return (

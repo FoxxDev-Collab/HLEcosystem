@@ -8,10 +8,10 @@
 //   manual enrichment returns { error: "TMDB not configured" } and the
 //   post-scan enrichment pass marks itself skipped.
 import { createServerFn } from "@tanstack/react-start"
-import { z } from "zod"
-import { adminMiddleware, householdMiddleware } from "@/server/middleware"
+import { householdMiddleware } from "@/server/middleware"
+import { canManageMedia } from "./manage"
 import { enrichHousehold } from "./enrichment"
-import { getScanRun, listScanRunsForHousehold, startScan } from "./scan-runs"
+import { listScanRunsForHousehold, startScan } from "./scan-runs"
 import { tmdbConfigured } from "./tmdb"
 
 // Any household member may watch scan progress (legacy parity)…
@@ -19,20 +19,15 @@ export const listScanRunsFn = createServerFn({ method: "GET" })
   .middleware([householdMiddleware])
   .handler(({ context }) => listScanRunsForHousehold(context.householdId))
 
-export const getScanRunFn = createServerFn({ method: "GET" })
-  .middleware([householdMiddleware])
-  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
-  .handler(({ data, context }) => {
-    const run = getScanRun(data.id)
-    if (!run || run.householdId !== context.householdId) return null
-    return run
-  })
-
-// …but starting one is admin-only: ffprobe-walking a large library is
-// resource-intensive.
+// …but starting one is household-privileged (OWNER or instance ADMIN, same
+// rule as legacy's household-admin check): ffprobe-walking a large library
+// is resource-intensive.
 export const startScanFn = createServerFn({ method: "POST" })
-  .middleware([adminMiddleware, householdMiddleware])
+  .middleware([householdMiddleware])
   .handler(({ context }) => {
+    if (!canManageMedia(context)) {
+      return { error: "Only the household owner can start a scan." }
+    }
     const root = process.env.MEDIA_LIBRARY_PATH
     if (!root) {
       return { error: "MEDIA_LIBRARY_PATH not configured" }
@@ -45,11 +40,14 @@ export const startScanFn = createServerFn({ method: "POST" })
     return { run }
   })
 
-// Manual TMDB enrichment for titles still missing tmdbId. Admin-only because
-// it can issue a few hundred outbound requests on a large library.
+// Manual TMDB enrichment for titles still missing tmdbId. Household-privileged
+// because it can issue a few hundred outbound requests on a large library.
 export const enrichLibraryFn = createServerFn({ method: "POST" })
-  .middleware([adminMiddleware, householdMiddleware])
+  .middleware([householdMiddleware])
   .handler(async ({ context }) => {
+    if (!canManageMedia(context)) {
+      return { error: "Only the household owner can run enrichment." }
+    }
     if (!tmdbConfigured()) {
       return { error: "TMDB not configured" }
     }

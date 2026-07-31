@@ -10,7 +10,8 @@ export const Route = createFileRoute("/_authed/media/")({
 })
 
 function MediaLibraryPage() {
-  const { counts, items, isAdmin, scanRuns, restricted } = Route.useLoaderData()
+  const { counts, items, canManage, scanRuns, restricted } =
+    Route.useLoaderData()
   const router = useRouter()
 
   return (
@@ -30,7 +31,7 @@ function MediaLibraryPage() {
         )}
       </div>
 
-      {isAdmin && (
+      {canManage && (
         <ScanPanel
           initialRuns={scanRuns}
           onLibraryChanged={() => router.invalidate()}

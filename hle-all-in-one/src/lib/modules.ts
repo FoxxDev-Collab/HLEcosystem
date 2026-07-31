@@ -74,7 +74,10 @@ export type NavItem = {
   title: string
   href: string
   icon: LucideIcon
+  /** Instance ADMIN only (e.g. user provisioning). */
   adminOnly?: boolean
+  /** Household OWNER or instance ADMIN (household-privileged features). */
+  ownerOrAdmin?: boolean
 }
 export type NavGroup = { label: string; items: Array<NavItem> }
 
@@ -604,7 +607,7 @@ export const MODULES: Array<ModuleDef> = [
             title: "Parental Controls",
             href: "/media/parental",
             icon: ShieldCheck,
-            adminOnly: true,
+            ownerOrAdmin: true,
           },
         ],
       },
