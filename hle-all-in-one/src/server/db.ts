@@ -8,3 +8,7 @@ if (!process.env.DATABASE_URL) {
 }
 
 export const sql = Bun.sql
+
+// Array-column binding helper — see pg-text-array.ts for why it is the only
+// construct that works. Re-exported here so query code imports one module.
+export { pgTextArray } from "./pg-text-array"

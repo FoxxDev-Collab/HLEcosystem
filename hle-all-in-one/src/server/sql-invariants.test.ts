@@ -40,26 +40,40 @@ async function serverSourceFiles(dir: string): Promise<Array<string>> {
 // `ANY(${expr})` — a template substitution passed straight to ANY(), with or
 // without a trailing array cast.
 const ANY_TEMPLATE_PARAM = /ANY\(\s*\$\{/
+// `${expr}::text[]` (any array cast) where expr is not pgTextArray(...) — a
+// bare array param 500s (`malformed array literal`) and `sql.array()` silently
+// corrupts elements with literal quotes. pgTextArray in db.ts is the one
+// binding that round-trips; a `'{}'::text[]` SQL literal (no `${`) is fine.
+const ARRAY_CAST_PARAM = /\$\{(?!pgTextArray\()[^}]*\}::\w+\[\]/
+
+async function offendersMatching(re: RegExp): Promise<Array<string>> {
+  const files = await serverSourceFiles(SERVER_DIR)
+  expect(files.length).toBeGreaterThan(0)
+  const hits = await Promise.all(
+    files.map(async (file) => {
+      const lines = (await readFile(file, "utf8")).split("\n")
+      return lines.flatMap((line, i) =>
+        re.test(line)
+          ? [`${path.relative(SERVER_DIR, file)}:${i + 1}: ${line.trim()}`]
+          : []
+      )
+    })
+  )
+  return hits.flat()
+}
 
 describe("Bun.sql array parameters", () => {
   it("no server query passes a template parameter to ANY()", async () => {
-    const files = await serverSourceFiles(SERVER_DIR)
-    expect(files.length).toBeGreaterThan(0)
-
-    const offenders = await Promise.all(
-      files.map(async (file) => {
-        const lines = (await readFile(file, "utf8")).split("\n")
-        return lines.flatMap((line, i) =>
-          ANY_TEMPLATE_PARAM.test(line)
-            ? [`${path.relative(SERVER_DIR, file)}:${i + 1}: ${line.trim()}`]
-            : []
-        )
-      })
-    )
-
     expect(
-      offenders.flat(),
+      await offendersMatching(ANY_TEMPLATE_PARAM),
       "Use `IN ${sql(arr)}` instead — see the comment at the top of this file"
+    ).toEqual([])
+  })
+
+  it("array-column values only bind through pgTextArray()", async () => {
+    expect(
+      await offendersMatching(ARRAY_CAST_PARAM),
+      "Bind array columns as ${pgTextArray(arr)}::text[] — see db.ts"
     ).toEqual([])
   })
 })
