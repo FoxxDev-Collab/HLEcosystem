@@ -105,8 +105,10 @@ async function main() {
     !membersAfter.some((m) => m.email === EMAIL)
   )
 
-  // DELETE
-  await deleteUser(created.id)
+  // DELETE — the test user owns no household, so the last-owner guard in
+  // deleteUser must not refuse.
+  const deleted = await deleteUser(created.id)
+  check("deleteUser returned ok", "ok" in deleted)
   const gone = await getUserWithSecretByEmail(EMAIL)
   check("deleteUser removed the account", gone === null)
 
