@@ -2,7 +2,7 @@
 // new "HealthProfileRecord"; the "current" profile is the latest recordDate
 // per member, history is preserved (legacy semantics). Metric units
 // (cm / kg) are stored; display-side conversion is the UI's job.
-import { sql } from "@/server/db"
+import { pgTextArray, sql } from "@/server/db"
 
 export type BloodType =
   | "A_POSITIVE"
@@ -95,8 +95,10 @@ export async function createProfileRecord(
       "isOrganDonor"
     ) VALUES (
       ${memberId}, ${input.recordDate}, ${input.bloodType}::"BloodType",
-      ${input.heightCm}, ${input.weightKg}, ${input.allergies}::text[],
-      ${input.chronicConditions}::text[], ${input.majorSurgeries}::text[],
+      ${input.heightCm}, ${input.weightKg},
+      ${pgTextArray(input.allergies)}::text[],
+      ${pgTextArray(input.chronicConditions)}::text[],
+      ${pgTextArray(input.majorSurgeries)}::text[],
       ${input.primaryCareProvider}, ${input.preferredHospital},
       ${input.medicalNotes}, ${input.isOrganDonor}
     )`

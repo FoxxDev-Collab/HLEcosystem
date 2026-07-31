@@ -12,7 +12,7 @@
 // implemented as delete + re-insert (same id) so the trigger reverses the old
 // effect and applies the new one (legacy semantics).
 import { z } from "zod"
-import { sql } from "@/server/db"
+import { pgTextArray, sql } from "@/server/db"
 
 export type TransactionType = "INCOME" | "EXPENSE" | "TRANSFER"
 
@@ -254,7 +254,7 @@ export async function updateTransaction(
         ${existing.recurringTransactionId}, ${existing.type}, ${amount},
         ${input.date}, ${input.payee}, ${input.description},
         ${existing.isReconciled}, ${existing.isCleared},
-        ${existing.isBalanceAdjustment}, ${existing.tags},
+        ${existing.isBalanceAdjustment}, ${pgTextArray(existing.tags)}::text[],
         ${existing.externalId}, ${existing.createdByUserId},
         ${existing.createdAt}, now()
       )`
