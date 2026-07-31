@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start"
 import { z } from "zod"
 import { householdMiddleware } from "@/server/middleware"
+import { canManageHousehold } from "@/server/privileges"
 import {
   createDebt,
   deleteDebt,
@@ -189,6 +190,11 @@ export const toggleDebtArchivedFn = createServerFn({ method: "POST" })
 export const deleteDebtFn = createServerFn({ method: "POST" })
   .middleware([householdMiddleware])
   .inputValidator((d: unknown) => z.object({ id: z.string().min(1) }).parse(d))
-  .handler(async ({ data, context }) =>
-    deleteDebt(context.householdId, data.id)
-  )
+  .handler(async ({ data, context }) => {
+    // Deletes the debt and its payment history irreversibly —
+    // household-privileged (see privileges.ts).
+    if (!canManageHousehold(context)) {
+      return { error: "Only the household owner can delete a debt." }
+    }
+    return deleteDebt(context.householdId, data.id)
+  })

@@ -130,8 +130,36 @@ export async function setUserPassword(
   await sql`UPDATE "User" SET "password" = ${hashed}, "updatedAt" = now() WHERE "id" = ${id}`
 }
 
-export async function deleteUser(id: string): Promise<void> {
+// HouseholdMember cascades on user delete — refuse when this user is the
+// only OWNER of a household that still has other members, which would leave
+// it permanently unmanageable (adding/removing members requires an OWNER;
+// same invariant as removeMember in households.ts).
+export async function deleteUser(
+  id: string
+): Promise<{ ok: true } | { error: string }> {
+  const orphaned = await sql<Array<{ name: string }>>`
+    SELECT h."name"
+    FROM "HouseholdMember" hm
+    JOIN "Household" h ON h."id" = hm."householdId"
+    WHERE hm."userId" = ${id} AND hm."role" = 'OWNER'
+      AND NOT EXISTS (
+        SELECT 1 FROM "HouseholdMember" o
+        WHERE o."householdId" = hm."householdId"
+          AND o."role" = 'OWNER' AND o."userId" <> ${id}
+      )
+      AND EXISTS (
+        SELECT 1 FROM "HouseholdMember" m
+        WHERE m."householdId" = hm."householdId"
+          AND m."userId" <> ${id}
+      )
+    LIMIT 1`
+  if (orphaned.length > 0) {
+    return {
+      error: `This user is the only owner of "${orphaned[0].name}", which still has members. Add another owner there first.`,
+    }
+  }
   await sql`DELETE FROM "User" WHERE "id" = ${id}`
+  return { ok: true }
 }
 
 export async function emailExists(

@@ -3,7 +3,7 @@ import { redirect } from "@tanstack/react-router"
 import { z } from "zod"
 import { householdMiddleware } from "@/server/middleware"
 import { getMembership, listMembers } from "@/server/households"
-import { canManageMedia } from "./manage"
+import { canManageHousehold } from "@/server/privileges"
 import {
   MOVIE_RATINGS,
   TV_RATINGS,
@@ -12,12 +12,12 @@ import {
   upsertParentalProfile,
 } from "./parental"
 
-// Page data for OWNER-or-instance-ADMIN (see manage.ts): household members
+// Page data for OWNER-or-instance-ADMIN (see privileges.ts): household members
 // joined with their parental profile (or none — none means unrestricted).
 export const getParentalPageFn = createServerFn({ method: "GET" })
   .middleware([householdMiddleware])
   .handler(async ({ context }) => {
-    if (!canManageMedia(context)) {
+    if (!canManageHousehold(context)) {
       throw redirect({ to: "/media" })
     }
     const [members, profiles] = await Promise.all([
@@ -48,7 +48,7 @@ export const setParentalProfileFn = createServerFn({ method: "POST" })
   .middleware([householdMiddleware])
   .inputValidator((d: unknown) => setSchema.parse(d))
   .handler(async ({ data, context }) => {
-    if (!canManageMedia(context)) {
+    if (!canManageHousehold(context)) {
       return { error: "Only the household owner can set parental controls." }
     }
     // Re-verify the target user is a member of THIS household before writing
@@ -73,7 +73,7 @@ export const clearParentalProfileFn = createServerFn({ method: "POST" })
     z.object({ userId: z.string().uuid() }).parse(d)
   )
   .handler(async ({ data, context }) => {
-    if (!canManageMedia(context)) {
+    if (!canManageHousehold(context)) {
       return { error: "Only the household owner can clear parental controls." }
     }
     await deleteParentalProfile(context.householdId, data.userId)

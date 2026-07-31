@@ -9,7 +9,7 @@
 //   post-scan enrichment pass marks itself skipped.
 import { createServerFn } from "@tanstack/react-start"
 import { householdMiddleware } from "@/server/middleware"
-import { canManageMedia } from "./manage"
+import { canManageHousehold } from "@/server/privileges"
 import { enrichHousehold } from "./enrichment"
 import { listScanRunsForHousehold, startScan } from "./scan-runs"
 import { tmdbConfigured } from "./tmdb"
@@ -25,7 +25,7 @@ export const listScanRunsFn = createServerFn({ method: "GET" })
 export const startScanFn = createServerFn({ method: "POST" })
   .middleware([householdMiddleware])
   .handler(({ context }) => {
-    if (!canManageMedia(context)) {
+    if (!canManageHousehold(context)) {
       return { error: "Only the household owner can start a scan." }
     }
     const root = process.env.MEDIA_LIBRARY_PATH
@@ -45,7 +45,7 @@ export const startScanFn = createServerFn({ method: "POST" })
 export const enrichLibraryFn = createServerFn({ method: "POST" })
   .middleware([householdMiddleware])
   .handler(async ({ context }) => {
-    if (!canManageMedia(context)) {
+    if (!canManageHousehold(context)) {
       return { error: "Only the household owner can run enrichment." }
     }
     if (!tmdbConfigured()) {

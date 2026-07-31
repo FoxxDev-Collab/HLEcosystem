@@ -78,6 +78,5 @@ export const removeMemberFn = createServerFn({ method: "POST" })
     if (context.membership.role !== "OWNER") {
       return { error: "Only the household owner can remove members." }
     }
-    await removeMember(context.householdId, data.membershipId)
-    return { ok: true as const }
+    return removeMember(context.householdId, data.membershipId)
   })

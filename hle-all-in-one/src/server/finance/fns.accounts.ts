@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start"
 import { z } from "zod"
 import { householdMiddleware } from "@/server/middleware"
+import { canManageHousehold } from "@/server/privileges"
 import {
   adjustBalance,
   createAccount,
@@ -122,6 +123,11 @@ export const adjustBalanceFn = createServerFn({ method: "POST" })
 export const deleteAccountFn = createServerFn({ method: "POST" })
   .middleware([householdMiddleware])
   .inputValidator((d: unknown) => z.object({ id: z.string().min(1) }).parse(d))
-  .handler(async ({ data, context }) =>
-    deleteAccountCascade(context.householdId, data.id)
-  )
+  .handler(async ({ data, context }) => {
+    // Cascade-deletes every attached transaction, import, and payment with
+    // no recovery path — household-privileged (see privileges.ts).
+    if (!canManageHousehold(context)) {
+      return { error: "Only the household owner can delete an account." }
+    }
+    return deleteAccountCascade(context.householdId, data.id)
+  })

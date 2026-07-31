@@ -97,12 +97,35 @@ export async function addExistingUserByEmail(
   return { ok: true }
 }
 
+// Refuses to remove the household's last OWNER (atomically — the EXISTS
+// runs inside the DELETE, no read-then-write window): a household left with
+// only MEMBERs is permanently unmanageable, since adding or removing members
+// requires an OWNER. Add another OWNER first, then remove this one.
 export async function removeMember(
   householdId: string,
   membershipId: string
-): Promise<void> {
-  await sql`
-    DELETE FROM "HouseholdMember"
+): Promise<{ ok: true } | { error: string }> {
+  const removed = await sql<Array<{ id: string }>>`
+    DELETE FROM "HouseholdMember" hm
+    WHERE hm."id" = ${membershipId} AND hm."householdId" = ${householdId}
+      AND (
+        hm."role" <> 'OWNER'
+        OR EXISTS (
+          SELECT 1 FROM "HouseholdMember" o
+          WHERE o."householdId" = ${householdId}
+            AND o."role" = 'OWNER' AND o."id" <> hm."id"
+        )
+      )
+    RETURNING hm."id"
+  `
+  if (removed.length > 0) return { ok: true }
+  const target = await sql<Array<{ role: string }>>`
+    SELECT "role" FROM "HouseholdMember"
     WHERE "id" = ${membershipId} AND "householdId" = ${householdId}
   `
+  if (target.length === 0) return { error: "Member not found." }
+  return {
+    error:
+      "Cannot remove the household's only owner. Add another owner first.",
+  }
 }
