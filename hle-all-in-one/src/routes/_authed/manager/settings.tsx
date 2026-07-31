@@ -107,6 +107,36 @@ function SettingsPage() {
           </form>
         </CardContent>
       </Card>
+
+      {user.role === "ADMIN" && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Backup</CardTitle>
+            <CardDescription>
+              Full-instance backup for disaster recovery or moving to another
+              machine. The database dump is pg_dump custom format (restore with
+              pg_restore); the uploads archive holds every module&apos;s file
+              attachments. See the README&apos;s &quot;Backup &amp;
+              migration&quot; section for the restore runbook.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-wrap gap-3">
+            {/* Plain links: the browser streams the download directly. */}
+            <Button
+              variant="outline"
+              render={<a href="/api/admin/backup-db" />}
+            >
+              Download database dump
+            </Button>
+            <Button
+              variant="outline"
+              render={<a href="/api/admin/backup-uploads" />}
+            >
+              Download uploads archive
+            </Button>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }

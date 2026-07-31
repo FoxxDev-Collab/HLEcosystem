@@ -125,7 +125,6 @@ export async function removeMember(
   `
   if (target.length === 0) return { error: "Member not found." }
   return {
-    error:
-      "Cannot remove the household's only owner. Add another owner first.",
+    error: "Cannot remove the household's only owner. Add another owner first.",
   }
 }
