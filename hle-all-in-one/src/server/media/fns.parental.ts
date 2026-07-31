@@ -1,7 +1,9 @@
 import { createServerFn } from "@tanstack/react-start"
+import { redirect } from "@tanstack/react-router"
 import { z } from "zod"
-import { adminMiddleware, householdMiddleware } from "@/server/middleware"
+import { householdMiddleware } from "@/server/middleware"
 import { getMembership, listMembers } from "@/server/households"
+import { canManageMedia } from "./manage"
 import {
   MOVIE_RATINGS,
   TV_RATINGS,
@@ -10,11 +12,14 @@ import {
   upsertParentalProfile,
 } from "./parental"
 
-// Admin-only page data: household members joined with their parental profile
-// (or none — none means unrestricted).
+// Page data for OWNER-or-instance-ADMIN (see manage.ts): household members
+// joined with their parental profile (or none — none means unrestricted).
 export const getParentalPageFn = createServerFn({ method: "GET" })
-  .middleware([adminMiddleware, householdMiddleware])
+  .middleware([householdMiddleware])
   .handler(async ({ context }) => {
+    if (!canManageMedia(context)) {
+      throw redirect({ to: "/media" })
+    }
     const [members, profiles] = await Promise.all([
       listMembers(context.householdId),
       listParentalProfiles(context.householdId),
@@ -40,9 +45,12 @@ const setSchema = z.object({
 })
 
 export const setParentalProfileFn = createServerFn({ method: "POST" })
-  .middleware([adminMiddleware, householdMiddleware])
+  .middleware([householdMiddleware])
   .inputValidator((d: unknown) => setSchema.parse(d))
   .handler(async ({ data, context }) => {
+    if (!canManageMedia(context)) {
+      return { error: "Only the household owner can set parental controls." }
+    }
     // Re-verify the target user is a member of THIS household before writing
     // — never trust an id from the form (ADR-0005).
     const membership = await getMembership(data.userId, context.householdId)
@@ -60,11 +68,14 @@ export const setParentalProfileFn = createServerFn({ method: "POST" })
   })
 
 export const clearParentalProfileFn = createServerFn({ method: "POST" })
-  .middleware([adminMiddleware, householdMiddleware])
+  .middleware([householdMiddleware])
   .inputValidator((d: unknown) =>
     z.object({ userId: z.string().uuid() }).parse(d)
   )
   .handler(async ({ data, context }) => {
+    if (!canManageMedia(context)) {
+      return { error: "Only the household owner can clear parental controls." }
+    }
     await deleteParentalProfile(context.householdId, data.userId)
     return { ok: true as const }
   })

@@ -89,10 +89,6 @@ export function startScan(opts: {
   return run
 }
 
-export function getScanRun(id: string): ScanRun | null {
-  return runs.get(id) ?? null
-}
-
 export function listScanRunsForHousehold(householdId: string): Array<ScanRun> {
   return [...runs.values()]
     .filter((r) => r.householdId === householdId)
