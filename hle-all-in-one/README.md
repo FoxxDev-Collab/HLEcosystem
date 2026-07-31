@@ -120,6 +120,7 @@ Every `process.env.*` actually referenced under `src/` and `scripts/`:
 | `TMDB_API_KEY` | Unset → `tmdbConfigured()` is false, every TMDB call returns `null`, the scanner runs unaffected without enrichment, and `enrichLibraryFn` returns `{ error: "TMDB not configured" }`. |
 | `CLAUDE_API_URL` + `CLAUDE_API_SERVICE_SECRET` | Both required together. Either unset → `isAiConfigured()` is false and every gateway call resolves to `{ success: false, code: "NOT_CONFIGURED" }` (`"AI gateway not configured"` in finance, `"AI features not configured"` in meals). Affects receipt OCR, smart categorize, smart link, the finance advisor, and shopping-list generation — each falls back to its manual path. |
 | `NODE_ENV` | Only read for the session cookie's `secure` flag (`production` → secure). |
+| `COOKIE_SECURE` | `false` disables the cookie's Secure flag — needed for LAN testing of the production container over plain `http://<host-ip>:8100`, where browsers silently drop Secure cookies and login breaks. Never set on anything public; TLS-terminated deployments keep the default. |
 | `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` | `admin@hle.local` / `ChangeMe123!`. Read by both `scripts/seed.ts` and `e2e/auth.setup.ts` — keep them in sync or the e2e login fails. |
 | `SEED_ADMIN_FIRST_NAME` / `SEED_ADMIN_LAST_NAME` | `Admin` / `User`. |
 | `PW_BASE_URL` | Playwright base URL, default `http://localhost:8100`. |
