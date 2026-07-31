@@ -20,6 +20,15 @@ COPY migrations ./migrations
 COPY scripts/migrate.ts ./scripts/migrate.ts
 COPY src/server/migrate.ts ./src/server/migrate.ts
 COPY src/server/db.ts ./src/server/db.ts
+# Headless scan path (cron / first-boot indexing): the library volume is
+# mounted here, so `podman exec hle-aio bun scripts/scan.ts <householdId>`
+# must work in-container. tsconfig.json carries the "@/..." path aliases the
+# scanner sources import through.
+COPY tsconfig.json ./tsconfig.json
+COPY scripts/scan.ts ./scripts/scan.ts
+COPY src/server/media/scanner.ts src/server/media/scanner-parse.ts \
+     src/server/media/enrichment.ts src/server/media/tmdb.ts \
+     ./src/server/media/
 COPY entrypoint.sh ./entrypoint.sh
 RUN mkdir -p /data/uploads /data/library && chown -R bun:bun /data /app
 USER bun

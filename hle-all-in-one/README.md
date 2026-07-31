@@ -94,6 +94,12 @@ Health probe: `GET /api/health` → `{"status":"ok"}`, or 503 `degraded` if
 script — it exercises the raw-SQL user/household data layer against the live DB
 and cleans up after itself.
 
+`scripts/scan.ts` (`bun scripts/scan.ts <householdId> [rootPath] [--enrich]`)
+is the headless media scan — the cron / first-boot indexing path the UI's Scan
+button doesn't cover. Works in-container too, where the library volume is
+mounted: `podman exec hle-aio bun scripts/scan.ts <householdId>`. Exits 1 if
+any file failed to index, 2 on usage/unknown-household errors.
+
 ## Environment variables
 
 Every `process.env.*` actually referenced under `src/` and `scripts/`:
