@@ -21,11 +21,12 @@ COPY scripts/migrate.ts ./scripts/migrate.ts
 COPY src/server/migrate.ts ./src/server/migrate.ts
 COPY src/server/db.ts ./src/server/db.ts
 COPY entrypoint.sh ./entrypoint.sh
-RUN mkdir -p /data/uploads && chown -R bun:bun /data /app
+RUN mkdir -p /data/uploads /data/library && chown -R bun:bun /data /app
 USER bun
 ENV NODE_ENV=production \
     PORT=3000 \
-    UPLOAD_DIR=/data/uploads
+    UPLOAD_DIR=/data/uploads \
+    MEDIA_LIBRARY_PATH=/data/library
 EXPOSE 3000
 # No wget/curl in Debian-slim — probe with bun's fetch. (Podman builds OCI
 # images where HEALTHCHECK is ignored; compose.yaml carries the same check.)

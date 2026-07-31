@@ -108,7 +108,7 @@ export async function bulkSuggestCategories(
              t."date"::text, a."name" AS "accountName", t."type"
       FROM "Transaction" t
       JOIN "Account" a ON a."id" = t."accountId"
-      WHERE t."id" = ANY(${batchIds}::uuid[])
+      WHERE t."id" IN ${sql(batchIds)}
         AND t."householdId" = ${householdId}
         AND t."categoryId" IS NULL
       ORDER BY t."date" DESC`,

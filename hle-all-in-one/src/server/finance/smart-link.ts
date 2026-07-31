@@ -157,6 +157,9 @@ export async function analyzeTransactions(
   transactionIds: Array<string>
 ): Promise<AnalyzeResult> {
   const limitedIds = transactionIds.slice(0, 50)
+  if (limitedIds.length === 0) {
+    return { matches: [], suggestedBills: [], suggestedRecurring: [] }
+  }
 
   const [transactions, debts, bills, recurring] = await Promise.all([
     sql<
@@ -177,7 +180,7 @@ export async function analyzeTransactions(
       FROM "Transaction" t
       JOIN "Account" a ON a."id" = t."accountId"
       LEFT JOIN "Category" c ON c."id" = t."categoryId"
-      WHERE t."id" = ANY(${limitedIds}::uuid[])
+      WHERE t."id" IN ${sql(limitedIds)}
         AND t."householdId" = ${householdId}`,
     sql<Array<DebtLite>>`
       SELECT "id", "name", "type", "lender", "currentBalance"::float8,
