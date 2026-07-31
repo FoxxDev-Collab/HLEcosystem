@@ -4,6 +4,8 @@ dist
 dist-ssr
 *.local
 .env*
+# ...but the template carries no secrets and is useless if not checked in.
+!.env.example
 .tanstack
 .wrangler
 .output
