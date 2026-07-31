@@ -96,6 +96,7 @@ export const deleteUserFn = createServerFn({ method: "POST" })
     if (data.id === context.user.id) {
       return { error: "You cannot delete your own account." }
     }
-    await deleteUser(data.id)
-    return { ok: true as const }
+    // deleteUser refuses when the user is the last OWNER of a household that
+    // still has members (see users.ts).
+    return deleteUser(data.id)
   })
