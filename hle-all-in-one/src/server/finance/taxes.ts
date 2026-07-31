@@ -82,7 +82,6 @@ async function deleteTaxFileIfUnreferenced(storagePath: string): Promise<void> {
 // Types
 // ---------------------------------------------------------------------------
 
-
 export {
   FILING_STATUSES,
   FILING_STATUS_LABELS,

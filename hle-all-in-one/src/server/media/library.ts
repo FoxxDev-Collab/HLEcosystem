@@ -61,7 +61,7 @@ export async function listLibrary(
     FROM "Movie" m
     WHERE m."householdId" = ${householdId}
       AND (
-        m."contentRating" = ANY(${movieRatings})
+        m."contentRating" IN ${sql(movieRatings)}
         OR (m."contentRating" IS NULL AND ${allowUnrated})
       )
     UNION ALL
@@ -83,7 +83,7 @@ export async function listLibrary(
     FROM "Series" s
     WHERE s."householdId" = ${householdId}
       AND (
-        s."contentRating" = ANY(${tvRatings})
+        s."contentRating" IN ${sql(tvRatings)}
         OR (s."contentRating" IS NULL AND ${allowUnrated})
       )
     ORDER BY title`
@@ -158,7 +158,7 @@ export async function getMovie(
       ON mf."id" = m."mediaFileId" AND mf."householdId" = m."householdId"
     WHERE m."householdId" = ${householdId} AND m."id" = ${movieId}
       AND (
-        m."contentRating" = ANY(${movieRatings})
+        m."contentRating" IN ${sql(movieRatings)}
         OR (m."contentRating" IS NULL AND ${allowUnrated})
       )
     LIMIT 1`
@@ -213,7 +213,7 @@ export async function getSeries(
     FROM "Series"
     WHERE "householdId" = ${householdId} AND "id" = ${seriesId}
       AND (
-        "contentRating" = ANY(${tvRatings})
+        "contentRating" IN ${sql(tvRatings)}
         OR ("contentRating" IS NULL AND ${allowUnrated})
       )
     LIMIT 1`
@@ -254,7 +254,7 @@ export async function getSeries(
            "durationSec", "mediaFileId", "airDate"::text
     FROM "Episode"
     WHERE "householdId" = ${householdId}
-      AND "seasonId" = ANY(${seasonIds})
+      AND "seasonId" IN ${sql(seasonIds)}
     ORDER BY "seasonId", "number"`
 
   return {
@@ -300,7 +300,7 @@ export async function getLibraryCounts(
         SELECT COUNT(*)::int FROM "Movie"
         WHERE "householdId" = ${householdId}
           AND (
-            "contentRating" = ANY(${movieRatings})
+            "contentRating" IN ${sql(movieRatings)}
             OR ("contentRating" IS NULL AND ${allowUnrated})
           )
       ) AS movies,
@@ -308,7 +308,7 @@ export async function getLibraryCounts(
         SELECT COUNT(*)::int FROM "Series"
         WHERE "householdId" = ${householdId}
           AND (
-            "contentRating" = ANY(${tvRatings})
+            "contentRating" IN ${sql(tvRatings)}
             OR ("contentRating" IS NULL AND ${allowUnrated})
           )
       ) AS series,
@@ -318,7 +318,7 @@ export async function getLibraryCounts(
         JOIN "Series" s  ON s."id"  = se."seriesId"
         WHERE e."householdId" = ${householdId}
           AND (
-            s."contentRating" = ANY(${tvRatings})
+            s."contentRating" IN ${sql(tvRatings)}
             OR (s."contentRating" IS NULL AND ${allowUnrated})
           )
       ) AS episodes`

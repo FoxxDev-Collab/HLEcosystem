@@ -61,12 +61,23 @@ services:
     environment:
       DATABASE_URL: postgresql://hle:hle_dev_pw@hle-aio-postgres:5432/hle_aio
       UPLOAD_DIR: /data/uploads
+      # Root the media scanner walks. Mount real libraries here read-only in
+      # production; the named volume is an empty placeholder for dev.
+      MEDIA_LIBRARY_PATH: /data/library
+      # Optional. Unset → scanner runs without TMDB enrichment (one warning).
+      TMDB_API_KEY: ${TMDB_API_KEY:-}
+      # Optional. Unset → every AI feature (receipt OCR, smart categorize,
+      # advisor, shopping-list generation) degrades to its manual path.
+      CLAUDE_API_URL: ${CLAUDE_API_URL:-}
+      CLAUDE_API_SERVICE_SECRET: ${CLAUDE_API_SERVICE_SECRET:-}
     ports:
       - "8100:3000"
     volumes:
       - hle-aio-uploads:/data/uploads
+      - hle-aio-library:/data/library
     restart: unless-stopped
 
 volumes:
   hle-aio-pgdata:
   hle-aio-uploads:
+  hle-aio-library:
