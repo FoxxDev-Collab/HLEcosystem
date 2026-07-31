@@ -42,7 +42,7 @@ jobs:
           # Containerfile.bun changes also force a full run since they affect
           # the Bun-runtime apps.
           if echo "$changed" | grep -qE '^(compose\.yaml|Containerfile\.nextjs|Containerfile\.bun|hle\.sh|\.github/workflows/)'; then
-            apps='["hle-claude_api","hle-family_finance","hle-family_health","hle-family_home_care","hle-family_manager","hle-family_travel","hle-family_wiki","hle-familyhub","hle-file_server","hle-meal_prep","hle-media"]'
+            apps='["hle-all-in-one","hle-claude_api","hle-family_finance","hle-family_health","hle-family_home_care","hle-family_manager","hle-family_travel","hle-family_wiki","hle-familyhub","hle-file_server","hle-meal_prep","hle-media"]'
           else
             apps=$(echo "$changed" | awk -F/ '/^hle-/ {print $1}' | sort -u | jq -R . | jq -s -c .)
             if [ "$apps" = "[]" ] || [ -z "$apps" ]; then
@@ -138,17 +138,37 @@ jobs:
         working-directory: ${{ matrix.app }}
         run: bun install --frozen-lockfile
 
-      # No `lint` script in Bun-runtime apps yet (hle-media has no eslint/biome
-      # config). Add one and a Lint step here when it exists. The Security
-      # invariant gate (security.yml) still applies the project-wide forbidden-
-      # patterns check across the diff.
+      # hle-all-in-one gitignores routeTree.gen.ts (its generated suppression
+      # headers would trip the invariant gate), so a fresh checkout cannot
+      # typecheck until the build regenerates it. The dummy DATABASE_URL only
+      # satisfies db.ts's import-time presence guard — nothing connects.
+      - name: Generate route artifacts (TanStack apps)
+        working-directory: ${{ matrix.app }}
+        env:
+          DATABASE_URL: postgresql://ci:ci@127.0.0.1:5432/ci
+        run: |
+          if [ -f vite.config.ts ]; then bun run build; fi
+
+      # hle-media has no lint config yet; hle-all-in-one has eslint. The
+      # Security invariant gate (security.yml) still applies the project-wide
+      # forbidden-patterns check across the diff either way.
+      - name: Lint
+        working-directory: ${{ matrix.app }}
+        run: |
+          if [ -f eslint.config.js ]; then bun run lint; fi
+
       - name: Typecheck
         working-directory: ${{ matrix.app }}
         run: bunx tsc --noEmit
 
+      # Each app's own test script picks its runner: `bun test` for hle-media
+      # (bun:test), `vitest run` for hle-all-in-one (vi.mock is unsupported
+      # under bun:test).
       - name: Test
         working-directory: ${{ matrix.app }}
-        run: bun test
+        env:
+          DATABASE_URL: postgresql://ci:ci@127.0.0.1:5432/ci
+        run: bun run test
 
   # Summary job so branch protection can require a single check.
   # Note: the lint/type suppression check (formerly no-disable-smuggling here)
