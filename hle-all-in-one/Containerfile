@@ -19,7 +19,7 @@ COPY --from=build /app/.output ./.output
 COPY migrations ./migrations
 COPY scripts/migrate.ts ./scripts/migrate.ts
 COPY src/server/migrate.ts ./src/server/migrate.ts
-COPY src/server/db.ts ./src/server/db.ts
+COPY src/server/db.ts src/server/pg-text-array.ts ./src/server/
 # Headless scan path (cron / first-boot indexing): the library volume is
 # mounted here, so `podman exec hle-aio bun scripts/scan.ts <householdId>`
 # must work in-container. tsconfig.json carries the "@/..." path aliases the

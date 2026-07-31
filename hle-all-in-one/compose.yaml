@@ -61,6 +61,10 @@ services:
     environment:
       DATABASE_URL: postgresql://hle:hle_dev_pw@hle-aio-postgres:5432/hle_aio
       UPLOAD_DIR: /data/uploads
+      # For LAN testing over plain http://<host-ip>:8100 set COOKIE_SECURE=false
+      # (browsers drop Secure cookies on non-TLS remote origins → login breaks).
+      # Leave unset for anything TLS-terminated or public.
+      COOKIE_SECURE: ${COOKIE_SECURE:-}
       # Root the media scanner walks. Mount real libraries here read-only in
       # production; the named volume is an empty placeholder for dev.
       MEDIA_LIBRARY_PATH: /data/library
