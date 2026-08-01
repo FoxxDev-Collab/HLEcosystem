@@ -1,12 +1,7 @@
 import { sql } from "@/server/db"
 
 export type ItemCondition =
-  | "EXCELLENT"
-  | "GOOD"
-  | "FAIR"
-  | "POOR"
-  | "NEEDS_REPAIR"
-  | "DECOMMISSIONED"
+  "EXCELLENT" | "GOOD" | "FAIR" | "POOR" | "NEEDS_REPAIR" | "DECOMMISSIONED"
 
 export type ItemListRow = {
   id: string

@@ -41,12 +41,7 @@ export async function authenticateFileRequest(): Promise<
 }
 
 export type DocumentType =
-  | "MANUAL"
-  | "WARRANTY"
-  | "RECEIPT"
-  | "INVOICE"
-  | "PHOTO"
-  | "OTHER"
+  "MANUAL" | "WARRANTY" | "RECEIPT" | "INVOICE" | "PHOTO" | "OTHER"
 
 export type DocumentRow = {
   id: string

@@ -6,12 +6,7 @@ import { sql } from "@/server/db"
 import { healthMemberBelongsToHousehold } from "./medications"
 
 export type InsuranceType =
-  | "MEDICAL"
-  | "DENTAL"
-  | "VISION"
-  | "PRESCRIPTION"
-  | "SUPPLEMENTAL"
-  | "OTHER"
+  "MEDICAL" | "DENTAL" | "VISION" | "PRESCRIPTION" | "SUPPLEMENTAL" | "OTHER"
 
 export type InsurancePolicyRow = {
   id: string

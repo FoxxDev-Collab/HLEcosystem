@@ -1,12 +1,7 @@
 import { sql } from "@/server/db"
 
 export type ImportantDateType =
-  | "BIRTHDAY"
-  | "ANNIVERSARY"
-  | "GRADUATION"
-  | "MEMORIAL"
-  | "HOLIDAY"
-  | "CUSTOM"
+  "BIRTHDAY" | "ANNIVERSARY" | "GRADUATION" | "MEMORIAL" | "HOLIDAY" | "CUSTOM"
 
 export type RecurrenceType = "ONCE" | "ANNUAL"
 

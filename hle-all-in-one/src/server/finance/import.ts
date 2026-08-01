@@ -13,11 +13,7 @@ import type { ParsedTransaction } from "./import-parser"
 export type ImportFileFormat = "CSV" | "QFX" | "OFX"
 
 export type ImportMatchStatus =
-  | "PENDING"
-  | "AUTO_MATCHED"
-  | "IMPORTED"
-  | "SKIPPED"
-  | "DUPLICATE"
+  "PENDING" | "AUTO_MATCHED" | "IMPORTED" | "SKIPPED" | "DUPLICATE"
 
 export type ImportBatchRow = {
   id: string

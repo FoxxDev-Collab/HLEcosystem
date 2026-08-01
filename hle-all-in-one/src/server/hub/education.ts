@@ -15,10 +15,7 @@ export type DegreeType =
   | "OTHER"
 
 export type EducationStatus =
-  | "IN_PROGRESS"
-  | "COMPLETED"
-  | "WITHDRAWN"
-  | "TRANSFERRED"
+  "IN_PROGRESS" | "COMPLETED" | "WITHDRAWN" | "TRANSFERRED"
 
 export type GradeTerm =
   | "QUARTER_1"

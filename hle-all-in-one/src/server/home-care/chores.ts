@@ -1,19 +1,12 @@
 import { sql } from "@/server/db"
 
 export type ChoreFrequency =
-  | "DAILY"
-  | "WEEKLY"
-  | "BI_WEEKLY"
-  | "MONTHLY"
-  | "CUSTOM_DAYS"
+  "DAILY" | "WEEKLY" | "BI_WEEKLY" | "MONTHLY" | "CUSTOM_DAYS"
 
 export type RotationMode = "NONE" | "ROUND_ROBIN" | "WEEKLY_ROTATION"
 
 export type ChoreCompletionStatus =
-  | "PENDING"
-  | "COMPLETED"
-  | "SKIPPED"
-  | "MISSED"
+  "PENDING" | "COMPLETED" | "SKIPPED" | "MISSED"
 
 export type ChoreRow = {
   id: string

@@ -11,11 +11,7 @@
 import { sql } from "@/server/db"
 
 export type VisitType =
-  | "IN_PERSON"
-  | "TELEHEALTH"
-  | "EMERGENCY"
-  | "HOSPITAL"
-  | "URGENT_CARE"
+  "IN_PERSON" | "TELEHEALTH" | "EMERGENCY" | "HOSPITAL" | "URGENT_CARE"
 
 export type VisitSummaryRow = {
   id: string

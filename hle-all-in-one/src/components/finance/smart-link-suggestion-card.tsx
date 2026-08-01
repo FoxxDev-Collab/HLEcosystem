@@ -177,9 +177,7 @@ export function SmartLinkSuggestionCard({
                   onChange={(e) =>
                     onUpdate({
                       chosenType: e.target.value as
-                        | "bill"
-                        | "recurring"
-                        | "skip",
+                        "bill" | "recurring" | "skip",
                     })
                   }
                 >

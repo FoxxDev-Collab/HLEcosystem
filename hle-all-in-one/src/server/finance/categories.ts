@@ -27,10 +27,7 @@ export type CategoryPickerRow = {
 }
 
 export type CategoryRuleMatchType =
-  | "CONTAINS"
-  | "STARTS_WITH"
-  | "EXACT"
-  | "REGEX"
+  "CONTAINS" | "STARTS_WITH" | "EXACT" | "REGEX"
 
 export type CategoryRuleRow = {
   id: string

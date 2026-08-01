@@ -22,11 +22,7 @@ export type PetAppointmentType =
   | "OTHER"
 
 export type PetAppointmentStatus =
-  | "SCHEDULED"
-  | "COMPLETED"
-  | "CANCELLED"
-  | "NO_SHOW"
-  | "RESCHEDULED"
+  "SCHEDULED" | "COMPLETED" | "CANCELLED" | "NO_SHOW" | "RESCHEDULED"
 
 export type PetInsuranceType =
   | "ACCIDENT_ONLY"

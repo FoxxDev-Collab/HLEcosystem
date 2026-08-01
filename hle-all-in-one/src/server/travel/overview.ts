@@ -6,11 +6,7 @@ import { sql } from "@/server/db"
 // "Trip"."householdId". The single write is the trip-status auto-sync below.
 
 export type TripStatus =
-  | "PLANNING"
-  | "BOOKED"
-  | "IN_PROGRESS"
-  | "COMPLETED"
-  | "CANCELLED"
+  "PLANNING" | "BOOKED" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED"
 
 export type TravelCurrency =
   | "USD"
@@ -37,10 +33,7 @@ export type ReservationType =
   | "OTHER"
 
 export type ReservationStatus =
-  | "PENDING"
-  | "CONFIRMED"
-  | "CANCELLED"
-  | "COMPLETED"
+  "PENDING" | "CONFIRMED" | "CANCELLED" | "COMPLETED"
 
 export type PackingCategory =
   | "CLOTHING"
