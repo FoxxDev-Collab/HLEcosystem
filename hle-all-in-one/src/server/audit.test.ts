@@ -92,6 +92,7 @@ describe("audit wiring stays in place (source invariants)", () => {
       "household.member.add",
       "household.member.remove",
     ],
+    "fns.setup.ts": ["setup.complete", "setup.token_rejected"],
     "finance/fns.accounts.ts": ["finance.account.delete"],
     "finance/fns.debts.ts": ["finance.debt.delete"],
     "../routes/api/admin/backup-db.ts": ["admin.backup.db_download"],

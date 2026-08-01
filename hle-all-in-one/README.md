@@ -70,6 +70,22 @@ Full stack in containers:
 podman-compose up -d      # app on :8100 → container :3000
 ```
 
+### First run (fresh database)
+
+An uninitialized instance (no users) routes every visitor to **`/setup`** — a
+wizard that creates the instance admin and first household, then signs you in.
+It asks for the **setup token** printed in the server logs:
+
+```bash
+podman logs hle-aio | grep -A2 "First-run setup"
+```
+
+The wizard only works while the `User` table is empty (enforced atomically in
+SQL, not just by redirect) and the token proves log access — someone who can
+merely reach the port cannot claim the instance. `SETUP_TOKEN` overrides the
+generated token for automated provisioning. See ADR-0006 in the repo-root
+`docs/adr/` for the threat model. `bun run seed` remains the dev/e2e path.
+
 The container entrypoint runs `bun scripts/migrate.ts` before serving; a failed
 migration aborts startup rather than serving against a half-migrated schema.
 Health probe: `GET /api/health` → `{"status":"ok"}`, or 503 `degraded` if
