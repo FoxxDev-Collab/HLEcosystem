@@ -322,12 +322,14 @@ jobs:
               echo ""
               echo "| Tool | Severity | Finding | File |"
               echo "|------|----------|---------|------|"
+              # Row cap lives inside jq — `jq | head` under pipefail dies
+              # of SIGPIPE the moment there are more rows than the cap.
               printf '%s' "$code_alerts" | jq -r '
-                .[] | select(
+                [.[] | select(
                   .rule.security_severity_level == "critical" or
                   .rule.security_severity_level == "high"
-                ) | "| \(.tool.name) | \(.rule.security_severity_level) | \(.rule.description // .rule.id) | `\(.most_recent_instance.location.path // "—")` |"
-              ' | head -25
+                )] | .[:25][] | "| \(.tool.name) | \(.rule.security_severity_level) | \(.rule.description // .rule.id) | `\(.most_recent_instance.location.path // "—")` |"
+              '
               echo ""
               echo "</details>"
               echo ""
@@ -350,11 +352,11 @@ jobs:
               echo "| Package | Severity | CVE | Fix available |"
               echo "|---------|----------|-----|---------------|"
               printf '%s' "$dep_alerts" | jq -r '
-                .[] | select(
+                [.[] | select(
                   .security_advisory.severity == "critical" or
                   .security_advisory.severity == "high"
-                ) | "| `\(.dependency.package.name)` | \(.security_advisory.severity) | \(.security_advisory.cve_id // "—") | \(.security_vulnerability.first_patched_version.identifier // "No fix") |"
-              ' | head -25
+                )] | .[:25][] | "| `\(.dependency.package.name)` | \(.security_advisory.severity) | \(.security_advisory.cve_id // "—") | \(.security_vulnerability.first_patched_version.identifier // "No fix") |"
+              '
               echo ""
               echo "</details>"
               echo ""
