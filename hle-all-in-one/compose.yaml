@@ -32,6 +32,9 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    # Same policy as the app service — without this, a host reboot brought
+    # the app back but not its database.
+    restart: unless-stopped
 
   hle-aio:
     build:

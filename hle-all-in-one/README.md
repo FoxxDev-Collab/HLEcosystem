@@ -20,6 +20,10 @@ Porting contract for new modules: [`docs/PORTING.md`](./docs/PORTING.md). Read
 it before adding a module — it is the style and security contract, not a
 suggestion.
 
+Self-hosting / production deployment (published image, TLS, backups,
+upgrades): [`docs/DEPLOYMENT.md`](./docs/DEPLOYMENT.md) with
+[`compose.release.yaml`](./compose.release.yaml).
+
 ## Modules
 
 `src/lib/modules.ts` is the single source of truth for the app switcher, the
