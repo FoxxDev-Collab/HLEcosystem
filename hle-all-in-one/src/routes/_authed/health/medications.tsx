@@ -160,7 +160,7 @@ function MedicationsPage() {
                       )}
                     </div>
                     <div className="mt-1 text-xs text-muted-foreground">
-                      {med.dosage && med.dosage}
+                      {med.dosage}
                       {med.frequency && ` · ${med.frequency}`}
                       {med.prescribedBy && ` · Dr. ${med.prescribedBy}`}
                       {med.pharmacy && ` · ${med.pharmacy}`}

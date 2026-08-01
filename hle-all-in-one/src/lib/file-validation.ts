@@ -55,11 +55,12 @@ function stripControlChars(value: string): string {
 }
 
 export function sanitizeFilename(name: string): string {
+  // Removing EVERY path separator makes traversal sequences unrepresentable —
+  // there is deliberately no ../-specific replace (a partial multi-char strip
+  // can reassemble into the very sequence it removed; CodeQL
+  // js/incomplete-multi-character-sanitization).
   let sanitized = stripControlChars(
-    name
-      .replace(/\.\.[/\\]/g, "")
-      .replace(/[/\\]/g, "")
-      .replace(/[<>:"|?*]/g, "")
+    name.replace(/[/\\]/g, "").replace(/[<>:"|?*]/g, "")
   ).trim()
 
   sanitized = sanitized.replace(/\s+/g, " ")
@@ -74,7 +75,9 @@ export function sanitizeFilename(name: string): string {
     }
   }
 
-  if (!sanitized || sanitized === ".") {
+  // "." and ".." are directory references, not filenames — a bare ".." would
+  // otherwise survive the character strips above and reach path joins.
+  if (!sanitized || sanitized === "." || sanitized === "..") {
     sanitized = "unnamed_file"
   }
 
