@@ -21,8 +21,17 @@ export default defineConfig({
       name: "setup",
       testMatch: /auth\.setup\.ts/,
     },
+    // First-run wizard: no auth dependency (an empty database has nobody to
+    // log in as). Self-skips unless the instance is uninitialized AND
+    // SETUP_TOKEN is provided — see e2e/setup-wizard.spec.ts.
+    {
+      name: "setup-wizard",
+      testMatch: /setup-wizard\.spec\.ts/,
+      use: { ...devices["Desktop Chrome"] },
+    },
     {
       name: "chromium",
+      testIgnore: /setup-wizard\.spec\.ts/,
       use: {
         ...devices["Desktop Chrome"],
         storageState: "e2e/.auth/state.json",

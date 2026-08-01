@@ -19,6 +19,7 @@ This directory contains Architecture Decision Records (ADRs) for HLEcosystem, fo
 | [0003](./0003-cookie-sessions-over-nextauth.md) | Custom cookie sessions over NextAuth/Auth.js | Accepted |
 | [0004](./0004-server-actions-over-rest.md) | Server Actions over REST API for mutations | Accepted |
 | [0005](./0005-household-scoped-tenancy.md) | Household-scoped multi-tenancy | Accepted |
+| [0006](./0006-first-run-setup-wizard.md) | First-run setup wizard as an unauthenticated endpoint | Accepted |
 
 ## Adding a new ADR
 

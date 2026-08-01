@@ -1,7 +1,8 @@
 import { useState } from "react"
-import { createFileRoute, useNavigate } from "@tanstack/react-router"
+import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router"
 import { Fingerprint } from "lucide-react"
 import { loginFn } from "@/server/fns.auth"
+import { getSetupStatusFn } from "@/server/fns.setup"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -14,6 +15,12 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
 export const Route = createFileRoute("/login")({
+  // A brand-new instance has nobody to log in — route into the wizard.
+  loader: async () => {
+    const { needsSetup } = await getSetupStatusFn()
+    if (needsSetup) throw redirect({ to: "/setup" })
+    return {}
+  },
   component: LoginPage,
 })
 
