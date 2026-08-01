@@ -50,6 +50,7 @@
     "picomatch@^4": "4.0.4",
     "uuid": "^14.0.0",
     "sharp": "$sharp",
-    "postcss": "^8.5.18"
+    "postcss": "^8.5.18",
+    "brace-expansion@2": "^2.1.2"
   }
 }

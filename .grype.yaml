@@ -135,6 +135,21 @@ ignore:
     package:
       type: deb
 
+  # ─── G-13: brace-expansion CVE-2026-14257 / GHSA-mh99-v99m-4gvg ─────
+  # The advisory's only fixed release is 5.0.8; the 1.x and 2.x lines that
+  # minimatch@3/@9 consumers require (^1.1.7 / ^2.0.1) have no fixed
+  # release and cannot be jumped four majors. All in-line-fixable
+  # brace-expansion advisories (e.g. GHSA-3jxr-9vmj-r5cp → 2.1.2) are
+  # force-resolved via npm overrides in both remaining apps and stay
+  # enforced by npm audit in CI. Same acceptance as the .trivyignore entry
+  # for the filesystem scan. Name-scoped (no version pin): every extant
+  # 1.x/2.x version is equally affected and equally unfixable; remove the
+  # entry when upstream backports or minimatch consumers move majors.
+  # Review-by: 2026-08-31
+  - vulnerability: GHSA-mh99-v99m-4gvg
+    package:
+      name: brace-expansion
+
 # Severity threshold — build fails if any finding at HIGH or above
 # remains AFTER the ignore list is applied.
 fail-on-severity: high

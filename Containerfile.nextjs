@@ -90,6 +90,14 @@ WORKDIR /app
 # CVE that lands before the base-image maintainers rebuild.
 # Must run as root — happens before the USER nextjs directive below.
 RUN apk upgrade --no-cache
+# The npm CLI ships vulnerable internals in the base image (tar
+# GHSA-23hp-3jrh-7fpw CRITICAL / GHSA-8x88-c5mf-7j5w, sigstore
+# GHSA-52v5-jr5w-gjxr — all inside npm's own node_modules), and nothing in
+# the runtime uses it: the entrypoints invoke prisma directly via
+# `node node_modules/prisma/build/index.js`. Remove it outright — smaller
+# attack surface beats keeping it patched. (npm self-upgrade also fails
+# in-place on alpine, so removal is the reliable option as well.)
+RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
 
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
