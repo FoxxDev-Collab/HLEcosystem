@@ -3,6 +3,7 @@ import { z } from "zod"
 import { passwordIsValid } from "@/lib/password"
 import { adminMiddleware } from "./middleware"
 import { listAllHouseholds } from "./households"
+import { deleteAllUserSessions, deleteOtherUserSessions } from "./session"
 import {
   createUser,
   deleteUser,
@@ -110,8 +111,17 @@ export const setUserPasswordFn = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
     z.object({ id: z.string().min(1), password: passwordField }).parse(d)
   )
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
     await setUserPassword(data.id, data.password)
+    // An admin reset revokes ALL of the target's sessions — the reset exists
+    // precisely because the account may be compromised or handed over. When
+    // the admin resets their own account this way, keep the session doing
+    // the resetting so they aren't logged out mid-action.
+    if (data.id === context.user.id) {
+      await deleteOtherUserSessions(data.id, context.sessionToken)
+    } else {
+      await deleteAllUserSessions(data.id)
+    }
     return { ok: true as const }
   })
 
