@@ -42,7 +42,7 @@ jobs:
           # Containerfile.bun changes also force a full run since they affect
           # the Bun-runtime apps.
           if echo "$changed" | grep -qE '^(compose\.yaml|Containerfile\.nextjs|Containerfile\.bun|hle\.sh|\.github/workflows/)'; then
-            apps='["hle-all-in-one","hle-claude_api","hle-family_finance","hle-family_health","hle-family_home_care","hle-family_manager","hle-family_travel","hle-family_wiki","hle-familyhub","hle-file_server","hle-meal_prep","hle-media"]'
+            apps='["hle-all-in-one","hle-claude_api","hle-file_server"]'
           else
             apps=$(echo "$changed" | awk -F/ '/^hle-/ {print $1}' | sort -u | jq -R . | jq -s -c .)
             if [ "$apps" = "[]" ] || [ -z "$apps" ]; then

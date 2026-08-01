@@ -169,15 +169,7 @@ jobs:
       matrix:
         app:
           - hle-claude_api
-          - hle-family_finance
-          - hle-family_health
-          - hle-family_home_care
-          - hle-family_manager
-          - hle-family_travel
-          - hle-family_wiki
-          - hle-familyhub
           - hle-file_server
-          - hle-meal_prep
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:

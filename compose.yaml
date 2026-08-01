@@ -1,5 +1,20 @@
 # compose.yaml
-# HLEcosystem — PostgreSQL + 7 Next.js apps
+# HLEcosystem legacy stack — PostgreSQL 16 (foxxlab) + the two apps that were
+# NOT absorbed into the consolidated hle-all-in-one (which has its own
+# compose.yaml on a dedicated PG18):
+#
+#   - hle-claude-api  — internal AI gateway. hle-all-in-one's receipt OCR /
+#     smart categorize / advisor features call it via CLAUDE_API_URL +
+#     CLAUDE_API_SERVICE_SECRET (server-to-server, no user session).
+#   - hle-file-server — file storage, not yet ported. NOTE: its login flowed
+#     through Family Manager (the old SSO provider), which was consolidated
+#     away — the service is kept as the source for the future files module
+#     but cannot authenticate users standalone.
+#
+# The nine consolidated apps (family_manager, familyhub, family_finance,
+# family_health, family_home_care, meal_prep, family_travel, family_wiki,
+# media) were removed from the repo; their foxxlab schemas remain in the
+# database untouched.
 
 x-nextjs-app: &nextjs-app
   restart: unless-stopped
@@ -12,47 +27,6 @@ x-nextjs-app: &nextjs-app
     NODE_ENV: production
     NEXT_TELEMETRY_DISABLED: "1"
     HOSTNAME: "0.0.0.0"
-    PORT: "3000"
-    AUTH_URL: ${AUTH_URL:-http://localhost:8080}
-    AUTH_DOMAIN: ${AUTH_DOMAIN:-}
-    SECURE_COOKIES: ${SECURE_COOKIES:-}
-    NEXT_PUBLIC_APP_URL_MANAGER: ${AUTH_URL:-http://localhost:8080}
-    NEXT_PUBLIC_APP_URL_HUB: ${HUB_URL:-http://localhost:8081}
-    NEXT_PUBLIC_APP_URL_FINANCE: ${FINANCE_URL:-http://localhost:8082}
-    NEXT_PUBLIC_APP_URL_HEALTH: ${HEALTH_URL:-http://localhost:8083}
-    NEXT_PUBLIC_APP_URL_HOME: ${HOMECARE_URL:-http://localhost:8084}
-    NEXT_PUBLIC_APP_URL_FILES: ${FILES_URL:-http://localhost:8085}
-    NEXT_PUBLIC_APP_URL_MEALS: ${MEALS_URL:-http://localhost:8086}
-    NEXT_PUBLIC_APP_URL_WIKI: ${WIKI_URL:-http://localhost:8087}
-    NEXT_PUBLIC_APP_URL_TRAVEL: ${TRAVEL_URL:-http://localhost:8089}
-    NEXT_PUBLIC_APP_URL_MEDIA: ${MEDIA_URL:-http://localhost:8090}
-  healthcheck:
-    test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:3000/api/health || exit 1"]
-    interval: 30s
-    timeout: 5s
-    retries: 3
-    start_period: 20s
-  logging:
-    driver: "json-file"
-    options:
-      max-size: "100m"
-      max-file: "10"
-  deploy:
-    resources:
-      limits:
-        memory: 512M
-      reservations:
-        memory: 128M
-
-x-bun-app: &bun-app
-  restart: unless-stopped
-  networks:
-    - hle-net
-  depends_on:
-    postgres:
-      condition: service_healthy
-  environment: &bun-env
-    NODE_ENV: production
     PORT: "3000"
     AUTH_URL: ${AUTH_URL:-http://localhost:8080}
     AUTH_DOMAIN: ${AUTH_DOMAIN:-}
@@ -106,111 +80,7 @@ services:
         reservations:
           memory: 256M
 
-  # Family Manager — Central auth & user management
-  hle-family-manager:
-    <<: *nextjs-app
-    container_name: foxxlab-family-manager
-    build:
-      context: .
-      dockerfile: Containerfile.nextjs
-      args:
-        APP_DIR: hle-family_manager
-        NEXT_PUBLIC_APP_NAME: "HLE Family Manager"
-    ports:
-      - "8080:3000"
-    environment:
-      <<: *nextjs-env
-      DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/foxxlab?schema=family_manager"
-      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
-      ADMIN_NAME: ${ADMIN_NAME:-Admin}
-      HOUSEHOLD_NAME: ${HOUSEHOLD_NAME:-My Household}
-      HUB_URL: ${HUB_URL:-http://localhost:8081}
-      FINANCE_URL: ${FINANCE_URL:-http://localhost:8082}
-      HEALTH_URL: ${HEALTH_URL:-http://localhost:8083}
-      HOMECARE_URL: ${HOMECARE_URL:-http://localhost:8084}
-      FILES_URL: ${FILES_URL:-http://localhost:8085}
-      MEALS_URL: ${MEALS_URL:-http://localhost:8086}
-      WIKI_URL: ${WIKI_URL:-http://localhost:8087}
-      MEDIA_URL: ${MEDIA_URL:-http://localhost:8090}
-
-  # FamilyHub — Family relationships, dates, gifts
-  hle-familyhub:
-    <<: *nextjs-app
-    container_name: foxxlab-familyhub
-    build:
-      context: .
-      dockerfile: Containerfile.nextjs
-      args:
-        APP_DIR: hle-familyhub
-        NEXT_PUBLIC_APP_NAME: "HLE FamilyHub"
-    ports:
-      - "8081:3000"
-    environment:
-      <<: *nextjs-env
-      DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/foxxlab?schema=familyhub"
-      APP_URL: ${HUB_URL:-http://localhost:8081}
-
-  # Family Finance
-  hle-family-finance:
-    <<: *nextjs-app
-    container_name: foxxlab-family-finance
-    build:
-      context: .
-      dockerfile: Containerfile.nextjs
-      args:
-        APP_DIR: hle-family_finance
-        NEXT_PUBLIC_APP_NAME: "HLE Family Finance"
-    ports:
-      - "8082:3000"
-    volumes:
-      - family-finance-uploads:/app/uploads
-    environment:
-      <<: *nextjs-env
-      DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/foxxlab?schema=family_finance"
-      APP_URL: ${FINANCE_URL:-http://localhost:8082}
-      CLAUDE_API_URL: "http://hle-claude-api:3000"
-      CLAUDE_API_SERVICE_SECRET: ${CLAUDE_API_SERVICE_SECRET}
-
-  # Family Health
-  hle-family-health:
-    <<: *nextjs-app
-    container_name: foxxlab-family-health
-    build:
-      context: .
-      dockerfile: Containerfile.nextjs
-      args:
-        APP_DIR: hle-family_health
-        NEXT_PUBLIC_APP_NAME: "HLE Family Health"
-    ports:
-      - "8083:3000"
-    environment:
-      <<: *nextjs-env
-      DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/foxxlab?schema=family_health"
-      APP_URL: ${HEALTH_URL:-http://localhost:8083}
-
-  # Family Home Care
-  hle-family-home-care:
-    <<: *nextjs-app
-    container_name: foxxlab-family-home-care
-    build:
-      context: .
-      dockerfile: Containerfile.nextjs
-      args:
-        APP_DIR: hle-family_home_care
-        NEXT_PUBLIC_APP_NAME: "HLE Family Home Care"
-    ports:
-      - "8084:3000"
-    volumes:
-      - home-care-uploads:/app/uploads
-    environment:
-      <<: *nextjs-env
-      DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/foxxlab?schema=family_home_care"
-      APP_URL: ${HOMECARE_URL:-http://localhost:8084}
-      UPLOAD_DIR: "/app/uploads"
-      MAX_FILE_SIZE_MB: "50"
-
-  # File Server
+  # File Server — kept as the future files-module source; see header note.
   hle-file-server:
     <<: *nextjs-app
     container_name: foxxlab-file-server
@@ -233,60 +103,7 @@ services:
       CLAUDE_API_URL: "http://hle-claude-api:3000"
       CLAUDE_API_SERVICE_SECRET: ${CLAUDE_API_SERVICE_SECRET}
 
-  # Meal Prep
-  hle-meal-prep:
-    <<: *nextjs-app
-    container_name: foxxlab-meal-prep
-    build:
-      context: .
-      dockerfile: Containerfile.nextjs
-      args:
-        APP_DIR: hle-meal_prep
-        NEXT_PUBLIC_APP_NAME: "HLE Meal Prep"
-    ports:
-      - "8086:3000"
-    environment:
-      <<: *nextjs-env
-      DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/foxxlab?schema=meal_prep"
-      APP_URL: ${MEALS_URL:-http://localhost:8086}
-      CLAUDE_API_URL: ${CLAUDE_API_URL:-http://hle-claude-api:3000}
-      CLAUDE_API_SERVICE_SECRET: ${CLAUDE_API_SERVICE_SECRET:-}
-
-  # Family Wiki
-  hle-family-wiki:
-    <<: *nextjs-app
-    container_name: foxxlab-family-wiki
-    build:
-      context: .
-      dockerfile: Containerfile.nextjs
-      args:
-        APP_DIR: hle-family_wiki
-        NEXT_PUBLIC_APP_NAME: "HLE Family Wiki"
-    ports:
-      - "8087:3000"
-    environment:
-      <<: *nextjs-env
-      DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/foxxlab?schema=family_wiki"
-      APP_URL: ${WIKI_URL:-http://localhost:8087}
-
-  # Family Travel
-  hle-family-travel:
-    <<: *nextjs-app
-    container_name: foxxlab-family-travel
-    build:
-      context: .
-      dockerfile: Containerfile.nextjs
-      args:
-        APP_DIR: hle-family_travel
-        NEXT_PUBLIC_APP_NAME: "HLE Family Travel"
-    ports:
-      - "8089:3000"
-    environment:
-      <<: *nextjs-env
-      DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/foxxlab?schema=family_travel"
-      APP_URL: ${TRAVEL_URL:-http://localhost:8089}
-
-  # Claude API Gateway — Centralized AI service for ecosystem apps
+  # Claude API — internal AI gateway (service-secret auth, no user session).
   hle-claude-api:
     <<: *nextjs-app
     container_name: foxxlab-claude-api
@@ -305,36 +122,6 @@ services:
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
       CLAUDE_API_SERVICE_SECRET: ${CLAUDE_API_SERVICE_SECRET}
 
-  # Media — Bun + React. Library, IPTV channels, Plex-lite player.
-  hle-media:
-    <<: *bun-app
-    container_name: foxxlab-media
-    build:
-      context: .
-      dockerfile: Containerfile.bun
-      args:
-        APP_DIR: hle-media
-    ports:
-      - "8090:3000"
-    volumes:
-      - media-library:/app/library
-    environment:
-      <<: *bun-env
-      # No `?schema=` here — Bun.sql forwards unknown URL params as Postgres
-      # connection options and the server rejects "schema". This app is
-      # fully schema-qualified at the SQL layer (`media."Movie"`), so no
-      # search_path manipulation is needed.
-      DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/foxxlab"
-      APP_URL: ${MEDIA_URL:-http://localhost:8090}
-      # BUN_PUBLIC_* env vars are baked into the client bundle by Bun's
-      # bundler — used in the React app for cross-app links (FM login, etc.).
-      BUN_PUBLIC_AUTH_URL: ${AUTH_URL:-http://localhost:8080}
-      MEDIA_LIBRARY_PATH: "/app/library"
-      # Optional. If unset, scanner runs without metadata enrichment and
-      # logs a single warning. Sign up for a free v3 key at:
-      #   https://www.themoviedb.org/settings/api
-      TMDB_API_KEY: ${TMDB_API_KEY:-}
-
 networks:
   hle-net:
     driver: bridge
@@ -343,11 +130,5 @@ networks:
 volumes:
   postgres-data:
     name: hle-postgres-data
-  family-finance-uploads:
-    name: hle-family-finance-uploads
-  home-care-uploads:
-    name: hle-home-care-uploads
   file-server-uploads:
     name: hle-file-server-uploads
-  media-library:
-    name: hle-media-library
