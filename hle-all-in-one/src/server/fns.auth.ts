@@ -12,24 +12,51 @@ import { authMiddleware } from "./middleware"
 import { getUserWithSecretByEmail, verifyPassword } from "./users"
 import { getMembership, listHouseholdsForUser } from "./households"
 import { createSession, deleteSession, setActiveHousehold } from "./session"
+import {
+  checkLoginAllowed,
+  recordLoginFailure,
+  recordLoginSuccess,
+} from "./login-throttle"
 
 const loginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(1),
 })
 
+// First hop of x-forwarded-for — only as trustworthy as the proxy in front,
+// so it feeds the coarse per-IP throttle, never an auth decision.
+function throttleIp(rawForwardedFor: string | null): string | null {
+  const first = rawForwardedFor?.split(",")[0]?.trim()
+  return first || null
+}
+
 export const loginFn = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => loginSchema.parse(d))
   .handler(async ({ data }) => {
+    const { userAgent, ipAddress } = requestMeta()
+    const ip = throttleIp(ipAddress)
+
+    // Throttle BEFORE the bcrypt verify: past the limit an attacker gets a
+    // constant-time refusal instead of ~250ms of hashing per guess (AC-7).
+    const verdict = checkLoginAllowed(data.email, ip)
+    if (!verdict.allowed) {
+      const mins = Math.max(1, Math.ceil(verdict.retryAfterSec / 60))
+      return {
+        error: `Too many failed attempts. Try again in about ${mins} minute${mins === 1 ? "" : "s"}.`,
+      }
+    }
+
     const user = await getUserWithSecretByEmail(data.email)
     // Same generic message whether the email is unknown, inactive, or the
-    // password is wrong — no account enumeration.
+    // password is wrong — no account enumeration. Failures count against the
+    // submitted email either way, so the throttle can't confirm one exists.
     if (!user || !user.active || !(await verifyPassword(user, data.password))) {
+      recordLoginFailure(data.email, ip)
       return { error: "Invalid email or password." }
     }
+    recordLoginSuccess(data.email)
     const households = await listHouseholdsForUser(user.id)
     const activeHouseholdId = households[0]?.id ?? null
-    const { userAgent, ipAddress } = requestMeta()
     const token = await createSession(user.id, {
       userAgent,
       ipAddress,
