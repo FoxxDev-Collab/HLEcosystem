@@ -1,0 +1,92 @@
+# hle-all-in-one — self-hosting compose (pulls the published image).
+#
+#   1. Put POSTGRES_PASSWORD (and any options) in a .env next to this file
+#   2. podman-compose -f compose.release.yaml up -d    (docker compose works too)
+#   3. Open http://<host>:8100 → the /setup wizard; token: see the app logs
+#
+# Full guide: docs/DEPLOYMENT.md — including the reverse-proxy/TLS
+# requirement before exposing this beyond your LAN.
+#
+# NOTE: the app's DATABASE_URL must NOT carry a ?schema= suffix (Bun.sql
+# forwards unknown URL params as Postgres startup options).
+services:
+  hle-aio-postgres:
+    image: docker.io/library/postgres:18
+    container_name: hle-aio-postgres
+    environment:
+      POSTGRES_USER: hle
+      # Required — set it in .env. The app reads the same value below, so the
+      # two can never drift.
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: hle_aio
+    # If SELinux blocks the container on your host (exits 127, "cannot apply
+    # additional memory protection"), uncomment on BOTH services:
+    # security_opt:
+    #   - label=disable
+    # PG18+ image stores data in a version subdir; mount the volume at
+    # /var/lib/postgresql (NOT .../data) per docker-library/postgres#1259.
+    volumes:
+      - hle-aio-pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hle -d hle_aio"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+    mem_limit: 1g
+
+  hle-aio:
+    image: ghcr.io/foxxdev-collab/hle-aio:latest
+    container_name: hle-aio
+    depends_on:
+      hle-aio-postgres:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "bun",
+          "-e",
+          "const r = await fetch('http://127.0.0.1:3000/api/health'); if (!r.ok) process.exit(1)",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    environment:
+      DATABASE_URL: postgresql://hle:${POSTGRES_PASSWORD}@hle-aio-postgres:5432/hle_aio
+      # ---- everything below is optional ----
+      # Fixed first-run setup token (otherwise one is generated and printed
+      # to the logs — `podman logs hle-aio | grep -A2 "First-run setup"`).
+      SETUP_TOKEN: ${SETUP_TOKEN:-}
+      # Scheduled pg_dump backups land in the hle-aio-backups volume.
+      BACKUP_INTERVAL_HOURS: ${BACKUP_INTERVAL_HOURS:-24}
+      BACKUP_RETENTION: ${BACKUP_RETENTION:-7}
+      # LAN-only escape hatch: browsers drop Secure cookies on non-TLS remote
+      # origins, so plain-HTTP LAN access needs COOKIE_SECURE=false. NEVER set
+      # this on an internet-facing deployment — put TLS in front instead
+      # (docs/DEPLOYMENT.md).
+      COOKIE_SECURE: ${COOKIE_SECURE:-}
+      # Media scanner enrichment (optional TMDB v3 key).
+      TMDB_API_KEY: ${TMDB_API_KEY:-}
+      # AI gateway (both or neither) — AI features degrade to manual paths.
+      CLAUDE_API_URL: ${CLAUDE_API_URL:-}
+      CLAUDE_API_SERVICE_SECRET: ${CLAUDE_API_SERVICE_SECRET:-}
+      # Upload size cap in MiB (default 50).
+      MAX_FILE_SIZE_MB: ${MAX_FILE_SIZE_MB:-}
+    ports:
+      - "8100:3000"
+    volumes:
+      - hle-aio-uploads:/data/uploads
+      - hle-aio-backups:/data/backups
+      # Media library: swap the named volume for your real library path,
+      # read-only, e.g.  - /mnt/media:/data/library:ro
+      - hle-aio-library:/data/library
+    restart: unless-stopped
+    mem_limit: 1g
+
+volumes:
+  hle-aio-pgdata:
+  hle-aio-uploads:
+  hle-aio-backups:
+  hle-aio-library:
