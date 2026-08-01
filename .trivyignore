@@ -1,0 +1,7 @@
+# CVE-2026-14257 (brace-expansion): trivy's affected range sweeps in the 1.x
+# and 2.x lines, but the upstream GitHub advisory scopes it to >=3.0.0 <5.0.8
+# and npm audit agrees the pinned 1.1.18 / 2.1.4 in hle-file_server are
+# unaffected. Forcing 5.0.8 under minimatch@3 (which requires ^1.1.7) would
+# risk real breakage to silence a false positive. Remove this entry when
+# trivy's range is corrected or minimatch consumers move off the 1.x line.
+CVE-2026-14257
