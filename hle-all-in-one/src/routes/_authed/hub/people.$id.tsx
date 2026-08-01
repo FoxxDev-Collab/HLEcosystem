@@ -765,10 +765,7 @@ function EditPersonCard({
           phone: text("phone"),
           email: text("email"),
           preferredContactMethod: text("preferredContactMethod") as
-            | "NONE"
-            | "PHONE"
-            | "EMAIL"
-            | "TEXT",
+            "NONE" | "PHONE" | "EMAIL" | "TEXT",
           addressLine1: text("addressLine1"),
           addressLine2: text("addressLine2"),
           city: text("city"),

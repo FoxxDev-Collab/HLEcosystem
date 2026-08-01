@@ -412,10 +412,7 @@ function RulesCard({
         data: {
           pattern: String(f.get("pattern") ?? ""),
           matchType: String(f.get("matchType") ?? "CONTAINS") as
-            | "CONTAINS"
-            | "STARTS_WITH"
-            | "EXACT"
-            | "REGEX",
+            "CONTAINS" | "STARTS_WITH" | "EXACT" | "REGEX",
           categoryId: String(f.get("categoryId") ?? ""),
           assignPayee: String(f.get("assignPayee") ?? ""),
           priority: 0,

@@ -1,10 +1,7 @@
 import { sql } from "@/server/db"
 
 export type RepairStatus =
-  | "SCHEDULED"
-  | "IN_PROGRESS"
-  | "COMPLETED"
-  | "CANCELLED"
+  "SCHEDULED" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED"
 
 export type RepairRow = {
   id: string

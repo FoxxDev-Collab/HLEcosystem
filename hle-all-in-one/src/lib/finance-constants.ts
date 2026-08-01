@@ -136,12 +136,7 @@ export const TAX_DOCUMENT_TYPE_LABELS: Record<TaxDocumentType, string> = {
 }
 
 export type RecurrenceFrequency =
-  | "DAILY"
-  | "WEEKLY"
-  | "BI_WEEKLY"
-  | "MONTHLY"
-  | "QUARTERLY"
-  | "YEARLY"
+  "DAILY" | "WEEKLY" | "BI_WEEKLY" | "MONTHLY" | "QUARTERLY" | "YEARLY"
 
 export const RECURRENCE_FREQUENCIES: Array<{
   value: RecurrenceFrequency
@@ -188,10 +183,7 @@ export const DEBT_TYPE_LABELS: Record<DebtType, string> = {
 }
 
 export type BudgetPlannerProjectStatus =
-  | "PLANNING"
-  | "ACTIVE"
-  | "COMPLETED"
-  | "CANCELLED"
+  "PLANNING" | "ACTIVE" | "COMPLETED" | "CANCELLED"
 
 export const PROJECT_STATUSES: Array<BudgetPlannerProjectStatus> = [
   "PLANNING",
@@ -201,10 +193,7 @@ export const PROJECT_STATUSES: Array<BudgetPlannerProjectStatus> = [
 ]
 
 export type FinanceTripStatus =
-  | "PLANNING"
-  | "ACTIVE"
-  | "COMPLETED"
-  | "CANCELLED"
+  "PLANNING" | "ACTIVE" | "COMPLETED" | "CANCELLED"
 
 export const TRIP_STATUSES: Array<FinanceTripStatus> = [
   "PLANNING",
@@ -214,12 +203,7 @@ export const TRIP_STATUSES: Array<FinanceTripStatus> = [
 ]
 
 export type FinanceTripExpenseType =
-  | "GAS"
-  | "FOOD"
-  | "LODGING"
-  | "TRANSPORT"
-  | "SUPPLIES"
-  | "OTHER"
+  "GAS" | "FOOD" | "LODGING" | "TRANSPORT" | "SUPPLIES" | "OTHER"
 
 export const TRIP_EXPENSE_TYPES: Array<FinanceTripExpenseType> = [
   "GAS",

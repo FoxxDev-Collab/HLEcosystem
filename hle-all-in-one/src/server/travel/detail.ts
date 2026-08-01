@@ -26,10 +26,7 @@ export type ReservationType =
   | "OTHER"
 
 export type ReservationStatus =
-  | "PENDING"
-  | "CONFIRMED"
-  | "CANCELLED"
-  | "COMPLETED"
+  "PENDING" | "CONFIRMED" | "CANCELLED" | "COMPLETED"
 
 export type PackingCategory =
   | "CLOTHING"

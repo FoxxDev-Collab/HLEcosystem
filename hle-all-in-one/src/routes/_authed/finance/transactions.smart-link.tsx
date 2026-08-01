@@ -276,11 +276,7 @@ function SmartLinkPage() {
             payee: s.payee,
             amount: s.amount,
             frequency: s.frequency as
-              | "WEEKLY"
-              | "BI_WEEKLY"
-              | "MONTHLY"
-              | "QUARTERLY"
-              | "YEARLY",
+              "WEEKLY" | "BI_WEEKLY" | "MONTHLY" | "QUARTERLY" | "YEARLY",
             accountId,
             transactionIds: s.transactionIds,
           },

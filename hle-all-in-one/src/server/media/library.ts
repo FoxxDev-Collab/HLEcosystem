@@ -88,27 +88,26 @@ export async function listLibrary(
       )
     ORDER BY title`
 
-  return rows.map(
-    (r): LibraryItem =>
-      r.kind === "movie"
-        ? {
-            kind: "movie",
-            id: r.id,
-            title: r.title,
-            year: r.year,
-            posterPath: r.posterPath,
-            contentRating: r.contentRating,
-            durationSec: r.durationSec === null ? null : Number(r.durationSec),
-          }
-        : {
-            kind: "series",
-            id: r.id,
-            title: r.title,
-            year: r.year,
-            posterPath: r.posterPath,
-            contentRating: r.contentRating,
-            episodeCount: Number(r.episodeCount ?? 0),
-          }
+  return rows.map((r): LibraryItem =>
+    r.kind === "movie"
+      ? {
+          kind: "movie",
+          id: r.id,
+          title: r.title,
+          year: r.year,
+          posterPath: r.posterPath,
+          contentRating: r.contentRating,
+          durationSec: r.durationSec === null ? null : Number(r.durationSec),
+        }
+      : {
+          kind: "series",
+          id: r.id,
+          title: r.title,
+          year: r.year,
+          posterPath: r.posterPath,
+          contentRating: r.contentRating,
+          episodeCount: Number(r.episodeCount ?? 0),
+        }
   )
 }
 

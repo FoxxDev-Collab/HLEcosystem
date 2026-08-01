@@ -15,11 +15,7 @@ export type AppointmentType =
   | "OTHER"
 
 export type AppointmentStatus =
-  | "SCHEDULED"
-  | "COMPLETED"
-  | "CANCELLED"
-  | "NO_SHOW"
-  | "RESCHEDULED"
+  "SCHEDULED" | "COMPLETED" | "CANCELLED" | "NO_SHOW" | "RESCHEDULED"
 
 export type AppointmentRow = {
   id: string

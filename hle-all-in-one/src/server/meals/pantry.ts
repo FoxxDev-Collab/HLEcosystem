@@ -2,11 +2,7 @@ import { sql } from "@/server/db"
 import type { ProductUnit } from "./products"
 
 export type PantryFilter =
-  | "all"
-  | "in-stock"
-  | "low-stock"
-  | "out-of-stock"
-  | "expiring"
+  "all" | "in-stock" | "low-stock" | "out-of-stock" | "expiring"
 
 export type PantrySort = "name" | "quantity" | "expiration"
 export type PantrySortDir = "asc" | "desc"

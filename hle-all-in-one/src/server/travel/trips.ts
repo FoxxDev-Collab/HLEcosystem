@@ -1,11 +1,7 @@
 import { sql } from "@/server/db"
 
 export type TripStatus =
-  | "PLANNING"
-  | "BOOKED"
-  | "IN_PROGRESS"
-  | "COMPLETED"
-  | "CANCELLED"
+  "PLANNING" | "BOOKED" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED"
 
 export type TripRow = {
   id: string
