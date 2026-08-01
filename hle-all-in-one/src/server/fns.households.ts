@@ -1,6 +1,8 @@
 import { createServerFn } from "@tanstack/react-start"
 import { z } from "zod"
 import { authMiddleware, householdMiddleware } from "./middleware"
+import { requestMeta } from "./auth"
+import { audit } from "./audit"
 import { setActiveHousehold } from "./session"
 import {
   addExistingUserByEmail,
@@ -40,6 +42,14 @@ export const createHouseholdFn = createServerFn({ method: "POST" })
     )
     // New household becomes the active one immediately.
     await setActiveHousehold(context.sessionToken, hh.id)
+    await audit("household.create", {
+      actorUserId: context.user.id,
+      actorEmail: context.user.email,
+      targetType: "Household",
+      targetId: hh.id,
+      householdId: hh.id,
+      ...requestMeta(),
+    })
     return { ok: true as const, household: hh }
   })
 
@@ -66,7 +76,21 @@ export const addMemberFn = createServerFn({ method: "POST" })
     if (context.membership.role !== "OWNER") {
       return { error: "Only the household owner can add members." }
     }
-    return addExistingUserByEmail(context.householdId, data.email, data.role)
+    const result = await addExistingUserByEmail(
+      context.householdId,
+      data.email,
+      data.role
+    )
+    if (result.ok) {
+      await audit("household.member.add", {
+        actorUserId: context.user.id,
+        actorEmail: context.user.email,
+        householdId: context.householdId,
+        detail: { email: data.email, role: data.role },
+        ...requestMeta(),
+      })
+    }
+    return result
   })
 
 export const removeMemberFn = createServerFn({ method: "POST" })
@@ -78,5 +102,16 @@ export const removeMemberFn = createServerFn({ method: "POST" })
     if (context.membership.role !== "OWNER") {
       return { error: "Only the household owner can remove members." }
     }
-    return removeMember(context.householdId, data.membershipId)
+    const result = await removeMember(context.householdId, data.membershipId)
+    if (!("error" in result)) {
+      await audit("household.member.remove", {
+        actorUserId: context.user.id,
+        actorEmail: context.user.email,
+        householdId: context.householdId,
+        targetType: "HouseholdMember",
+        targetId: data.membershipId,
+        ...requestMeta(),
+      })
+    }
+    return result
   })

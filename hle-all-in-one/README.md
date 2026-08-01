@@ -161,7 +161,20 @@ Applies `migrations/*.sql` in lexical order, each inside a transaction, and
 records a sha256 checksum per file in `"_migrations"`. **Editing an
 already-applied migration is a hard error** ("migration drift") — write a new
 migration instead. Current set: `0001_init` (identity + tenancy), `0002_user_names`,
-then one per module `0003_hub` … `0010_media`.
+one per module `0003_hub` … `0010_media`, then `0011_audit` (append-only
+`AuditLog` — see below).
+
+### Audit trail
+
+`src/server/audit.ts` writes an append-only `AuditLog` row for every
+security-relevant event: login success/failure/throttled, logout, password
+change/reset, session revocation, admin user create/update/delete, household
+create and membership changes, backup downloads, and destructive finance
+deletes (accounts, debts). The writer never throws — an audit failure logs to
+stderr rather than breaking the audited operation — and `actorUserId` is
+`ON DELETE SET NULL` so deleting a user never erases their trail
+(`actorEmail` keeps the principal readable). `src/server/audit.test.ts` pins
+both the writer and every wiring site.
 
 ### Generated files
 

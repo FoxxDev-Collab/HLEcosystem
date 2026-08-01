@@ -2,6 +2,8 @@ import { createServerFn } from "@tanstack/react-start"
 import { z } from "zod"
 import { passwordIsValid } from "@/lib/password"
 import { authMiddleware } from "./middleware"
+import { requestMeta } from "./auth"
+import { audit } from "./audit"
 import {
   deleteOtherUserSessions,
   deleteSessionById,
@@ -37,6 +39,13 @@ export const revokeSessionFn = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ id: z.string().min(1) }).parse(d))
   .handler(async ({ data, context }) => {
     await deleteSessionById(data.id, context.user.id)
+    await audit("account.session.revoke", {
+      actorUserId: context.user.id,
+      actorEmail: context.user.email,
+      targetType: "Session",
+      targetId: data.id,
+      ...requestMeta(),
+    })
     return { ok: true as const }
   })
 
@@ -59,6 +68,11 @@ export const changePasswordFn = createServerFn({ method: "POST" })
     // Revoke every OTHER session (IA-5): a stolen session must not survive
     // the password rotation. This one stays — no self-logout.
     await deleteOtherUserSessions(context.user.id, context.sessionToken)
+    await audit("account.password.change", {
+      actorUserId: context.user.id,
+      actorEmail: context.user.email,
+      ...requestMeta(),
+    })
     return { ok: true as const }
   })
 
