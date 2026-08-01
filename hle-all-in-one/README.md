@@ -84,6 +84,7 @@ Health probe: `GET /api/health` → `{"status":"ok"}`, or 503 `degraded` if
 | `preview` | `vite preview` | Serve the built output. |
 | `migrate` | `bun scripts/migrate.ts` | Apply pending `migrations/*.sql`. |
 | `seed` | `bun scripts/seed.ts` | Idempotent dev seed: ADMIN user + OWNER household. |
+| `scheduler` | `bun scripts/scheduler.ts` | Background jobs loop (session pruning, recurring transactions, scheduled backups). The container runs it automatically via `entrypoint.sh`; in dev run it alongside `bun run dev` if you want the jobs. |
 | `test` | `vitest run` | Unit suites (`src/**/*.test.ts`), node environment. |
 | `e2e` | `playwright test` | Browser suite against `PW_BASE_URL` (default `http://localhost:8100`). |
 | `lint` | `eslint` | `@tanstack/eslint-config`. |
@@ -124,6 +125,9 @@ Every `process.env.*` actually referenced under `src/` and `scripts/`:
 | `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` | `admin@hle.local` / `ChangeMe123!`. Read by both `scripts/seed.ts` and `e2e/auth.setup.ts` — keep them in sync or the e2e login fails. |
 | `SEED_ADMIN_FIRST_NAME` / `SEED_ADMIN_LAST_NAME` | `Admin` / `User`. |
 | `PW_BASE_URL` | Playwright base URL, default `http://localhost:8100`. |
+| `BACKUP_DIR` | Scheduled-backup target for `scripts/scheduler.ts`. Unset → scheduled backups disabled (one boot log line). The container image sets `/data/backups` (own named volume). |
+| `BACKUP_INTERVAL_HOURS` | Default `24`. Due-ness keys off the newest dump's file age, so container restarts never stack dumps and an overdue host backs up immediately on boot. |
+| `BACKUP_RETENTION` | Default `7` newest dumps kept; `0` disables pruning. |
 
 Bun auto-loads `.env`; it is gitignored.
 
@@ -183,8 +187,16 @@ the dev server). Do not hand-edit it; if it is stale, build.
 
 ## Backup & migration
 
-Manager → Settings (admin only) offers two downloads, also reachable
-directly — both require an instance-ADMIN session:
+**Scheduled:** the in-container scheduler takes a `pg_dump -Fc` into the
+`hle-aio-backups` volume (`/data/backups`) every `BACKUP_INTERVAL_HOURS`
+(default daily), keeping the newest `BACKUP_RETENTION` (default 7). Dumps are
+written to a dot-prefixed partial first and renamed only on success, so a
+crash mid-dump never leaves a file that looks like a valid backup. These live
+on the same host as the database — still copy them (or the manual downloads
+below) somewhere else for real disaster recovery.
+
+**Manual:** Manager → Settings (admin only) offers two downloads, also
+reachable directly — both require an instance-ADMIN session:
 
 - `/api/admin/backup-db` — full-database `pg_dump` **custom format**
   (`hle-aio-<stamp>.dump`). Spans every household and includes credential

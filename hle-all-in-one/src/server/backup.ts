@@ -9,6 +9,9 @@
 // createServerFn middleware).
 import { readSessionToken } from "./auth"
 import { validateSession } from "./session"
+// Filename stamp lives in scheduled-jobs.ts (framework-import-free) so the
+// slim runtime image's scheduler can use it too; re-exported for the routes.
+export { backupStamp } from "./scheduled-jobs"
 
 export async function authenticateAdminRequest(): Promise<
   { ok: true; userId: string } | { ok: false; response: Response }
@@ -25,11 +28,6 @@ export async function authenticateAdminRequest(): Promise<
     return { ok: false, response: new Response("Forbidden", { status: 403 }) }
   }
   return { ok: true, userId: session.user.id }
-}
-
-// UTC stamp for download filenames: 2026-07-31-2145
-export function backupStamp(now = new Date()): string {
-  return now.toISOString().slice(0, 16).replace("T", "-").replace(":", "")
 }
 
 // Spawn pg_dump streaming to the response. Custom format embeds its own

@@ -6,6 +6,7 @@
     "dev": "bun --bun vite dev --port 3000",
     "migrate": "bun scripts/migrate.ts",
     "seed": "bun scripts/seed.ts",
+    "scheduler": "bun scripts/scheduler.ts",
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run",

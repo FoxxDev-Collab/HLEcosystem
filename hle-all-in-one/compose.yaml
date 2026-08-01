@@ -74,14 +74,20 @@ services:
       # advisor, shopping-list generation) degrades to its manual path.
       CLAUDE_API_URL: ${CLAUDE_API_URL:-}
       CLAUDE_API_SERVICE_SECRET: ${CLAUDE_API_SERVICE_SECRET:-}
+      # Scheduled pg_dump backups (scripts/scheduler.ts). BACKUP_DIR is baked
+      # into the image (/data/backups); tune cadence/retention here.
+      BACKUP_INTERVAL_HOURS: ${BACKUP_INTERVAL_HOURS:-24}
+      BACKUP_RETENTION: ${BACKUP_RETENTION:-7}
     ports:
       - "8100:3000"
     volumes:
       - hle-aio-uploads:/data/uploads
       - hle-aio-library:/data/library
+      - hle-aio-backups:/data/backups
     restart: unless-stopped
 
 volumes:
   hle-aio-pgdata:
   hle-aio-uploads:
   hle-aio-library:
+  hle-aio-backups:
