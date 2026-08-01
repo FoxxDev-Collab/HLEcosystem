@@ -6,7 +6,11 @@
 
 ## What This Is
 
-A multi-app family management ecosystem: 10 Next.js apps sharing a single PostgreSQL database with schema-level isolation. Each app owns its own Prisma schema and database schema. Family Manager is the central identity provider.
+A family management platform, consolidated (2026-07) into **`hle-all-in-one/`** — one TanStack Start + React 19 app on the Bun runtime, raw SQL via `Bun.sql` (no ORM), dedicated PostgreSQL 18, one login, nine modules: Manager, Hub, Finance, Health, Home Care, Meals, Travel, Wiki, Media. Read `hle-all-in-one/README.md` for its architecture, and `hle-all-in-one/docs/PORTING.md` before adding a module.
+
+Two satellite apps remain on the legacy Next.js + Prisma + foxxlab-PG16 stack (root `compose.yaml`): `hle-claude_api` (internal AI gateway the monolith calls server-to-server) and `hle-file_server` (files, not yet ported; its old SSO provider is gone, so it cannot authenticate users standalone). The nine consolidated app directories were deleted from the repo — their code lives in git history and their foxxlab schemas remain in the database.
+
+Sections below that describe the legacy multi-app patterns (per-app Prisma schemas, cookie prefixes, cross-schema `$queryRaw` reads of `family_manager."User"`) now apply ONLY to the two satellite apps. The security workflow, tenancy invariants (ADR-0005), and CI gates apply everywhere, including the monolith.
 
 ## Security workflow (MANDATORY for any AI assistant or contributor)
 
@@ -41,7 +45,7 @@ Every Server Action, API route, or database query MUST satisfy the following inv
 
 6. **No secrets in code or logs.** API keys, tokens, passwords, connection strings come from `process.env.*`. If you need to log something for debugging, assume the log will be read by an attacker.
 
-7. **Strip sensitive fields from user objects.** Follow the pattern in `hle-family_manager/lib/session.ts:41` — `password` and `totpSecret` are stripped before any User object leaves the server.
+7. **Strip sensitive fields from user objects.** Follow the pattern in `hle-all-in-one/src/server/users.ts` (`toPublic`) — `password` and `totpSecret` are stripped before any User object leaves the server.
 
 8. **No new `any` types.** TypeScript strict mode is a security control, not a stylistic preference. `any` in a Server Action is a CVE waiting to happen.
 
@@ -51,7 +55,7 @@ Every Server Action, API route, or database query MUST satisfy the following inv
 
 11. **Never suppress lint or type-check rules.** Do not write `// eslint-disable`, `// eslint-disable-next-line`, `// @ts-ignore`, `// @ts-expect-error`, or `// @ts-nocheck`. Ever. Lint exists because it catches real bugs; suppressing it is how "reasonable looking" vibe code ships exploitable bugs. If a rule is wrong for a specific case, either (a) fix the underlying code so the rule no longer applies, (b) refactor so the construct isn't needed, or (c) propose a reasoned change to the shared ESLint config in a separate PR that explains why the rule is inappropriate project-wide. CI enforces this via the `Security invariant gate` job in `.github/workflows/security.yml`, which greps every PR diff for suppression comments, `$queryRawUnsafe`, `$executeRawUnsafe`, `dangerouslySetInnerHTML`, and explicit `: any` type annotations. Any match fails the build and the PR cannot merge. This rule is non-negotiable.
 
-12. **Add a regression test for every security fix.** If you are fixing a bug that involves authentication, authorization, tenancy, or data exposure, you must write a test that (a) fails against the pre-fix code and (b) passes against the post-fix code. The canonical example is `hle-family_finance/app/(app)/transactions/actions.test.ts`, which guards the ADR-0005 household-scoping incident. See `docs/TESTING.md` for the current test infrastructure; Vitest is configured in `hle-family_manager` and `hle-family_finance`, and other apps can adopt the same pattern.
+12. **Add a regression test for every security fix.** If you are fixing a bug that involves authentication, authorization, tenancy, or data exposure, you must write a test that (a) fails against the pre-fix code and (b) passes against the post-fix code. The canonical example is `hle-all-in-one/src/server/finance/transactions.test.ts`, which guards the ADR-0005 household-scoping incident. See `docs/TESTING.md` for the current test infrastructure; Vitest is configured in `hle-all-in-one` (unit suites + a Playwright e2e suite including the family-lifecycle tenancy tests).
 
 ### Before you open a PR
 
@@ -82,7 +86,7 @@ If you are an AI assistant, you must execute the equivalent checks (Read the cha
 
 | Change type | Required reading | Required review |
 |-------------|------------------|------------------|
-| Authentication, session, password, MFA | ADR-0003, SECURITY_CONTROLS.md §IA | Manual re-read of `hle-family_manager/lib/session.ts` and `lib/users.ts` |
+| Authentication, session, password, MFA | ADR-0003, SECURITY_CONTROLS.md §IA | Manual re-read of `hle-all-in-one/src/server/{auth,session,users}.ts` |
 | New Server Action touching money, health, files, or identity | ADR-0005, THREAT_MODEL.md §4 TB-1 | Verify auth + household scoping gate present |
 | New public (unauthenticated) endpoint | THREAT_MODEL.md §5 (share-link case study) | New ADR documenting the decision |
 | Database schema migration | ADR-0001, ADR-0005 | Verify `householdId` column on every new tenant-scoped table |
@@ -116,19 +120,13 @@ If you are an AI assistant, you must execute the equivalent checks (Read the cha
 
 ## App Registry
 
-| App | Directory | Port | DB Schema | Cookie Prefix | Status |
-|-----|-----------|------|-----------|---------------|--------|
-| Family Manager | `hle-family_manager/` | 8080 | `family_manager` | `fm_` | Core |
-| FamilyHub | `hle-familyhub/` | 8081 | `familyhub` | `fh_` | Active |
-| Family Finance | `hle-family_finance/` | 8082 | `family_finance` | `ff_` | Active |
-| Family Health | `hle-family_health/` | 8083 | `family_health` | `fh_` | Active |
-| Home Care | `hle-family_home_care/` | 8084 | `family_home_care` | `hc_` | Active |
-| File Server | `hle-file_server/` | 8085 | `file_server` | `fs_` | Active |
-| Meal Prep | `hle-meal_prep/` | 8086 | `meal_prep` | `mp_` | Active |
-| Family Wiki | `hle-family_wiki/` | 8087 | `family_wiki` | `fw_` | Active |
-| Claude API | `hle-claude_api/` | 8088 | `claude_api` | — | Active (internal AI gateway) |
-| Family Travel | `hle-family_travel/` | 8089 | `family_travel` | `ft_` | Active |
-| Media | `hle-media/` | 8090 | `media` | `mv_` | Active (Bun runtime) |
+| App | Directory | Port | Stack | Status |
+|-----|-----------|------|-------|--------|
+| **All-in-One** (consolidated platform) | `hle-all-in-one/` | 8100 | TanStack Start + Bun + raw SQL, PG18 on :5433 | Active — the product |
+| Claude API | `hle-claude_api/` | 8088 | Next.js + Prisma, foxxlab PG16 | Active (internal AI gateway) |
+| File Server | `hle-file_server/` | 8085 | Next.js + Prisma, foxxlab PG16 | Kept as future files-module source; no standalone auth |
+
+Consolidated and removed from the repo (2026-07-31): family_manager, familyhub, family_finance, family_health, family_home_care, meal_prep, family_wiki, family_travel, media.
 
 ## Tech Stack
 
@@ -271,7 +269,7 @@ All containers are managed via `./hle.sh`:
 ./hle nuke                      # Full teardown (destructive)
 ```
 
-Service names use hyphens: `hle-family-manager`, `hle-familyhub`, `hle-family-finance`, etc.
+Service names use hyphens: `hle-file-server`, `hle-claude-api`. The consolidated app is managed from `hle-all-in-one/` with its own compose.yaml (service `hle-aio`).
 
 ## Adding a New App
 

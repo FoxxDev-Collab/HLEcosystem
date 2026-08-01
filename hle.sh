@@ -13,45 +13,18 @@ MAX_PARALLEL=3
 
 # ── Service registry ──────────────────────────────────────────────
 declare -A PORTS=(
-  [hle-family-manager]=8080
-  [hle-familyhub]=8081
-  [hle-family-finance]=8082
-  [hle-family-health]=8083
-  [hle-family-home-care]=8084
   [hle-file-server]=8085
-  [hle-meal-prep]=8086
-  [hle-family-wiki]=8087
   [hle-claude-api]=8088
-  [hle-family-travel]=8089
-  [hle-media]=8090
 )
 
 declare -A CONTAINERS=(
-  [hle-family-manager]=foxxlab-family-manager
-  [hle-familyhub]=foxxlab-familyhub
-  [hle-family-finance]=foxxlab-family-finance
-  [hle-family-health]=foxxlab-family-health
-  [hle-family-home-care]=foxxlab-family-home-care
   [hle-file-server]=foxxlab-file-server
-  [hle-meal-prep]=foxxlab-meal-prep
-  [hle-family-wiki]=foxxlab-family-wiki
   [hle-claude-api]=foxxlab-claude-api
-  [hle-family-travel]=foxxlab-family-travel
-  [hle-media]=foxxlab-media
 )
 
 SERVICES=(
-  hle-family-manager
-  hle-familyhub
-  hle-family-finance
-  hle-family-health
-  hle-family-home-care
   hle-file-server
-  hle-meal-prep
-  hle-family-wiki
   hle-claude-api
-  hle-family-travel
-  hle-media
 )
 
 # ── Colors ────────────────────────────────────────────────────────
