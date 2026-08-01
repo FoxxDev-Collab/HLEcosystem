@@ -17,6 +17,7 @@ import {
   recordLoginFailure,
   recordLoginSuccess,
 } from "./login-throttle"
+import { audit } from "./audit"
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -41,6 +42,11 @@ export const loginFn = createServerFn({ method: "POST" })
     const verdict = checkLoginAllowed(data.email, ip)
     if (!verdict.allowed) {
       const mins = Math.max(1, Math.ceil(verdict.retryAfterSec / 60))
+      await audit("auth.login.throttled", {
+        actorEmail: data.email,
+        ipAddress: ip,
+        userAgent,
+      })
       return {
         error: `Too many failed attempts. Try again in about ${mins} minute${mins === 1 ? "" : "s"}.`,
       }
@@ -52,9 +58,20 @@ export const loginFn = createServerFn({ method: "POST" })
     // submitted email either way, so the throttle can't confirm one exists.
     if (!user || !user.active || !(await verifyPassword(user, data.password))) {
       recordLoginFailure(data.email, ip)
+      await audit("auth.login.failure", {
+        actorEmail: data.email,
+        ipAddress: ip,
+        userAgent,
+      })
       return { error: "Invalid email or password." }
     }
     recordLoginSuccess(data.email)
+    await audit("auth.login.success", {
+      actorUserId: user.id,
+      actorEmail: user.email,
+      ipAddress: ip,
+      userAgent,
+    })
     const households = await listHouseholdsForUser(user.id)
     const activeHouseholdId = households[0]?.id ?? null
     const token = await createSession(user.id, {
@@ -67,9 +84,16 @@ export const loginFn = createServerFn({ method: "POST" })
   })
 
 export const logoutFn = createServerFn({ method: "POST" }).handler(async () => {
+  const session = await currentSession()
   const token = readSessionToken()
   if (token) await deleteSession(token)
   clearSessionCookie()
+  if (session) {
+    await audit("auth.logout", {
+      actorUserId: session.user.id,
+      actorEmail: session.user.email,
+    })
+  }
   return { ok: true as const }
 })
 

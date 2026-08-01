@@ -2,6 +2,8 @@ import { createServerFn } from "@tanstack/react-start"
 import { z } from "zod"
 import { passwordIsValid } from "@/lib/password"
 import { adminMiddleware } from "./middleware"
+import { requestMeta } from "./auth"
+import { audit } from "./audit"
 import { listAllHouseholds } from "./households"
 import { deleteAllUserSessions, deleteOtherUserSessions } from "./session"
 import {
@@ -49,7 +51,7 @@ const createSchema = z.object({
 export const createUserFn = createServerFn({ method: "POST" })
   .middleware([adminMiddleware])
   .inputValidator((d: unknown) => createSchema.parse(d))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
     if (await emailExists(data.email)) {
       return { error: "A user with that email already exists." }
     }
@@ -71,6 +73,15 @@ export const createUserFn = createServerFn({ method: "POST" })
         ? { householdId: data.householdId, role: data.householdRole }
         : undefined
     )
+    await audit("admin.user.create", {
+      actorUserId: context.user.id,
+      actorEmail: context.user.email,
+      targetType: "User",
+      targetId: user.id,
+      householdId: data.householdId ?? null,
+      detail: { email: data.email, role: data.role },
+      ...requestMeta(),
+    })
     return { ok: true as const, user }
   })
 
@@ -103,6 +114,14 @@ export const updateUserFn = createServerFn({ method: "POST" })
       role: data.role,
       active: data.active,
     })
+    await audit("admin.user.update", {
+      actorUserId: context.user.id,
+      actorEmail: context.user.email,
+      targetType: "User",
+      targetId: data.id,
+      detail: { email: data.email, role: data.role, active: data.active },
+      ...requestMeta(),
+    })
     return { ok: true as const, user }
   })
 
@@ -122,6 +141,13 @@ export const setUserPasswordFn = createServerFn({ method: "POST" })
     } else {
       await deleteAllUserSessions(data.id)
     }
+    await audit("admin.user.password_reset", {
+      actorUserId: context.user.id,
+      actorEmail: context.user.email,
+      targetType: "User",
+      targetId: data.id,
+      ...requestMeta(),
+    })
     return { ok: true as const }
   })
 
@@ -134,5 +160,15 @@ export const deleteUserFn = createServerFn({ method: "POST" })
     }
     // deleteUser refuses when the user is the last OWNER of a household that
     // still has members (see users.ts).
-    return deleteUser(data.id)
+    const result = await deleteUser(data.id)
+    if (!("error" in result)) {
+      await audit("admin.user.delete", {
+        actorUserId: context.user.id,
+        actorEmail: context.user.email,
+        targetType: "User",
+        targetId: data.id,
+        ...requestMeta(),
+      })
+    }
+    return result
   })

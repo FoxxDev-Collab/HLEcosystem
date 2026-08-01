@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start"
 import { z } from "zod"
 import { householdMiddleware } from "@/server/middleware"
 import { canManageHousehold } from "@/server/privileges"
+import { audit } from "@/server/audit"
 import {
   adjustBalance,
   createAccount,
@@ -129,5 +130,15 @@ export const deleteAccountFn = createServerFn({ method: "POST" })
     if (!canManageHousehold(context)) {
       return { error: "Only the household owner can delete an account." }
     }
-    return deleteAccountCascade(context.householdId, data.id)
+    const result = await deleteAccountCascade(context.householdId, data.id)
+    if (!("error" in result)) {
+      await audit("finance.account.delete", {
+        actorUserId: context.user.id,
+        actorEmail: context.user.email,
+        householdId: context.householdId,
+        targetType: "Account",
+        targetId: data.id,
+      })
+    }
+    return result
   })
