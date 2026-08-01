@@ -244,12 +244,16 @@ jobs:
         run: |
           set -euo pipefail
 
-          # Every fetch is normalized to a JSON array: the API can answer
-          # with an error OBJECT or STRING on a zero-exit (feature disabled,
-          # missing token permission), and under `set -euo pipefail` a
-          # non-array piped into jq's `.[]` kills the job — which is exactly
-          # how this summary silently failed on every PR for a while.
-          as_array() { jq -e 'type=="array"' >/dev/null 2>&1 <<<"$1" && printf '%s' "$1" || printf '[]'; }
+          # Every fetch is normalized to ONE JSON array. Two failure shapes
+          # broke this job on every PR: `gh api --paginate` emits multiple
+          # concatenated JSON documents (one array per page), so a plain jq
+          # filter runs once per document and a "count" becomes "3\n0"; and
+          # the API can answer with an error object/string on a zero exit
+          # (feature disabled, missing token permission). Slurp all docs,
+          # keep only array documents' elements, drop everything else.
+          as_array() {
+            jq -s '[.[] | if type=="array" then .[] else empty end]' <<<"$1" 2>/dev/null || printf '[]'
+          }
 
           # ── Code scanning (CodeQL, Trivy, zizmor) ──────────────────
           code_alerts=$(gh api --paginate \
