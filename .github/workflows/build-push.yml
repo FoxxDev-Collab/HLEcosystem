@@ -14,7 +14,6 @@ permissions:
 
 jobs:
   build-and-push:
-    if: github.server_url == 'https://github.com'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -24,53 +23,24 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - app_dir: hle-family_manager
-            image_name: hle-family-manager
-            app_name: "HLE Family Manager"
-            dockerfile: Containerfile.nextjs
-          - app_dir: hle-familyhub
-            image_name: hle-familyhub
-            app_name: "HLE FamilyHub"
-            dockerfile: Containerfile.nextjs
-          - app_dir: hle-family_finance
-            image_name: hle-family-finance
-            app_name: "HLE Family Finance"
-            dockerfile: Containerfile.nextjs
-          - app_dir: hle-family_health
-            image_name: hle-family-health
-            app_name: "HLE Family Health"
-            dockerfile: Containerfile.nextjs
-          - app_dir: hle-family_home_care
-            image_name: hle-family-home-care
-            app_name: "HLE Family Home Care"
+          # The consolidated platform. Self-contained build context — its
+          # Containerfile ignores the APP_DIR/NEXT_PUBLIC_APP_NAME build-args
+          # the shared steps pass for matrix uniformity.
+          - app_dir: hle-all-in-one
+            image_name: hle-aio
+            app_name: "HLE All-in-One"
+            context: hle-all-in-one
+            dockerfile: hle-all-in-one/Containerfile
+          - app_dir: hle-claude_api
+            image_name: hle-claude-api
+            app_name: "HLE Claude API"
+            context: .
             dockerfile: Containerfile.nextjs
           - app_dir: hle-file_server
             image_name: hle-file-server
             app_name: "HLE File Server"
+            context: .
             dockerfile: Containerfile.nextjs
-          - app_dir: hle-meal_prep
-            image_name: hle-meal-prep
-            app_name: "HLE Meal Prep"
-            dockerfile: Containerfile.nextjs
-          - app_dir: hle-family_wiki
-            image_name: hle-family-wiki
-            app_name: "HLE Family Wiki"
-            dockerfile: Containerfile.nextjs
-          - app_dir: hle-claude_api
-            image_name: hle-claude-api
-            app_name: "HLE Claude API"
-            dockerfile: Containerfile.nextjs
-          - app_dir: hle-family_travel
-            image_name: hle-family-travel
-            app_name: "HLE Family Travel"
-            dockerfile: Containerfile.nextjs
-          # Bun app — uses Containerfile.bun. NEXT_PUBLIC_APP_NAME is
-          # passed as an unused build-arg for matrix uniformity; Bun's
-          # Containerfile silently ignores it.
-          - app_dir: hle-media
-            image_name: hle-media
-            app_name: "HLE Media"
-            dockerfile: Containerfile.bun
 
     steps:
       - name: Checkout
@@ -103,7 +73,7 @@ jobs:
         id: build
         uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7
         with:
-          context: .
+          context: ${{ matrix.context }}
           file: ${{ matrix.dockerfile }}
           load: true
           tags: ${{ matrix.image_name }}:scan
@@ -139,18 +109,23 @@ jobs:
           sarif_file: ${{ steps.grype-sarif.outputs.sarif }}
           category: grype-image-${{ matrix.image_name }}
 
-      - name: Grype image scan (fail on HIGH/CRITICAL)
+      # only-fixed mirrors the trivy gate's ignore-unfixed policy: block on
+      # findings with a released fix (actionable), report-but-don't-block on
+      # ones no upstream has fixed yet — the SARIF step above keeps those
+      # visible in the Security tab.
+      - name: Grype image scan (fail on fixable HIGH/CRITICAL)
         uses: anchore/scan-action@1638637db639e0ade3258b51db49a9a137574c3e # v6
         with:
           image: ${{ matrix.image_name }}:scan
           fail-build: true
           severity-cutoff: high
+          only-fixed: true
           output-format: table
 
       - name: Push image
         uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7
         with:
-          context: .
+          context: ${{ matrix.context }}
           file: ${{ matrix.dockerfile }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
