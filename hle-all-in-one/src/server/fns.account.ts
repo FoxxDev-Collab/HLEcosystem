@@ -2,7 +2,11 @@ import { createServerFn } from "@tanstack/react-start"
 import { z } from "zod"
 import { passwordIsValid } from "@/lib/password"
 import { authMiddleware } from "./middleware"
-import { deleteSessionById, listUserSessions } from "./session"
+import {
+  deleteOtherUserSessions,
+  deleteSessionById,
+  listUserSessions,
+} from "./session"
 import {
   emailExists,
   getUserWithSecretById,
@@ -52,6 +56,9 @@ export const changePasswordFn = createServerFn({ method: "POST" })
       return { error: "Your current password is incorrect." }
     }
     await setUserPassword(context.user.id, data.newPassword)
+    // Revoke every OTHER session (IA-5): a stolen session must not survive
+    // the password rotation. This one stays — no self-logout.
+    await deleteOtherUserSessions(context.user.id, context.sessionToken)
     return { ok: true as const }
   })
 

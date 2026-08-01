@@ -84,6 +84,26 @@ export async function deleteSessionById(
   await sql`DELETE FROM "Session" WHERE "id" = ${id} AND "userId" = ${userId}`
 }
 
+// Credential-change revocation (IA-5 / AC-12): a password change invalidates
+// every OTHER session — an attacker holding a stolen session must not survive
+// the victim rotating their password. The changing session itself stays
+// alive, so the user isn't logged out by their own change.
+export async function deleteOtherUserSessions(
+  userId: string,
+  keepToken: string
+): Promise<void> {
+  await sql`
+    DELETE FROM "Session"
+    WHERE "userId" = ${userId} AND "token" <> ${keepToken}
+  `
+}
+
+// Admin password reset: the target's sessions are ALL revoked — the reset
+// exists precisely because the account may be compromised or handed over.
+export async function deleteAllUserSessions(userId: string): Promise<void> {
+  await sql`DELETE FROM "Session" WHERE "userId" = ${userId}`
+}
+
 export async function listUserSessions(
   userId: string,
   currentToken: string
