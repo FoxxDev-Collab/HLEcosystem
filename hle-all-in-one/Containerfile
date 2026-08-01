@@ -40,13 +40,19 @@ COPY scripts/scan.ts ./scripts/scan.ts
 COPY src/server/media/scanner.ts src/server/media/scanner-parse.ts \
      src/server/media/enrichment.ts src/server/media/tmdb.ts \
      ./src/server/media/
+# Background scheduler (session pruning, recurring transactions, scheduled
+# backups) — supervised by entrypoint.sh. scheduled-jobs.ts is deliberately
+# framework-import-free so it runs from TS sources like the migration runner.
+COPY scripts/scheduler.ts ./scripts/scheduler.ts
+COPY src/server/scheduled-jobs.ts ./src/server/scheduled-jobs.ts
 COPY entrypoint.sh ./entrypoint.sh
-RUN mkdir -p /data/uploads /data/library && chown -R bun:bun /data /app
+RUN mkdir -p /data/uploads /data/library /data/backups && chown -R bun:bun /data /app
 USER bun
 ENV NODE_ENV=production \
     PORT=3000 \
     UPLOAD_DIR=/data/uploads \
-    MEDIA_LIBRARY_PATH=/data/library
+    MEDIA_LIBRARY_PATH=/data/library \
+    BACKUP_DIR=/data/backups
 EXPOSE 3000
 # No wget/curl in Debian-slim — probe with bun's fetch. (Podman builds OCI
 # images where HEALTHCHECK is ignored; compose.yaml carries the same check.)
