@@ -52,7 +52,7 @@ const selectClass =
   "h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
 
 function MembersPage() {
-  const { users, counts } = Route.useLoaderData()
+  const { users, counts, households } = Route.useLoaderData()
   const router = useRouter()
   const [createOpen, setCreateOpen] = useState(false)
   const [editUser, setEditUser] = useState<UserPublic | null>(null)
@@ -144,6 +144,7 @@ function MembersPage() {
 
       {createOpen && (
         <CreateUserDialog
+          households={households}
           onClose={() => setCreateOpen(false)}
           onSaved={() => {
             setCreateOpen(false)
@@ -179,15 +180,22 @@ function MembersPage() {
 }
 
 function CreateUserDialog({
+  households,
   onClose,
   onSaved,
 }: {
+  households: Array<{ id: string; name: string; memberCount: number }>
   onClose: () => void
   onSaved: () => void
 }) {
   const [password, setPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
+  // Preselect the household when there is exactly one — forgetting this field
+  // used to strand the new account with no household at all.
+  const [householdId, setHouseholdId] = useState(
+    households.length === 1 ? households[0].id : ""
+  )
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -202,6 +210,11 @@ function CreateUserDialog({
           email: String(f.get("email") ?? ""),
           password,
           role: String(f.get("role") ?? "MEMBER") as Role,
+          householdId: householdId || undefined,
+          householdRole:
+            householdId && String(f.get("householdRole")) === "OWNER"
+              ? ("OWNER" as const)
+              : ("MEMBER" as const),
         },
       })
       if ("error" in result && typeof result.error === "string") {
@@ -259,6 +272,47 @@ function CreateUserDialog({
               <option value="ADMIN">Admin</option>
             </select>
           </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="c-household">Household</Label>
+              <select
+                id="c-household"
+                name="householdId"
+                className={selectClass}
+                value={householdId}
+                onChange={(e) => setHouseholdId(e.target.value)}
+              >
+                <option value="">No household yet</option>
+                {households.map((h) => (
+                  <option key={h.id} value={h.id}>
+                    {h.name} ({h.memberCount}{" "}
+                    {h.memberCount === 1 ? "member" : "members"})
+                  </option>
+                ))}
+              </select>
+            </div>
+            {householdId && (
+              <div className="space-y-2">
+                <Label htmlFor="c-household-role">Household role</Label>
+                <select
+                  id="c-household-role"
+                  name="householdRole"
+                  className={selectClass}
+                  defaultValue="MEMBER"
+                >
+                  <option value="MEMBER">Member</option>
+                  <option value="OWNER">Owner</option>
+                </select>
+              </div>
+            )}
+          </div>
+          {!householdId && (
+            <p className="text-xs text-muted-foreground">
+              Without a household the user will be sent to first-run setup to
+              create their own. A household owner can also add them later by
+              email.
+            </p>
+          )}
           {error && <p className="text-sm text-destructive">{error}</p>}
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>
