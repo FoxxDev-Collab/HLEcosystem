@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start"
 import { z } from "zod"
 import { passwordIsValid } from "@/lib/password"
 import { adminMiddleware } from "./middleware"
+import { listAllHouseholds } from "./households"
 import {
   createUser,
   deleteUser,
@@ -25,7 +26,11 @@ const passwordField = z
 export const listUsersFn = createServerFn({ method: "GET" })
   .middleware([adminMiddleware])
   .handler(async () => {
-    return { users: await listUsers(), counts: await userCounts() }
+    return {
+      users: await listUsers(),
+      counts: await userCounts(),
+      households: await listAllHouseholds(),
+    }
   })
 
 const createSchema = z.object({
@@ -34,6 +39,10 @@ const createSchema = z.object({
   lastName: nameField,
   password: passwordField,
   role: roleSchema,
+  // Optional initial household placement — without it the new account exists
+  // but belongs nowhere, and every module redirects it to /setup.
+  householdId: z.string().min(1).optional(),
+  householdRole: z.enum(["OWNER", "MEMBER"]).default("MEMBER"),
 })
 
 export const createUserFn = createServerFn({ method: "POST" })
@@ -43,7 +52,24 @@ export const createUserFn = createServerFn({ method: "POST" })
     if (await emailExists(data.email)) {
       return { error: "A user with that email already exists." }
     }
-    const user = await createUser(data)
+    if (data.householdId) {
+      const known = await listAllHouseholds()
+      if (!known.some((h) => h.id === data.householdId)) {
+        return { error: "That household no longer exists." }
+      }
+    }
+    const user = await createUser(
+      {
+        email: data.email,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        password: data.password,
+        role: data.role,
+      },
+      data.householdId
+        ? { householdId: data.householdId, role: data.householdRole }
+        : undefined
+    )
     return { ok: true as const, user }
   })
 

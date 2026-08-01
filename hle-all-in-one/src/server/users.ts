@@ -1,5 +1,5 @@
 import { sql } from "./db"
-import type { Role, User, UserPublic } from "@/lib/types"
+import type { HouseholdRole, Role, User, UserPublic } from "@/lib/types"
 
 // Strip secrets and derive the display name before a row leaves the server.
 export function toPublic(u: User): UserPublic {
@@ -65,21 +65,39 @@ export async function getUserWithSecretById(id: string): Promise<User | null> {
   return rows[0] ?? null
 }
 
-export async function createUser(data: {
-  email: string
-  firstName: string
-  lastName: string
-  password: string
-  role: Role
-}): Promise<UserPublic> {
+// When `membership` is given, the user and their HouseholdMember row are
+// created in one transaction — a failed membership insert (e.g. household
+// deleted concurrently; FK is the backstop) rolls back the user too, so an
+// admin never ends up with a half-provisioned account.
+export async function createUser(
+  data: {
+    email: string
+    firstName: string
+    lastName: string
+    password: string
+    role: Role
+  },
+  membership?: { householdId: string; role: HouseholdRole }
+): Promise<UserPublic> {
   const hashed = await hashPassword(data.password)
-  const rows = await sql`
-    INSERT INTO "User" ("email","firstName","lastName","password","role","active")
-    VALUES (${data.email}, ${data.firstName}, ${data.lastName}, ${hashed},
-            ${data.role}::"Role", true)
-    RETURNING *
-  `
-  return toPublic(rows[0])
+  const displayName = `${data.firstName} ${data.lastName}`.trim()
+  const row = await sql.begin(async (tx) => {
+    const rows = await tx`
+      INSERT INTO "User" ("email","firstName","lastName","password","role","active")
+      VALUES (${data.email}, ${data.firstName}, ${data.lastName}, ${hashed},
+              ${data.role}::"Role", true)
+      RETURNING *
+    `
+    if (membership) {
+      await tx`
+        INSERT INTO "HouseholdMember" ("householdId","userId","displayName","role")
+        VALUES (${membership.householdId}, ${rows[0].id}, ${displayName},
+                ${membership.role}::"HouseholdRole")
+      `
+    }
+    return rows[0]
+  })
+  return toPublic(row)
 }
 
 export async function updateUser(

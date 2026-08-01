@@ -17,6 +17,21 @@ export async function listHouseholdsForUser(
   `
 }
 
+// Admin-only (instance scope): every household, for the user-provisioning
+// dropdown. Never expose through a non-admin fn — regular users only see
+// their own memberships via listHouseholdsForUser.
+export async function listAllHouseholds(): Promise<
+  Array<{ id: string; name: string; memberCount: number }>
+> {
+  return await sql`
+    SELECT h."id", h."name", count(hm."id")::int AS "memberCount"
+    FROM "Household" h
+    LEFT JOIN "HouseholdMember" hm ON hm."householdId" = h."id"
+    GROUP BY h."id", h."name"
+    ORDER BY h."name" ASC
+  `
+}
+
 // The tenancy boundary: does this user actually belong to this household?
 export async function getMembership(
   userId: string,
