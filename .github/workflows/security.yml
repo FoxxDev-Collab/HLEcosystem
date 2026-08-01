@@ -21,7 +21,6 @@ jobs:
   # overly-permissive tokens, unpinned actions, etc.
   zizmor:
     name: Workflow audit (zizmor)
-    if: github.server_url == 'https://github.com'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -49,7 +48,7 @@ jobs:
   dependency-review:
     name: Dependency review (PR only)
     runs-on: ubuntu-latest
-    if: github.server_url == 'https://github.com' && github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request'
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
@@ -65,7 +64,7 @@ jobs:
   invariant-gate:
     name: Security invariant gate
     runs-on: ubuntu-latest
-    if: github.server_url == 'https://github.com' && github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request'
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
@@ -105,7 +104,6 @@ jobs:
 
   gitleaks:
     name: Secret scan (gitleaks)
-    if: github.server_url == 'https://github.com'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
@@ -120,7 +118,6 @@ jobs:
 
   trivy-fs:
     name: Dependency + config scan (trivy)
-    if: github.server_url == 'https://github.com'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -162,7 +159,6 @@ jobs:
 
   npm-audit:
     name: npm audit (${{ matrix.app }})
-    if: github.server_url == 'https://github.com'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -203,7 +199,6 @@ jobs:
 
   codeql:
     name: CodeQL (JavaScript/TypeScript)
-    if: github.server_url == 'https://github.com'
     runs-on: ubuntu-latest
     permissions:
       security-events: write
@@ -235,7 +230,7 @@ jobs:
   security-report:
     name: Security alert summary
     runs-on: ubuntu-latest
-    if: github.server_url == 'https://github.com' && github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request'
     permissions:
       contents: read
       security-events: read
@@ -249,10 +244,18 @@ jobs:
         run: |
           set -euo pipefail
 
+          # Every fetch is normalized to a JSON array: the API can answer
+          # with an error OBJECT or STRING on a zero-exit (feature disabled,
+          # missing token permission), and under `set -euo pipefail` a
+          # non-array piped into jq's `.[]` kills the job — which is exactly
+          # how this summary silently failed on every PR for a while.
+          as_array() { jq -e 'type=="array"' >/dev/null 2>&1 <<<"$1" && printf '%s' "$1" || printf '[]'; }
+
           # ── Code scanning (CodeQL, Trivy, zizmor) ──────────────────
           code_alerts=$(gh api --paginate \
             "repos/$REPO/code-scanning/alerts?state=open&per_page=100" \
             2>/dev/null || echo "[]")
+          code_alerts=$(as_array "$code_alerts")
 
           cs_critical=$(printf '%s' "$code_alerts" | jq '[.[] | select(.rule.security_severity_level == "critical")] | length')
           cs_high=$(printf '%s'     "$code_alerts" | jq '[.[] | select(.rule.security_severity_level == "high")]     | length')
@@ -264,6 +267,7 @@ jobs:
           dep_alerts=$(gh api --paginate \
             "repos/$REPO/dependabot/alerts?state=open&per_page=100" \
             2>/dev/null || echo "[]")
+          dep_alerts=$(as_array "$dep_alerts")
 
           dep_critical=$(printf '%s' "$dep_alerts" | jq '[.[] | select(.security_advisory.severity == "critical")] | length')
           dep_high=$(printf '%s'     "$dep_alerts" | jq '[.[] | select(.security_advisory.severity == "high")]     | length')
@@ -272,9 +276,10 @@ jobs:
           dep_total=$(printf '%s'    "$dep_alerts" | jq 'length')
 
           # ── Secret scanning ────────────────────────────────────────
-          ss_total=$(gh api --paginate \
+          ss_alerts=$(gh api --paginate \
             "repos/$REPO/secret-scanning/alerts?state=open&per_page=100" \
-            2>/dev/null | jq 'length' || echo "0")
+            2>/dev/null || echo "[]")
+          ss_total=$(as_array "$ss_alerts" | jq 'length')
 
           # ── Status badge ───────────────────────────────────────────
           if [ "$ss_total" -gt 0 ] || [ "$cs_critical" -gt 0 ] || [ "$dep_critical" -gt 0 ]; then

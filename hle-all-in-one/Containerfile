@@ -17,6 +17,9 @@ WORKDIR /app
 # Debian 13 base ships no postgres client and its default repo would offer an
 # older major that refuses to dump a PG18 server, so pull from PGDG.
 RUN apt-get update \
+    # Pull all released Debian security fixes into the runtime layer — the
+    # GHCR pipeline's grype gate fails on fixable HIGH/CRITICAL OS CVEs.
+    && apt-get upgrade -y \
     && apt-get install -y --no-install-recommends postgresql-common ca-certificates \
     && /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y \
     && apt-get install -y --no-install-recommends postgresql-client-18 \

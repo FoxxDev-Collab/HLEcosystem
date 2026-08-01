@@ -16,7 +16,6 @@ permissions:
 jobs:
   detect:
     name: Detect changed apps
-    if: github.server_url == 'https://github.com'
     runs-on: ubuntu-latest
     outputs:
       node-apps: ${{ steps.set.outputs.node-apps }}
@@ -69,7 +68,7 @@ jobs:
   build-node:
     name: lint + typecheck (${{ matrix.app }})
     needs: detect
-    if: github.server_url == 'https://github.com' && needs.detect.outputs.node-apps != '[]'
+    if: needs.detect.outputs.node-apps != '[]'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -118,7 +117,7 @@ jobs:
   build-bun:
     name: lint + typecheck (${{ matrix.app }})
     needs: detect
-    if: github.server_url == 'https://github.com' && needs.detect.outputs.bun-apps != '[]'
+    if: needs.detect.outputs.bun-apps != '[]'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -177,7 +176,7 @@ jobs:
   ci-passed:
     name: CI passed
     needs: [detect, build-node, build-bun]
-    if: always() && github.server_url == 'https://github.com'
+    if: always()
     runs-on: ubuntu-latest
     steps:
       - name: Verify all jobs succeeded

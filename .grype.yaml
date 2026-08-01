@@ -115,6 +115,26 @@ ignore:
       name: libssl3
       version: 3.5.5-r0
 
+  # ─── G-12: Debian base-OS packages the security team has triaged ────
+  # The hle-aio image (oven/bun Debian 13 base + postgresql-client-18)
+  # carries OS packages (glibc, perl, ncurses, sqlite, gzip, acl) with
+  # open CVEs Debian has marked wont-fix — typically minor-severity-in-
+  # context issues they decline to backport. The patch is owned by Debian,
+  # not HLEcosystem; the Containerfile runs `apt-get upgrade` at build so
+  # every RELEASED fix is always applied. This rule is deliberately
+  # scoped: the moment Debian publishes a fix, grype's fix-state flips
+  # from wont-fix to fixed and the finding fails the gate again — the
+  # acceptance self-expires per CVE, which per-CVE dated entries cannot do
+  # for a rolling base image.
+  # Reachability: OS-level libraries; the app process is a Bun HTTP server
+  # behind the operator's reverse proxy — no perl/sqlite/ncurses codepath
+  # is reachable from a request (perl arrives only via postgresql-common's
+  # packaging scripts, used at image build).
+  # Review-by: 2026-08-31
+  - fix-state: wont-fix
+    package:
+      type: deb
+
 # Severity threshold — build fails if any finding at HIGH or above
 # remains AFTER the ignore list is applied.
 fail-on-severity: high
