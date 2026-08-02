@@ -145,6 +145,7 @@ Every `process.env.*` actually referenced under `src/` and `scripts/`:
 | `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` | `admin@hle.local` / `ChangeMe123!`. Read by both `scripts/seed.ts` and `e2e/auth.setup.ts` — keep them in sync or the e2e login fails. |
 | `SEED_ADMIN_FIRST_NAME` / `SEED_ADMIN_LAST_NAME` | `Admin` / `User`. |
 | `PW_BASE_URL` | Playwright base URL, default `http://localhost:8100`. |
+| `PW_MEDIA_LIBRARY_DIR` | Host path of the media library root for `e2e/media.spec.ts`. Unset → that spec self-skips. |
 | `BACKUP_DIR` | Scheduled-backup target for `scripts/scheduler.ts`. Unset → scheduled backups disabled (one boot log line). The container image sets `/data/backups` (own named volume). |
 | `BACKUP_INTERVAL_HOURS` | Default `24`. Due-ness keys off the newest dump's file age, so container restarts never stack dumps and an overdue host backs up immediately on boot. |
 | `BACKUP_RETENTION` | Default `7` newest dumps kept; `0` disables pruning. |
@@ -315,5 +316,11 @@ dev database.
   health, finance, home-care, meals, travel, wiki; manager is read-only). Every
   entity is named with an "E2E Smoke" + timestamp marker so any leftover is
   identifiable.
+- `e2e/media.spec.ts` — full media pipeline: seeds `e2e/fixtures/sample.mp4`
+  into the library, scans from the UI, and streams the result (206 authed /
+  401 anonymous). Self-skips unless `PW_MEDIA_LIBRARY_DIR` points at the
+  library root from the host's perspective — see the spec header for the
+  `podman volume inspect` + `podman unshare chmod` one-liners. Guards the
+  missing-ffprobe regression (a container without ffmpeg indexes nothing).
 
 Pre-flight before a PR: `bun run typecheck && bun run lint && bun run check && bun run test`.
