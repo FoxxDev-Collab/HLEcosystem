@@ -636,6 +636,14 @@ export const MODULES: Array<ModuleDef> = [
   },
 ]
 
+// Where a module-switcher tile lands: the module's first nav item. Not every
+// module has a `<base>/dashboard` route (media's index is `/media`, wiki's is
+// `/wiki/pages`), so a hardcoded suffix 404s. Nav hrefs are also what
+// e2e/pages.spec.ts sweeps, so every entry point stays render-tested.
+export function moduleEntryHref(m: ModuleDef): string {
+  return m.nav[0]?.items[0]?.href ?? m.base
+}
+
 export function getActiveModule(pathname: string): ModuleDef | undefined {
   return MODULES.find(
     (m) =>
