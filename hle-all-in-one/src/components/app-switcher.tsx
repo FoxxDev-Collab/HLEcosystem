@@ -1,6 +1,6 @@
 import { Link, useLocation } from "@tanstack/react-router"
 import type { LinkProps } from "@tanstack/react-router"
-import { MODULES, getActiveModule } from "@/lib/modules"
+import { MODULES, getActiveModule, moduleEntryHref } from "@/lib/modules"
 
 /**
  * The bottom-of-sidebar module switcher. Same 4-col grid as the original
@@ -70,7 +70,7 @@ export function AppSwitcher() {
         return (
           <Link
             key={m.key}
-            to={`${m.base}/dashboard` as LinkProps["to"]}
+            to={moduleEntryHref(m) as LinkProps["to"]}
             className={className}
             title={m.name}
           >

@@ -23,6 +23,10 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends postgresql-common ca-certificates \
     && /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y \
     && apt-get install -y --no-install-recommends postgresql-client-18 \
+    # ffmpeg ships ffprobe, which the media scanner shells out to for tech
+    # metadata — without it every scanned file is skipped and the library
+    # stays empty (scanner.ts degrades per-file instead of crashing).
+    && apt-get install -y --no-install-recommends ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 # Runtime = built server + the migration runner (bun executes the TS sources
 # directly; db.ts/migrate.ts only use Bun.sql + node builtins, no node_modules).
